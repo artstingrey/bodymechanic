@@ -13,6 +13,8 @@
 
 Чтобы сайт начал принимать записи и заявки, нужен сервер. Контракт, по которому его ждёт фронтенд, и список того, что построить, — в [`docs/BACKEND-CONTRACT.md`](docs/BACKEND-CONTRACT.md).
 
+**Направление следующего этапа:** тест подключения в `tools/altegio-smoke` успешен по сообщению заказчика. Серверная часть и Altegio будут реализованы в этом же Next.js-проекте. Сейчас это план, основной сайт ещё на заглушках. [Порядок внедрения и задания двум отдельным чатам](C:/next-js-projects/body-mechanic/docs/ALTEGIO-IMPLEMENTATION-PLAN.md): сначала серверная основа, затем карточки услуг на главной.
+
 Живой сайт: <https://bodymechanic-site.onrender.com> (Render, статический сайт, ветка `main`).
 
 ## Быстрый старт
@@ -80,6 +82,8 @@ npm run gate:clean
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Стек, маршруты и раскладки, структура папок, 3D-блок, тексты и языки, стили, хранение в браузере, скрипты сборки |
 | [`docs/BACKEND-CONTRACT.md`](docs/BACKEND-CONTRACT.md) | Что стоит на месте бэкенда, функции и типы, что построить |
+| [План внедрения Altegio](C:/next-js-projects/body-mechanic/docs/ALTEGIO-IMPLEMENTATION-PLAN.md) | Актуальная архитектура единого проекта, анализ успешного теста, карта этапов и задания следующим чатам |
+| [Аудит готовности](C:/next-js-projects/body-mechanic/docs/ALTEGIO-INTEGRATION-AUDIT.md) | Общий список заглушек, требования к данным и ограничения интеграции |
 | [`docs/CONFIG-DEPLOY.md`](docs/CONFIG-DEPLOY.md) | Переменные окружения, настройки Render, свой домен, открытие для поиска |
 | [`docs/ANALYTICS-SEO.md`](docs/ANALYTICS-SEO.md) | Согласие, GTM, события, UTM, метаданные, карта сайта, микроразметка |
 | [`docs/TESTING.md`](docs/TESTING.md) | Проверки Playwright, матрица устройств, замер скорости |
