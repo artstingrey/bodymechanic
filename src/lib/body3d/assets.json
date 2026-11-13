@@ -1,0 +1,33 @@
+{
+ "models": {
+  "male": {
+   "lod0": "/models/male.396bfdf6.glb",
+   "lod0Bytes": 3275832,
+   "lod1": "/models/male.lod1.fdbdd47f.glb",
+   "lod1Bytes": 1977928
+  },
+  "female": {
+   "lod0": "/models/female.dab60a48.glb",
+   "lod0Bytes": 3525424,
+   "lod1": "/models/female.lod1.2ea345c1.glb",
+   "lod1Bytes": 2083652
+  }
+ },
+ "posters": {
+  "male": {
+   "avif": "/posters/hero-male@2x.avif",
+   "webp": "/posters/hero-male@2x.webp",
+   "png": "/posters/hero-male@2x.png",
+   "width": 1350,
+   "height": 1800
+  },
+  "female": {
+   "avif": "/posters/hero-female@2x.avif",
+   "webp": "/posters/hero-female@2x.webp",
+   "png": "/posters/hero-female@2x.png",
+   "width": 1350,
+   "height": 1800
+  }
+ },
+ "transcoderPath": "/basis/"
+}

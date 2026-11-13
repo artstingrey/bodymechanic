@@ -1,0 +1,1255 @@
+{
+  "nav": {
+    "logoAria": "The Body Mechanic: go to the homepage",
+    "main": {
+      "massage": "Massage",
+      "rehab": "Rehabilitation",
+      "approach": "Approach",
+      "team": "Team",
+      "prices": "Prices",
+      "reviews": "Reviews",
+      "faq": "FAQ",
+      "contacts": "Contacts",
+      "label": "Main menu"
+    },
+    "langSwitch": {
+      "label": "Language",
+      "ru": "RU",
+      "en": "EN",
+      "toRu": "Switch to Russian",
+      "toEn": "Switch to English"
+    },
+    "book": "Book",
+    "bookFloatingAria": "Book",
+    "skipToContent": "Skip to content",
+    "footer": {
+      "label": "Footer menu"
+    },
+    "breadcrumbs": {
+      "label": "Breadcrumbs",
+      "home": "Home"
+    },
+    "burger": {
+      "open": "Open menu",
+      "close": "Close menu",
+      "sections": "All sections",
+      "services": "Services",
+      "journal": "Journal",
+      "contacts": "Contacts",
+      "social": "Social media",
+      "account": "My bookings",
+      "accountHint": "Sign in with your phone number"
+    }
+  },
+  "footer": {
+    "col": {
+      "services": "Services",
+      "studio": "About the studio",
+      "contacts": "Contacts",
+      "language": "Language"
+    },
+    "links": {
+      "allServices": "All services",
+      "prices": "Prices",
+      "book": "Book",
+      "approach": "Approach",
+      "team": "Team",
+      "reviews": "Reviews",
+      "journal": "Journal",
+      "faq": "Questions and answers",
+      "address": "Address and directions",
+      "whatsapp": "WhatsApp",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "lang": {
+      "ru": "Русский",
+      "en": "English"
+    },
+    "social": {
+      "instagram": "Instagram",
+      "telegram": "Telegram",
+      "whatsapp": "WhatsApp"
+    },
+    "docs": {
+      "privacy": "Privacy policy",
+      "terms": "Terms of use",
+      "cookies": "Cookie settings"
+    },
+    "copyright": "© {year} The Body Mechanic",
+    "legalEntity": "TODO(content): legal entity name for the © line",
+    "socialLinks": "TODO(content): social media links (Instagram, Telegram)"
+  },
+  "cookie": {
+    "title": "We use cookies",
+    "text": "Essential cookies keep the site and booking running. We switch on analytics and marketing cookies only with your consent.",
+    "utmNote": "Until you consent, the tags from ad links (UTM) are kept only for the current session and added to the comment on your booking. We keep them for 30 days only if you consent to analytics or marketing, and delete them if you withdraw consent.",
+    "acceptAll": "Accept all",
+    "necessaryOnly": "Essential only",
+    "customize": "Customise",
+    "save": "Save my choice",
+    "learnMore": "More in our privacy policy",
+    "alwaysOn": "Always on",
+    "cat": {
+      "necessary": {
+        "title": "Essential",
+        "desc": "Keeps the site, booking, language choice and sign-in to “My bookings” working."
+      },
+      "analytics": {
+        "title": "Analytics",
+        "desc": "Shows which sections are useful to visitors (Google Analytics 4)."
+      },
+      "marketing": {
+        "title": "Marketing",
+        "desc": "Shows which ads lead to bookings (Meta Pixel and Conversions API, Google Ads). We share the fact of a request and your contact in hashed form, which can’t be read; health details, notes and body areas are never shared."
+      }
+    },
+    "dialogLabel": "Cookie settings"
+  },
+  "common": {
+    "brand": "The Body Mechanic",
+    "brandCategory": "Performance & Recovery Studio",
+    "brandDescriptor": "Precision Recovery",
+    "dubaiTime": "Dubai time",
+    "timeWithZone": "{time} · Dubai time",
+    "currency": "AED",
+    "price": "{price} AED",
+    "priceFrom": "from {price} AED",
+    "priceFromDuration": "from {priceMin} AED · {durationMin} min",
+    "priceRange": "{min}–{max} AED",
+    "duration": "{minutes} min",
+    "durationHours": "{hours} h {minutes} min",
+    "any": "Any",
+    "anySpecialist": "Any specialist",
+    "required": "required",
+    "requiredLegend": "* required field",
+    "optional": "optional",
+    "male": "Male",
+    "female": "Female",
+    "actions": {
+      "start": "Start →",
+      "book": "Book",
+      "bookWithSpecialist": "Book with this specialist",
+      "bookAgain": "Book again",
+      "next": "Next",
+      "back": "Back",
+      "backArrow": "← Back",
+      "continue": "Continue",
+      "cancel": "Cancel",
+      "close": "Close",
+      "confirm": "Confirm",
+      "save": "Save",
+      "edit": "Edit",
+      "remove": "Remove",
+      "retry": "Try again",
+      "reload": "Reload the page",
+      "details": "Learn more",
+      "seeAll": "See all",
+      "select": "Select",
+      "selected": "Selected",
+      "reset": "Reset",
+      "logout": "Sign out",
+      "getDirections": "Get directions",
+      "addToCalendar": "Add to calendar",
+      "writeWhatsapp": "Message us on WhatsApp",
+      "call": "Call us"
+    },
+    "state": {
+      "loading": "Loading…",
+      "saving": "Saving…",
+      "empty": "Nothing here yet",
+      "error": "Something went wrong. Please try again."
+    },
+    "glossary": {
+      "lfk": "exercise therapy",
+      "rehabilitation": "rehabilitation",
+      "kinesiotherapy": "kinesiotherapy",
+      "manualTherapy": "manual therapy",
+      "recovery": "recovery"
+    }
+  },
+  "placeholder": {
+    "roomPhoto": "Photos will appear after the shoot",
+    "specialist": "Studio specialist",
+    "specialistPhoto": "Photos will appear after the shoot",
+    "illustrativePhoto": "Illustrative photo",
+    "clientName": "Client name",
+    "clientInitials": "CN",
+    "reviewDate": "Visit date",
+    "reviewText": "Review text from Altegio"
+  },
+  "prototype": {
+    "demoNotice": "Demo data: prices, availability and specialists are examples",
+    "demoNoticeShort": "Prices and times are examples",
+    "demoBadge": "Demo"
+  },
+  "a11y": {
+    "carousel": {
+      "prev": "Previous slide",
+      "next": "Next slide",
+      "goTo": "Go to slide {n}",
+      "position": "Slide {current} of {total}",
+      "label": "Carousel"
+    },
+    "accordion": {
+      "expand": "Expand",
+      "collapse": "Collapse"
+    },
+    "gallery": {
+      "open": "Open photo {n} of {total}",
+      "close": "Close gallery",
+      "prev": "Previous photo",
+      "next": "Next photo"
+    },
+    "opensNewTab": "Opens in a new tab",
+    "loading": "Loading",
+    "dialog": {
+      "close": "Close dialog"
+    },
+    "sheet": {
+      "handle": "Drag to expand or collapse the panel"
+    },
+    "photo": "Photo: {name}",
+    "rating": "Rated {rating} out of 5",
+    "externalLink": "External link"
+  },
+  "forms": {
+    "field": {
+      "name": "Name",
+      "namePlaceholder": "What should we call you?",
+      "phone": "Phone",
+      "phonePlaceholder": "+971 XX XXX XXXX",
+      "phoneHint": "International format, +971 by default",
+      "email": "Email",
+      "emailPlaceholder": "name@example.com",
+      "age": "Age",
+      "gender": "Gender",
+      "genderHint": "Taken from the body model you selected",
+      "service": "Service",
+      "servicePlaceholder": "Choose a service",
+      "staff": "Specialist",
+      "datetime": "Date and time",
+      "datetimePlaceholder": "Choose an available time",
+      "condition": "Describe how you feel",
+      "conditionPlaceholder": "What’s bothering you, or what you’d like to achieve",
+      "code": "SMS code"
+    },
+    "consent": {
+      "privacy": "I consent to the processing of my personal data and accept the <privacy>privacy policy</privacy>",
+      "health": "I have read the contraindications",
+      "healthData": "I understand that my notes and the markers I place on the body model are shared with the studio’s specialist so that they can prepare for my session"
+    },
+    "error": {
+      "required": "Please fill in this field",
+      "nameShort": "Enter your name (at least 2 characters)",
+      "phoneInvalid": "Check the number: enter it in international format, for example +971…",
+      "emailInvalid": "Check your email address",
+      "ageInvalid": "Enter your age as a number",
+      "ageRange": "Age must be between {min} and {max}",
+      "noteTooLong": "No more than {max} characters",
+      "consentRequired": "We need your consent to continue",
+      "healthRequired": "Please confirm that you have read the contraindications",
+      "serviceRequired": "Choose a service",
+      "datetimeRequired": "Choose a date and time",
+      "summary": "Please check the highlighted fields"
+    },
+    "todo": {
+      "ageBounds": "TODO(content): permitted client age and policy for minors (bounds for the age validation message)"
+    }
+  },
+  "disclaimer": {
+    "general": "The information on this site does not replace a doctor’s advice.",
+    "recommendation": "Suggestions based on the areas you mark are a starting point. Your specialist will confirm the details at the studio.",
+    "recoveryFromInjury": "If you are recovering from an injury or surgery, please check with your doctor before booking."
+  },
+  "home": {
+    "hero": {
+      "title": "Bodywork and movement, tailored to you.",
+      "subtitle": "Sports massage, exercise therapy and rehabilitation in Dubai",
+      "cta": "Start →",
+      "note": "Mark an area, choose a service and a time. It takes 1–2 minutes.",
+      "modelSwitchLabel": "Body model",
+      "hintRotate": "Drag the model to rotate it",
+      "pauseRotation": "Pause rotation",
+      "resumeRotation": "Resume rotation",
+      "posterAlt": "3D anatomical model of the body showing the muscle layer"
+    },
+    "services": {
+      "title": "Massage and recovery that keep up with you",
+      "lead": "Sports massage, rehabilitation exercises and exercise therapy, all in one studio in Dubai.",
+      "cardPrice": "from {priceMin} AED · {durationMin} min",
+      "cardLink": "Learn more",
+      "all": "All services",
+      "errorLoad": "We couldn’t load the services. Please reload the page.",
+      "cardDescription": {
+        "todo": "TODO(content): service description, 1–2 lines",
+        "sports": "Massage for people who train: before a session, after a race and between workouts.",
+        "classic": "A calm, classic massage in a private room.",
+        "thai": "Thai massage with gentle stretching and attention to mobility.",
+        "sportsInfrared": "Sports massage combined with an infrared capsule session.",
+        "classicInfrared": "Classic massage combined with an infrared capsule session.",
+        "fullComplex": "Massage, infrared capsule and ice bath in a single visit.",
+        "lfkKinesio": "Exercises and movement work guided by a specialist, with a plan for practising at home.",
+        "manual": "Hands-on techniques, chosen to fit your request and plan.",
+        "orthoRehab": "Gentle work on limited mobility after an injury, once your doctor has cleared you.",
+        "mfrPir": "Myofascial release and work on muscle tension; the technique is chosen at the assessment stage."
+      }
+    },
+    "approach": {
+      "title": "Understand the body. Work with care.",
+      "col1": {
+        "title": "A personal approach",
+        "text": "We start with a conversation about your training load and goals. You mark the areas on the 3D model, and your specialist sees them before you arrive."
+      },
+      "col2": {
+        "title": "Your comfort",
+        "text": "A private room, a time that suits you, and service in Russian or English."
+      },
+      "col3": {
+        "title": "Results in motion",
+        "sub": "Exercises and a plan for home",
+        "text": "After your session you get exercises and a plan for home. We schedule your next visit around that plan, not out of habit."
+      }
+    },
+    "process": {
+      "title": "How it works",
+      "step1": {
+        "num": "01",
+        "title": "Assessment",
+        "text": "We talk through your training load, check your mobility and look at the areas you marked on the 3D model."
+      },
+      "step2": {
+        "num": "02",
+        "title": "Plan",
+        "text": "We choose the technique: massage, myofascial release, exercise therapy or a combination."
+      },
+      "step3": {
+        "num": "03",
+        "title": "Session",
+        "text": "Hands-on work in a private room."
+      },
+      "step4": {
+        "num": "04",
+        "title": "At home",
+        "text": "Exercises and guidance for home, then a follow-up visit as planned."
+      }
+    },
+    "team": {
+      "title": "People you can trust",
+      "intro": "Meet our specialists and choose who you’d like to book with.",
+      "rating": "Rating {rating}",
+      "nearest": "Next available: {slot}",
+      "cta": "Book with this specialist",
+      "viewProfile": "View profile",
+      "people": "TODO(content): specialists: names, titles, photos, ratings"
+    },
+    "reviews": {
+      "title": "Reviews",
+      "sourceVisit": "Review after a visit",
+      "sourceGoogle": "Google review",
+      "ratingLabel": "{rating} out of 5",
+      "comingSoon": "Reviews will appear after the first visits",
+      "avatarInitials": "Initials: {initials}",
+      "items": "TODO(content): reviews from real clients, after moderation; if there are none, the block is hidden"
+    },
+    "space": {
+      "title": "A space just for you",
+      "text": "Private rooms, a calm setting and time that is entirely yours.",
+      "galleryOpen": "Open the gallery",
+      "photos": "TODO(content): 2–3 unfiltered photos of the rooms, with captions and alt text",
+      "description": "TODO(content): main block text about the studio and its equipment"
+    },
+    "todo": {
+      "studioPhotos": "TODO(content): general photos of the studio and team for section headers and previews"
+    },
+    "faq": {
+      "title": "Questions and answers",
+      "more": "Can’t find your answer? Message us on WhatsApp",
+      "choose": {
+        "q": "How do I choose a service?",
+        "a": "The quickest way is to mark the areas on the 3D model. We’ll match a service to them and show it first in the list, with a label. You can choose any other service: each one shows its price and duration. If you’re not sure, describe in your own words what’s bothering you, and your specialist will see your note before the visit."
+      },
+      "duration": {
+        "q": "How long does a session last?",
+        "a": "The duration is shown on every service: in the services list, on the service page and during booking. All times are in Dubai time.",
+        "todo": "TODO(content): typical session length for each type of service, and how much time to allow before and after"
+      },
+      "prepare": {
+        "q": "How should I prepare?",
+        "a": "Mark the areas on the 3D model in advance and briefly describe what’s bothering you: your specialist will see it before your visit.",
+        "todo": "TODO(content): how to prepare: what to wear, eating and drinking beforehand, when to arrive, what to bring"
+      },
+      "specialist": {
+        "q": "Can I choose my specialist?",
+        "a": "Yes. At the “Specialist” step you can pick a particular person (each card shows a photo, name, rating and next available slot) or leave it on “Any specialist”. You’ll find more about each of them in the “Team” section."
+      },
+      "reschedule": {
+        "q": "How do I reschedule a booking?",
+        "a": "Open “My bookings”: sign in with your phone number and an SMS code (no password needed), or follow the link from your booking SMS or email. Tap “Reschedule” and choose a new time.",
+        "todo": "TODO(content): the minimum notice for rescheduling and cancelling, the cancellation rules, and a WhatsApp contact for urgent cases"
+      },
+      "contraindications": {
+        "q": "Are there any contraindications?",
+        "a": "Yes, any kind of bodywork has limits. The list of contraindications is in the left-hand panel on the booking page and on each service page, and you confirm you’ve read it before you book. If in doubt, check with your doctor."
+      }
+    },
+    "form": {
+      "eyebrow": "Quick booking, no 3D needed",
+      "title": "It starts with you",
+      "lead": "Leave your details, choose a service and a free slot, and your booking goes straight into the studio’s schedule.",
+      "submit": "Book",
+      "showOn3d": "Show on the 3D model",
+      "submitting": "Sending…",
+      "anyStaffOption": "Any"
+    }
+  },
+  "body3d": {
+    "toolbar": {
+      "label": "Model tools",
+      "rotate": "Rotate",
+      "zoom": "Zoom",
+      "marker": "Marker",
+      "rotateHint": "Drag to rotate",
+      "zoomHint": "Scroll or pinch to zoom",
+      "markerHint": "Tap the body to place a marker",
+      "resetHint": "Double-click to reset the view",
+      "reset": "Reset view",
+      "pause": "Pause",
+      "autoRotate": "Rotate",
+      "switch2d": "2D body diagram",
+      "switch2dAria": "Show the 2D body diagram instead of the 3D model",
+      "switch2dShort": "2D",
+      "switch3d": "3D model",
+      "switch3dShort": "3D",
+      "switch3dAria": "Return to the 3D model",
+      "pauseAria": "Pause the model’s automatic rotation",
+      "autoRotateAria": "Resume the model’s automatic rotation"
+    },
+    "model": {
+      "label": "Body model",
+      "male": "Male",
+      "female": "Female"
+    },
+    "back": "← Back",
+    "canvasLabel": "Interactive 3D body model. Click to mark an area.",
+    "help": {
+      "title": "Help",
+      "step1": "Tap or click the model where something bothers you and a marker will appear.",
+      "step2": "Describe how you feel: what you notice and how strongly, on a scale from 1 to 10.",
+      "step3": "Book your session: choose a service, a specialist and a time.",
+      "sides": "Left and right are counted from your own body, not from the screen.",
+      "tools": "Rotate the model with your finger or mouse and zoom with the scroll wheel or by pinching. Double-click to reset the view."
+    },
+    "contra": {
+      "title": "Contraindications",
+      "intro": "Please read this before you book. You’ll confirm it at the “Contact details” step."
+    },
+    "prices": {
+      "title": "Prices",
+      "note": "Current prices from the booking system. The exact cost is shown at the “Service” step.",
+      "all": "All prices",
+      "loadError": "We couldn’t load the prices."
+    },
+    "helpButtonAria": "Help",
+    "panel": {
+      "title": "Booking",
+      "markerTitle": "Marker {n} · {zone}",
+      "notePlaceholder": "Describe the discomfort…",
+      "noteCounter": "{count} of {max}",
+      "intensity": "Intensity: {value} out of 10",
+      "intensityAria": "Intensity from 1 to 10",
+      "removeMarker": "Remove marker {n}",
+      "clearAll": "Clear all",
+      "clearConfirmTitle": "Remove all markers?",
+      "clearConfirmYes": "Remove all",
+      "clearConfirmNo": "Keep them",
+      "clearedToast": "Markers removed",
+      "undo": "Undo",
+      "empty": "Tap or click the model to place your first marker.",
+      "generalNote": "Briefly describe how you feel",
+      "generalNotePlaceholder": "For example, anything you’d like your specialist to know before the session",
+      "maxReached": "You can place up to {max, plural, one {# marker} other {# markers}}. Remove one to add another.",
+      "gateHint": "Place at least one marker or describe how you feel to continue.",
+      "skip": "I know what I need",
+      "cta": "Continue to booking →"
+    },
+    "hint": {
+      "outOfZones": "This area isn’t in the list of zones. Describe it in the general notes field."
+    },
+    "sheet": {
+      "count": "{count, plural, one {# marker} other {# markers}}",
+      "countZero": "No markers yet",
+      "swipeHint": "Swipe up to expand",
+      "title": "Booking"
+    },
+    "zones": {
+      "neck_collar": "Neck & upper back",
+      "shoulder_girdle": "Shoulder girdle",
+      "chest": "Chest",
+      "abdomen": "Abdomen",
+      "thoracic_spine": "Thoracic spine",
+      "lumbar": "Lower back",
+      "gluteal": "Glutes",
+      "hip_joint": "Hip joint",
+      "quadriceps": "Front thigh",
+      "hamstrings": "Back of thigh",
+      "knee": "Knee",
+      "calves": "Calves",
+      "ankle": "Ankle",
+      "foot": "Foot",
+      "shoulder_joint": "Shoulder joint",
+      "elbow_forearm": "Elbow / forearm",
+      "hand": "Hand",
+      "shin": "Shin",
+      "left": "{zone}, left side",
+      "right": "{zone}, right side",
+      "sideFront": "Front",
+      "sideBack": "Back",
+      "unknown": "Area not identified"
+    },
+    "live": {
+      "markerAdded": "Marker {n}: {zone}",
+      "outOfZones": "This area isn’t in the list of zones. Describe it in the general notes field.",
+      "markerAdded2d": "Marker {n}: {zone}",
+      "markerRemoved": "Marker {n} removed.",
+      "allCleared": "All markers cleared.",
+      "maxReached": "Marker limit reached.",
+      "zoneUnknown": "We couldn’t identify the area. Try clicking a little more precisely.",
+      "modelSwitched": "Switched to the {model, select, male {male} female {female} other {other}} model. Markers kept: {kept}.",
+      "markersDropped": "{dropped, plural, one {# marker wasn’t carried over: that area isn’t on the other model.} other {# markers weren’t carried over: those areas aren’t on the other model.}}",
+      "viewReset": "View reset.",
+      "zoneChecked": "Area selected: {zone}.",
+      "zoneUnchecked": "Area deselected: {zone}.",
+      "modelLoaded": "The 3D model has loaded.",
+      "mode2d": "2D mode is on: mark areas on the diagram or in the list."
+    },
+    "load": {
+      "progress": "Loading the 3D model… {percent}%",
+      "slow": "Loading is taking longer than usual.",
+      "timeoutTitle": "The model is taking too long to load",
+      "timeoutText": "You can keep waiting or switch to the simplified 2D diagram. Booking works the same way.",
+      "switchTo2d": "Switch to 2D",
+      "keepWaiting": "Keep waiting",
+      "error": "We couldn’t load the model."
+    },
+    "mode2d": {
+      "noWebgl": "3D isn’t available on this device",
+      "lowFps": "3D is running slowly",
+      "text": "We’re showing a simplified body diagram. The areas and booking work just as they do in 3D.",
+      "badge": "2D mode",
+      "tryAgain": "Try 3D again",
+      "diagramLabel": "Body diagram: {side}"
+    },
+    "list": {
+      "title": "Choose areas from a list",
+      "text": "Tick the areas that bother you. It works exactly like markers on the model, and suits keyboard and screen reader use.",
+      "skip": "Skip to the list of areas",
+      "link": "Area list",
+      "groupFront": "Front",
+      "groupBack": "Back",
+      "selected": "Areas selected: {count}",
+      "otherSide": "{count} more selected on the other side of the figure"
+    },
+    "todo": {
+      "zoneRules": "TODO(content): rules for matching a service to the marked areas"
+    }
+  },
+  "contraindications": {
+    "items": {
+      "thrombosis": "Thrombosis",
+      "thrombophlebitis": "Thrombophlebitis",
+      "oncology": "Cancer",
+      "neurologicalAcute": "Acute neurological conditions, including numbness, weakness or loss of coordination",
+      "cardiovascularNoClearance": "Cardiovascular conditions without a doctor’s clearance",
+      "pregnancy": "Pregnancy",
+      "acuteInjuries": "Acute injuries, including fractures, ligament tears and dislocations"
+    },
+    "todo": "TODO(content): the final list of contraindications"
+  },
+  "booking": {
+    "summary": {
+      "title": "Your booking"
+    },
+    "stepper": {
+      "label": "Booking steps",
+      "progress": "Step {current} of {total}"
+    },
+    "step": {
+      "zones": {
+        "title": "Areas",
+        "desc": "Marks and notes"
+      },
+      "service": {
+        "title": "Service",
+        "desc": "Matched to your areas"
+      },
+      "specialist": {
+        "title": "Specialist",
+        "desc": "A specific person or “Any”"
+      },
+      "time": {
+        "title": "Date and time",
+        "desc": "Available times"
+      },
+      "contacts": {
+        "title": "Contact details",
+        "desc": "Name, phone, email, consent"
+      },
+      "review": {
+        "title": "Review",
+        "desc": "Check your details",
+        "descSms": "Check your details and confirm by SMS"
+      },
+      "done": {
+        "title": "Done",
+        "desc": "Reference and calendar"
+      }
+    },
+    "draft": {
+      "restoreTitle": "We’ve saved your selections",
+      "restoreText": "Your areas and selections are still here. Would you like to pick up where you left off?",
+      "continue": "Continue",
+      "startOver": "Start over",
+      "leaveTitle": "Leave the booking?",
+      "leaveText": "Your choices will stay in this tab until you close it."
+    },
+    "zones": {
+      "heading": "Mark the areas on the model"
+    },
+    "service": {
+      "heading": "Choose a service",
+      "filter": "Category",
+      "filterAll": "All",
+      "suggested": "Matched to your areas",
+      "priceFromDuration": "from {priceMin} AED · {durationMin} min",
+      "priceExact": "{price} AED · {durationMin} min",
+      "empty": "There are no services in this category yet.",
+      "loadError": "We couldn’t load the services."
+    },
+    "staff": {
+      "heading": "Choose a specialist",
+      "any": "Any specialist",
+      "anyHint": "We’ll show availability across all specialists",
+      "nearest": "Next available: {slot}",
+      "noSlots": "No available times at the moment",
+      "rating": "Rating {rating}",
+      "loadError": "We couldn’t load the specialists."
+    },
+    "time": {
+      "heading": "Choose a date and time",
+      "calendarLabel": "30-day calendar",
+      "dateUnavailable": "No availability",
+      "partMorning": "Morning",
+      "partDay": "Afternoon",
+      "partEvening": "Evening",
+      "zoneNote": "Dubai time",
+      "selected": "You’ve chosen: {date}, {time}",
+      "searching": "Looking for available times…",
+      "noTimes": "There’s no availability on this date. Please choose another.",
+      "slotUnfit": "This time doesn’t fit the selected service. Please choose another",
+      "noDates": "The next 30 days are fully booked. Message us on WhatsApp and we’ll suggest options."
+    },
+    "contacts": {
+      "heading": "Your contact details",
+      "lead": "We need them to confirm your booking.",
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "next": "Review booking"
+    },
+    "review": {
+      "heading": "Check your booking",
+      "areas": "Areas",
+      "service": "Service",
+      "specialist": "Specialist",
+      "datetime": "Date and time",
+      "contacts": "Contact details",
+      "total": "Price",
+      "edit": "Edit",
+      "noAreas": "No areas marked on the model",
+      "confirm": "Confirm booking",
+      "confirming": "Confirming your booking…",
+      "captcha": "Verifying that you’re human",
+      "paymentTodo": "TODO(content): payment terms (at the studio or in advance), one line in the summary"
+    },
+    "sms": {
+      "sent": "We’ve sent a code to {phone}.",
+      "label": "SMS code",
+      "resend": "Send the code again",
+      "resendIn": "Send again in {seconds} s",
+      "invalid": "That code isn’t right. Please check it and try again.",
+      "tooMany": "Too many codes requested. Please try again in 10 minutes."
+    },
+    "done": {
+      "title": "Booking confirmed",
+      "lead": "We look forward to seeing you. Your booking details are below.",
+      "reference": "Booking reference",
+      "date": "Date and time",
+      "specialist": "Specialist",
+      "address": "Address",
+      "calendar": "Add to calendar",
+      "calendarIcs": ".ics file (Apple, Outlook)",
+      "calendarGoogle": "Google Calendar",
+      "pdf": "Download booking PDF",
+      "whatsapp": "WhatsApp",
+      "myBookings": "My bookings",
+      "directions": "Get directions",
+      "addressTodo": "TODO(content): studio address and map link"
+    },
+    "queued": {
+      "title": "Request received",
+      "message": "Your request has been received, and an administrator will confirm the time within 15 minutes.",
+      "hint": "If you don’t hear from us, message us on WhatsApp."
+    },
+    "error": {
+      "slotTaken": "Someone has just booked that time. We’ve refreshed the list, so please choose another.",
+      "tooLate": "It’s too late to cancel online because your visit is coming up soon. Please message us on WhatsApp.",
+      "network": "We can’t reach the server. Check your connection and try again.",
+      "server": "Something went wrong. Please try again or message us on WhatsApp.",
+      "rateLimit": "Too many attempts. Please wait a moment and try again.",
+      "captcha": "We couldn’t complete the security check. Reload the page and try again.",
+      "sessionExpired": "Your session has expired. Please sign in again.",
+      "backToTime": "Choose another time"
+    }
+  },
+  "services": {
+    "title": "Services",
+    "lead": "Choose a service and book online.",
+    "filter": {
+      "category": "Category",
+      "categoryAll": "All categories",
+      "price": "Price",
+      "duration": "Duration",
+      "reset": "Clear filters"
+    },
+    "count": "{count, plural, one {# service found} other {# services found}}",
+    "sort": {
+      "label": "Sort by",
+      "default": "Sports and rehabilitation first"
+    },
+    "card": {
+      "priceLabel": "Price",
+      "durationLabel": "Duration"
+    },
+    "empty": "Nothing matches these filters."
+  },
+  "service": {
+    "hero": {
+      "from": "from {price} AED",
+      "duration": "{minutes} min"
+    },
+    "section": {
+      "forWhom": "Who it’s for",
+      "indications": "Good for",
+      "session": "What a session involves",
+      "options": "Duration and options",
+      "contra": "Contraindications",
+      "specialists": "Specialists for this service",
+      "faq": "Questions about this service",
+      "related": "Related articles"
+    },
+    "cta": "Book",
+    "todo": {
+      "body": "TODO(content): service page content: who it’s for, what a session involves, duration and options, contraindications, questions about the service"
+    }
+  },
+  "prices": {
+    "title": "Prices",
+    "lead": "Our current price list by category. All prices are in AED.",
+    "col": {
+      "service": "Service",
+      "duration": "Duration",
+      "price": "Price"
+    },
+    "note": "Prices are updated automatically.",
+    "cta": "Book",
+    "error": "We couldn’t load the prices. Please reload the page."
+  },
+  "team": {
+    "title": "Team",
+    "lead": "Meet the specialists at our studio. Choose yours and book the next available time.",
+    "profile": {
+      "specialization": "Specialisation",
+      "experience": "Experience",
+      "education": "Education",
+      "certificates": "Certificates",
+      "languages": "Languages",
+      "nearestSlots": "Next available times",
+      "reviews": "Reviews",
+      "back": "All specialists"
+    },
+    "todo": {
+      "bio": "TODO(content): each specialist’s experience, education, certificates and languages"
+    }
+  },
+  "account": {
+    "title": "My bookings",
+    "login": {
+      "lead": "Sign in with your phone number. No password needed.",
+      "getCode": "Get a code",
+      "submit": "Sign in",
+      "changePhone": "Change number",
+      "invalid": "We couldn’t sign you in. Please check your number and code."
+    },
+    "upcoming": {
+      "title": "Upcoming bookings",
+      "empty": "You have no upcoming bookings."
+    },
+    "past": {
+      "title": "Past bookings",
+      "empty": "Your booking history is empty."
+    },
+    "card": {
+      "areas": "Marked areas",
+      "status": "Status"
+    },
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Awaiting confirmation",
+      "cancelled": "Cancelled",
+      "completed": "Completed"
+    },
+    "action": {
+      "reschedule": "Reschedule",
+      "cancel": "Cancel booking",
+      "review": "Leave a review"
+    },
+    "reschedule": {
+      "title": "Reschedule your booking",
+      "lead": "Choose a new date and time, then review your booking.",
+      "minNotice": "You can reschedule up to {hours, plural, one {# hour} other {# hours}} before your visit.",
+      "unavailable": "It’s too late to reschedule online because your visit is coming up soon. Please message us on WhatsApp.",
+      "unavailableShort": "Rescheduling unavailable",
+      "confirm": "Confirm new time",
+      "success": "Your booking has been moved to {datetime}."
+    },
+    "cancel": {
+      "title": "Cancel this booking?",
+      "confirm": "Yes, cancel booking",
+      "keep": "Keep my booking",
+      "success": "Your booking has been cancelled.",
+      "rules": "TODO(content): cancellation rules"
+    },
+    "link": {
+      "title": "Your booking",
+      "invalid": "This link is invalid or has expired. Sign in to “My bookings” with your phone number."
+    }
+  },
+  "journal": {
+    "title": "Journal",
+    "lead": "Articles from our specialists on training load, mobility and recovery.",
+    "category": {
+      "all": "All topics"
+    },
+    "card": {
+      "read": "Read"
+    },
+    "article": {
+      "toc": "In this article",
+      "readTime": "{minutes} min read",
+      "author": "Author",
+      "bookAuthor": "Book with the author",
+      "related": "Related articles"
+    },
+    "empty": "Articles are coming soon.",
+    "todo": {
+      "articles": "TODO(content): journal topics and articles; authors are the studio’s specialists"
+    }
+  },
+  "contacts": {
+    "title": "Contacts",
+    "label": {
+      "address": "Address",
+      "directions": "How to get here",
+      "parking": "Parking",
+      "hours": "Opening hours",
+      "whatsapp": "WhatsApp",
+      "phone": "Phone",
+      "email": "Email"
+    },
+    "mapLabel": "Map: studio location",
+    "openMap": "Open in Google Maps",
+    "mapFacade": {
+      "button": "Open the map",
+      "note": "Google Maps loads only after you press the button"
+    },
+    "value": {
+      "address": "TODO(content): studio address",
+      "directions": "TODO(content): how to get here (metro / landmarks)",
+      "parking": "TODO(content): parking information",
+      "hours": "TODO(content): opening hours",
+      "whatsapp": "TODO(content): WhatsApp number",
+      "phone": "TODO(content): studio phone number",
+      "email": "TODO(content): studio email"
+    },
+    "pending": "Address, opening hours and contacts will appear before launch"
+  },
+  "docs": {
+    "privacy": {
+      "title": "Privacy policy",
+      "clause": {
+        "utm": "Campaign tags (UTM). If you arrive from an ad link, until you consent the tags (source, channel, campaign) are kept only for the current browser session and added to the comment on a booking made in that session. If you consent to “Analytics” or “Marketing” cookies, we keep them for 30 days in the bm_utm cookie. If you withdraw consent, the cookie is deleted."
+      }
+    },
+    "terms": {
+      "title": "Terms of use"
+    },
+    "updated": "Last updated: {date}",
+    "todo": {
+      "privacy": "TODO(content): privacy policy text (from the client)",
+      "terms": "TODO(content): terms of use text (from the client)"
+    }
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page not found",
+    "text": "The link may be out of date or the address mistyped. Head back to the homepage or book a session.",
+    "home": "Back to the homepage",
+    "services": "Services",
+    "book": "Book",
+    "illustrationAlt": "Illustration: 3D body model"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "text": "Try reloading the page, or go back to the homepage."
+  },
+  "mock": {
+    "categories": {
+      "massage": "Massage",
+      "rehab": "Rehabilitation"
+    },
+    "services": {
+      "sports": {
+        "title": "Sports massage"
+      },
+      "classic": {
+        "title": "Classic massage"
+      },
+      "thai": {
+        "title": "Thai massage"
+      },
+      "sportsInfrared": {
+        "title": "Sports massage with infrared capsule"
+      },
+      "classicInfrared": {
+        "title": "Classic massage with infrared capsule"
+      },
+      "fullComplex": {
+        "title": "Full recovery programme with ice bath"
+      },
+      "lfkKinesio": {
+        "title": "Exercise therapy and kinesiotherapy"
+      },
+      "manual": {
+        "title": "Manual therapy"
+      },
+      "orthoRehab": {
+        "title": "Orthopaedic rehabilitation"
+      },
+      "mfrPir": {
+        "title": "Myofascial release and post-isometric relaxation"
+      }
+    },
+    "price": {
+      "onRequest": "On request",
+      "onRequestShort": "on request"
+    },
+    "articles": {
+      "title": "Demo article {n}"
+    },
+    "duration": {
+      "onRequest": "On request",
+      "upTo": "up to 1 h 40 min"
+    },
+    "todo": {
+      "pricesDurations": "TODO(content): service prices and durations: to be confirmed"
+    }
+  },
+  "lp": {
+    "offer": {
+      "service": "sports massage",
+      "title": "{percent}% off your first visit",
+      "priceLine": "{service}: AED {salePrice} instead of {price}",
+      "full": "{percent}% off your first visit: {service} AED {salePrice} instead of {price}",
+      "badge": "{percent}% off",
+      "body": "your first visit: {service} AED {salePrice} instead of {price}",
+      "urgency": "For the studio’s first clients",
+      "exampleBadge": "Example offer: terms to be confirmed",
+      "exampleBadgeShort": "Example offer",
+      "termsPending": "Offer terms to be confirmed",
+      "terms": "TODO(content): offer terms: dates or a limit for the studio’s first clients, which services, who qualifies"
+    },
+    "h1": {
+      "a1": "Sports massage in Dubai for recovery between training sessions",
+      "a2": "Sports massage in Dubai for people who train seriously",
+      "a3": "Massage built around your load: running, triathlon, padel, CrossFit, gym",
+      "a4": "Between race days and workouts: sports massage in Dubai",
+      "a5": "Your first {service} in Dubai: {percent}% off, AED {salePrice} instead of {price}",
+      "b1": "Massage for neck, shoulders and lower back in Dubai. Request in a minute",
+      "b2": "Massage after a long work week in Dubai. Request in a minute",
+      "b3": "For people who sit a lot: massage in Dubai at a convenient time",
+      "b4": "Leave your number and we’ll find a time for a massage in Dubai",
+      "b5": "{percent}% off your first visit in Dubai: {service} AED {salePrice} instead of {price}"
+    },
+    "a": {
+      "sub": "Running, triathlon, padel, CrossFit, gym: bodywork around your training load. Leave your number and our admin will suggest a time.",
+      "situation": "Training load keeps growing, and recovery time is short.",
+      "wa": {
+        "message": "Hi! I’d like to book a sports massage."
+      },
+      "seo": {
+        "title": "Sports massage in Dubai | The Body Mechanic",
+        "description": "A massage and recovery studio in Dubai. Leave your number and our admin will suggest a time."
+      }
+    },
+    "b": {
+      "sub": "For people who sit a lot. Leave your number and our admin will suggest a convenient time.",
+      "situation": "Long days at a desk, little time to book a visit.",
+      "wa": {
+        "message": "Hi! I’d like to book a massage."
+      },
+      "seo": {
+        "title": "Massage in Dubai: request in a minute | The Body Mechanic",
+        "description": "A massage and recovery studio in Dubai. Leave your number and our admin will suggest a convenient time."
+      }
+    },
+    "form": {
+      "title": "Leave your number and we’ll suggest a time",
+      "phone": "Phone / WhatsApp",
+      "phoneHint": "We’ll reply on WhatsApp or call",
+      "submit": "Find a time",
+      "submitFirstVisit": "Book my first visit",
+      "whatsapp": "Message us on WhatsApp",
+      "demoNotice": "Not sent to the studio: this is a demo",
+      "privacyNote": "We use your number only to reply about your booking",
+      "details": {
+        "toggle": "Add details (optional)",
+        "hint": "Mark what matters so our admin can prepare better",
+        "note": "Only the studio’s admin and specialist will see this"
+      }
+    },
+    "chips": {
+      "recovery": "Recovery after training",
+      "event": "Preparing for race day",
+      "neckShoulders": "Neck and shoulders",
+      "lowerBack": "Lower back",
+      "notSure": "Not sure yet"
+    },
+    "consent": {
+      "submit": "By tapping “{button}”, you consent to the processing of your personal data and accept the <privacy>privacy policy</privacy>",
+      "details": "I understand that the areas and goals I select are shared with the studio’s admin and specialist to prepare for my visit"
+    },
+    "error": {
+      "name": "Please tell us what to call you",
+      "phone": "Please check the number: international format, for example +971 50 123 4567",
+      "consent": "We need your consent to reply",
+      "consentDetails": "Please confirm consent to share your selections, or clear them",
+      "summary": "Please check these fields: {fields}",
+      "field": {
+        "consent": "Consent",
+        "phone": "Phone",
+        "consentDetails": "Consent for selections"
+      },
+      "server": "We couldn’t send it. Try again or message us on WhatsApp"
+    },
+    "success": {
+      "title": "Request received",
+      "text": "Our admin will confirm a time within 15 minutes during opening hours"
+    },
+    "studio": {
+      "title": "Specialists and studio"
+    },
+    "why": {
+      "title": "Why The Body Mechanic",
+      "1": {
+        "title": "Built around sport and movement",
+        "text": "A Dubai studio for massage and recovery, made for people who train and keep moving"
+      },
+      "2": {
+        "title": "Show the area on a body model",
+        "text": "On our site you can mark areas on a 3D model, so your specialist sees them before your visit",
+        "link": "Book with the 3D model"
+      },
+      "3": {
+        "title": "Russian and English, prices in AED",
+        "text": "The site and request form work in two languages, and every service shows its price in AED"
+      }
+    },
+    "steps": {
+      "title": "How it works",
+      "1": {
+        "title": "You leave your number",
+        "text": "It takes about a minute"
+      },
+      "2": {
+        "title": "Our admin contacts you",
+        "text": "We suggest a time and answer your questions. Reply within 15 minutes during opening hours"
+      },
+      "3": {
+        "title": "You come to the studio",
+        "text": "The address and directions are further down the page"
+      }
+    },
+    "services": {
+      "title": "What you can choose",
+      "note": "Price and duration are shown for every service",
+      "desc": {
+        "sports": "Massage for people who train: before a session, after a race and between workouts.",
+        "sportsInfrared": "Sports massage and an infrared capsule session: recovery after training in a single visit.",
+        "fullComplex": "Massage, an infrared capsule and an ice bath: recovery after training in a single visit.",
+        "classic": "Classic massage: work on the neck, shoulders and back after a week at a desk.",
+        "thai": "Thai massage with gentle stretching and attention to mobility."
+      }
+    },
+    "directions": {
+      "pending": "The address will appear before launch",
+      "district": "TODO(content): the district of Dubai where the studio is",
+      "building": "TODO(content): the building and the floor or unit number",
+      "mapLink": "TODO(content): the map link"
+    },
+    "risk": {
+      "title": "Good to know before you book",
+      "1": "A request commits you to nothing and needs no online payment",
+      "2": "Our admin will confirm the details and the time before your visit",
+      "3": "If the time doesn’t suit you, we’ll suggest the nearest options"
+    },
+    "faq": {
+      "duration": {
+        "q": "How long does a session last?",
+        "a": "The duration is shown on every service. All times are in Dubai time."
+      },
+      "contraindications": {
+        "q": "Are there any contraindications?",
+        "a": "Yes, any kind of bodywork has limits. You can see the list on the booking page, and our admin will confirm the details before your visit. If you are recovering from an injury or surgery, please check with your doctor before booking."
+      },
+      "afterRequest": {
+        "q": "What happens after I send the request?",
+        "a": "Our admin will message you on WhatsApp or call, suggest a time and answer your questions. We reply within 15 minutes during opening hours."
+      },
+      "price": {
+        "q": "How much does it cost?",
+        "a": "The price is shown on every service. The terms of the first-visit offer are written next to the offer."
+      }
+    },
+    "final": {
+      "title": "Let’s find you a time",
+      "text": "It takes about a minute, no online payment needed"
+    },
+    "todo": {
+      "responseSla": "TODO(content): the response schedule: opening hours and who replies",
+      "whatsapp": "TODO(content): the WhatsApp number for the landing button"
+    },
+    "zoneShort": {
+      "neck_collar": "Neck, shoulders",
+      "shoulder_girdle": "Shoulder girdle",
+      "chest": "Chest",
+      "abdomen": "Abdomen",
+      "thoracic_spine": "Mid back",
+      "lumbar": "Lower back",
+      "gluteal": "Glutes",
+      "hip_joint": "Hip joint",
+      "quadriceps": "Front thigh",
+      "hamstrings": "Back of thigh",
+      "knee": "Knee",
+      "calves": "Calves",
+      "ankle": "Ankle",
+      "foot": "Foot",
+      "shoulder_joint": "Shoulder joint",
+      "elbow_forearm": "Elbow, forearm",
+      "hand": "Hand",
+      "shin": "Shin"
+    }
+  },
+  "meta": {
+    "home": {
+      "title": "Sports massage & rehabilitation in Dubai · The Body Mechanic",
+      "description": "Sports massage and rehabilitation exercises in Dubai. Mark the areas that bother you on a 3D body model and book online in 1–2 minutes.",
+      "ogTitle": "The Body Mechanic · Sports massage in Dubai",
+      "ogDescription": "Mark the areas on a 3D body model and book in 1–2 minutes."
+    },
+    "services": {
+      "title": "Services: massage & rehabilitation · The Body Mechanic",
+      "description": "Sports massage, exercise therapy and rehabilitation in Dubai: services with prices and durations. Book online.",
+      "ogTitle": "Services · The Body Mechanic",
+      "ogDescription": "Every service with its price and duration."
+    },
+    "service": {
+      "title": "{service} in Dubai · The Body Mechanic",
+      "description": "{service} at The Body Mechanic, Dubai: price, duration, specialists and online booking.",
+      "ogTitle": "{service} · The Body Mechanic",
+      "ogDescription": "From {priceMin} AED, {durationMin} min. Book online."
+    },
+    "booking": {
+      "title": "Book a massage online in Dubai · The Body Mechanic",
+      "description": "Mark the areas on the 3D body model, then choose a service, specialist and time. Your booking goes straight into the studio’s schedule.",
+      "ogTitle": "Book online · The Body Mechanic",
+      "ogDescription": "A 3D body model, available times and confirmation in 1–2 minutes."
+    },
+    "prices": {
+      "title": "Massage prices in Dubai · The Body Mechanic",
+      "description": "Our current price list by category: service, duration and price in AED. Book online for a time that suits you.",
+      "ogTitle": "Prices · The Body Mechanic",
+      "ogDescription": "Current price list: duration and cost in AED."
+    },
+    "team": {
+      "title": "Meet the team · The Body Mechanic",
+      "description": "Meet the specialists at our Dubai studio, choose yours and book the next available time online.",
+      "ogTitle": "Team · The Body Mechanic",
+      "ogDescription": "Meet our specialists and book with yours."
+    },
+    "staff": {
+      "title": "{name}, {position} · The Body Mechanic",
+      "description": "{name}, {position} at The Body Mechanic in Dubai. Next available times and online booking.",
+      "ogTitle": "{name} · The Body Mechanic",
+      "ogDescription": "{position}. Book online for the next available time."
+    },
+    "account": {
+      "title": "My bookings · The Body Mechanic",
+      "description": "Your studio bookings: reschedule, cancel or add to your calendar.",
+      "ogTitle": "My bookings · The Body Mechanic",
+      "ogDescription": "Reschedule or cancel your booking."
+    },
+    "journal": {
+      "title": "Journal: movement and recovery · The Body Mechanic",
+      "description": "Articles from our specialists on training load, mobility and recovery.",
+      "ogTitle": "Journal · The Body Mechanic",
+      "ogDescription": "Articles from our specialists on movement and recovery."
+    },
+    "article": {
+      "title": "{title} · The Body Mechanic",
+      "description": "{excerpt}",
+      "ogTitle": "{title} · The Body Mechanic",
+      "ogDescription": "{excerpt}"
+    },
+    "contacts": {
+      "title": "Contact and location · The Body Mechanic",
+      "description": "Address, map, opening hours, WhatsApp and phone number for The Body Mechanic studio in Dubai.",
+      "ogTitle": "Contacts · The Body Mechanic",
+      "ogDescription": "Address, map and opening hours of our Dubai studio."
+    },
+    "privacy": {
+      "title": "Privacy policy · The Body Mechanic",
+      "description": "How The Body Mechanic handles and protects your personal data.",
+      "ogTitle": "Privacy policy · The Body Mechanic",
+      "ogDescription": "How we handle and protect your data."
+    },
+    "terms": {
+      "title": "Terms of use · The Body Mechanic",
+      "description": "Terms for using the site and booking at The Body Mechanic.",
+      "ogTitle": "Terms of use · The Body Mechanic",
+      "ogDescription": "Terms for using the site and booking."
+    },
+    "notFound": {
+      "title": "Page not found · The Body Mechanic",
+      "description": "This page doesn’t exist. Head back to the homepage or book a session.",
+      "ogTitle": "Page not found · The Body Mechanic",
+      "ogDescription": "This page doesn’t exist. Head back to the homepage."
+    },
+    "og": {
+      "siteName": "The Body Mechanic",
+      "imageAlt": "3D body model for The Body Mechanic"
+    },
+    "schema": {
+      "businessDescription": "Massage and rehabilitation studio in Dubai: sports massage, exercise therapy and online booking."
+    }
+  }
+}

@@ -1,0 +1,564 @@
+/* =====================================================================
+   The Body Mechanic · booking /booking (ТЗ §06–07, README §13, ui-kit «Степпер», «Время», «Маркер»)
+   Step 1: three columns on desktop (help / model / your markers), steps 2–6: «Ваша запись» 420 px + content.
+   The 3D slot classes (.b3d-*) belong to Frontend Builder: styled here, never renamed.
+   ===================================================================== */
+/* the steps are client-rendered (?step in the URL → Suspense with an empty fallback): reserve the screen so the footer
+   is never painted under the header and then pushed down (Lighthouse CLS 0.76 on mobile) */
+.bk-page { padding-block: 16px var(--section-y); min-height: calc(100svh - var(--header-h)); }
+.booking { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; } /* minmax(0,…): the canvas' 300 px intrinsic width must not widen the track (320 px phones) */
+.booking > nav { padding: 4px 0 8px; border-bottom: 1px solid var(--line); }
+.bk-step { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.bk-head { display: grid; gap: 8px; }
+.bk-head__step { display: none; } /* phones only (step 1): «Шаг 1 из 7» in the H1 row; ≥ 768 the stepper shows it */
+.bk-head .h2, .bk-main > .h2, .bk-narrow > .h2 { margin: 0; }
+.bk-head--row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.bk-alert { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--error) 8%, var(--surface)); color: var(--error); font-weight: 600; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error) 30%, transparent); }
+.bk-alert p { margin: 0; }
+.bk-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-top: 8px; }
+.bk-actions > :only-child { margin-left: auto; }
+
+/* steps 2–6: «Ваша запись» + content */
+.bk-grid { display: grid; gap: 20px; }
+.bk-main { display: grid; gap: 20px; align-content: start; min-width: 0; }
+.bk-summary { order: 2; background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: inset 0 0 0 1px var(--line); align-self: start; }
+.bk-summary .h3 { margin: 0 0 8px; }
+.bk-summary dl { margin: 0; display: grid; }
+.bk-summary dl > div { display: grid; gap: 2px; padding: 10px 0; border-top: 1px solid var(--line); }
+.bk-summary dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
+.bk-summary dd { margin: 0; display: grid; gap: 2px; font-weight: 600; }
+.bk-summary dd .cap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-weight: 400; }
+@media (min-width: 1024px) {
+  .bk-grid { grid-template-columns: var(--summary-w) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .bk-summary { order: 0; position: sticky; top: calc(var(--header-h) + 16px); }
+}
+
+/* option lists (services, specialists) on radio cards */
+.bk-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.bk-opt { align-items: center; }
+.bk-opt__body { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.bk-opt__body > span:not(.badge) { font-size: 13px; color: var(--muted); } /* the badge keeps its own AA pair (R-CODE-02 F-01 b) */
+.bk-opt__body .badge { justify-self: start; max-width: 100%; white-space: normal; text-wrap: balance; padding-block: 3px; line-height: 1.25; border-radius: 12px; } /* «Подобрано по вашим зонам» wraps inside a narrow card instead of running into its frame at 320 (design audit F28); one line stays a 24 px pill */
+.bk-opt__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; font-size: 13px; color: var(--muted); }
+.bk-opt__meta b { font-size: 15px; color: var(--text); white-space: nowrap; }
+@media (max-width: 479px) { .bk-opt { flex-wrap: wrap; } .bk-opt__meta { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; padding-left: 36px; text-align: left; } }
+
+/* step 4: calendar + slots */
+.bk-time { display: grid; gap: 24px; }
+.bk-slots { display: grid; gap: 16px; align-content: start; }
+.slot-groups { display: grid; gap: 16px; }
+.bk-picked { margin: 0; }
+@media (min-width: 1280px) { .bk-time { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr); gap: 32px; } }
+/* step 4 waiting states (lead, 2026-11-07: never an empty step): a static skeleton in the calendar geometry while the dates
+   load; before a service is chosen the skeleton is dimmed under a card that leads back to step 2 */
+.bk-time-wait { position: relative; display: grid; gap: 16px; }
+.bk-time--skel .skel { display: block; }
+.bk-time--skel .skel--title { width: 180px; height: 20px; }
+.bk-time--skel .skel--wd { height: 12px; margin: 10px 8px; border-radius: 4px; }
+.bk-time--skel .skel--day { min-height: 44px; border-radius: 12px; background: color-mix(in srgb, var(--line) 60%, var(--surface)); }
+.bk-time--skel .skel--h { width: 72px; height: 16px; }
+.bk-time--skel .skel--slot { width: 76px; height: 44px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--line) 60%, var(--surface)); }
+.bk-time-wait:has(> .state) > .bk-time--skel { opacity: 0.5; }
+@media (max-width: 1279px) { .bk-time--skel .bk-slots { display: none; } } /* one column: the calendar alone keeps the shape */
+.bk-time-wait > .state { position: absolute; left: 50%; top: min(50%, 220px); transform: translate(-50%, -50%); width: min(360px, calc(100% - 32px));
+  justify-items: center; text-align: center; box-shadow: var(--sh-2), inset 0 0 0 1px var(--line); }
+
+/* step 5: contacts */
+.bk-form .row2 { display: grid; gap: 16px; }
+@media (min-width: 768px) { .bk-form .row2 { grid-template-columns: 1fr 1fr; align-items: start; } }
+.bk-form .lead, .bk-form .cap { margin: 0; }
+.bk-gender { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+
+/* step 6: review, step 7: done */
+.bk-narrow { max-width: 760px; width: 100%; margin-inline: auto; }
+.bk-review { margin: 0; background: var(--surface); border-radius: var(--r-card); padding: 4px 20px; box-shadow: inset 0 0 0 1px var(--line); }
+.bk-review > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 14px 0; border-top: 1px solid var(--line); align-items: center; }
+.bk-review > div:first-child { border-top: 0; }
+.bk-review dt { grid-column: 1; font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
+.bk-review dd { grid-column: 1; margin: 0; font-weight: 600; }
+.bk-review .bk-edit { grid-column: 2; grid-row: 1 / span 2; }
+.bk-total dd { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.bk-done { justify-items: start; }
+.bk-done__ic { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--card-sand); color: var(--text); }
+.bk-done__ic[data-ok] { background: var(--text); color: var(--bg); }
+.bk-done__ic .i { width: 30px; height: 30px; stroke-width: 2; }
+.bk-done .lead, .bk-done .cap { margin: 0; }
+.bk-done .bk-review { width: 100%; }
+.bk-done__acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.bk-done__acts .chip { cursor: default; }
+
+/* ---------- Step 1: 3D workspace ----------
+   ≥1024 (ТЗ §12, style frame A): three columns — heading + help accordions | model on the screen height | «Запись».
+   Phones/tablets: one column, the left wrapper dissolves (display: contents) so the order is heading → model → side → help. */
+.booking-3d { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.booking-3d__left { display: contents; }
+.booking-3d__model { position: relative; display: grid; gap: 10px; min-width: 0; }
+.booking-3d__model .b3d-slot { border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); height: clamp(420px, 62svh, 820px); }
+.booking-3d__side { display: grid; gap: 16px; align-content: start; }
+.bk-cta { display: grid; gap: 8px; justify-items: stretch; }
+.bk-cta .hint { margin: 0; }
+.bk-cta .btn--text { justify-self: center; }
+.b3d-list-link { justify-self: start; min-height: 44px; display: inline-flex; align-items: center; font-size: 14px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+@media (min-width: 1024px) {
+  .booking-3d { grid-template-columns: clamp(232px, 19vw, var(--panel-3d)) minmax(0, 1fr) clamp(288px, 24vw, var(--panel-3d-right)); gap: 20px; align-items: start; }
+  .booking-3d__left { display: grid; gap: 16px; align-content: start; min-width: 0; }
+  .booking-3d__left .h2 { font-size: clamp(1.625rem, 0.9rem + 1.15vw, 2.5rem); overflow-wrap: break-word; }
+  .booking-3d__left .booking-restore { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .booking-3d__left .booking-restore__acts { grid-column: 1 / -1; }
+  .booking-3d__right { position: sticky; top: calc(var(--header-h) + 16px); }
+  /* the model fills the first screen under the header, the stepper and the toolbar (lead, 2026-11-07):
+     --bk-model-top = workspace top (demo bar + header + stepper ≈ 212) + toolbar rows + gap + 16 px air */
+  .booking-3d { --bk-model-top: 350px; }
+  .booking-3d__model .b3d-slot { height: clamp(420px, calc(100svh - var(--bk-model-top)), 1000px); }
+}
+@media (min-width: 1280px) { .booking-3d { --bk-model-top: 290px; gap: 24px; } }
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .booking-3d__side .b3d-general textarea { min-height: 88px; } /* the placeholder wraps to 3 lines in the 288–346 px panel */
+}
+
+/* toolbar in the workspace: М/Ж + tools + «Сброс вида» on one row ≥1280 (two below); «Схема тела (2D)» is a chip in the
+   slot's top-right corner — right after the toolbar in reading and tab order, so the visual order matches the DOM */
+.booking-3d .b3d-toolbar { position: relative; }
+.booking-3d .booking-3d__model .b3d-toolbar [role="group"] button { padding: 0 11px; font-size: 13px; }
+.booking-3d .b3d-toolbar > button:not([data-testid]) { padding: 0 14px; font-size: 13px; }
+.booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: absolute; z-index: 3; top: calc(100% + 18px); right: 10px; min-height: 44px; padding: 0 16px;
+  border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); text-decoration: none; font-size: 13px; }
+@media (hover: hover) { .booking-3d .b3d-toolbar > [data-testid="switch-2d"]:hover { background: var(--text); color: var(--bg); box-shadow: none; } }
+@media (max-width: 1279px) { .booking-3d .b3d-toolbar > [role="group"]:not(:first-child) { order: 2; } } /* row 1: М/Ж + «Сброс вида», row 2: tools */
+
+/* toolbar: model switch + tools as a segmented group + «Сброс вида» */
+.b3d-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.b3d-toolbar > [role="group"]:not(.b3d-switch) { display: inline-flex; padding: 4px; border-radius: var(--r-pill); background: rgba(38, 34, 31, 0.06); gap: 2px; }
+.b3d-toolbar > [role="group"]:not(.b3d-switch) button { min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 0; background: transparent; font: 600 14px/1 var(--font-sans); color: var(--muted-card); cursor: pointer; }
+.b3d-toolbar > [role="group"]:not(.b3d-switch) button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--sh-1); }
+.b3d-toolbar > button { margin-left: auto; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 0; background: transparent; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); font: 700 14px/1 var(--font-sans); cursor: pointer; }
+@media (hover: hover) { .b3d-toolbar > button:hover { background: var(--text); color: var(--bg); } }
+
+/* left panel: help / contraindications / prices as accordions */
+.b3d-left { display: grid; align-content: start; background: var(--surface); border-radius: var(--r-card); padding: 4px 20px; box-shadow: inset 0 0 0 1px var(--line); }
+.b3d-left details { border-top: 1px solid var(--line); }
+.b3d-left details:first-child { border-top: 0; }
+.b3d-left summary { list-style: none; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; cursor: pointer; }
+.b3d-left summary::-webkit-details-marker { display: none; }
+.b3d-left summary::after { content: ""; width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin-top: -4px; }
+.b3d-left details[open] summary::after { transform: rotate(-135deg); margin-top: 4px; }
+.b3d-left details > :not(summary) { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+.b3d-left ol, .b3d-left ul { padding-left: 18px; display: grid; gap: 6px; }
+
+/* marker panel */
+.b3d-panel { display: grid; gap: 12px; background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: inset 0 0 0 1px var(--line); }
+.b3d-panel h2 { font-size: var(--fs-h3); margin: 0; }
+.b3d-panel > p { margin: 0; font-size: 14px; color: var(--muted); }
+.b3d-markers { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.b3d-markers > li { position: relative; display: grid; gap: 8px; background: var(--bg); border-radius: var(--r-card-sm); padding: 12px; }
+.b3d-markers h3 { margin: 0; min-height: 44px; display: flex; align-items: center; padding-right: 52px; font-size: 14px; font-weight: 700; } /* the remove button sits in this row, never over the note */
+.b3d-markers textarea, .b3d-general textarea { width: 100%; min-height: 64px; border: 0; border-radius: var(--r-field); box-shadow: inset 0 0 0 1px var(--field-border); background: var(--surface); padding: 10px 12px; font: 400 16px/1.4 var(--font-sans); color: var(--text); resize: vertical; }
+.b3d-markers textarea:focus-visible, .b3d-general textarea:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--text); }
+.b3d-markers label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.b3d-markers input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.b3d-markers li > .b3d-remove { position: absolute; right: 10px; top: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--field-border); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.b3d-intensity { display: grid; gap: 6px; }
+.b3d-intensity .cap { margin: 0; }
+/* the 2D switch in the toolbar (Frontend Builder, ТЗ 6.10) */
+.b3d-toolbar > :is([data-testid="switch-2d"], [data-testid="switch-3d"]) { margin-left: 0; box-shadow: none; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.b3d-panel > button { justify-self: start; min-height: 44px; padding: 0 4px; border: 0; background: none; font: 600 14px/1 var(--font-sans); color: var(--text); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.b3d-panel > button:disabled { color: var(--muted); text-decoration: none; cursor: not-allowed; }
+.b3d-general { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+
+/* zone list (accessible alternative), 2D fallback */
+.b2d-list { margin: 8px 0 0; padding: 20px; border: 0; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
+.b2d-list legend { float: left; width: 100%; padding: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; }
+.b2d-list > p { grid-column: 1 / -1; margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+.b2d-list label { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 15px; cursor: pointer; }
+.b2d-list input { width: 20px; height: 20px; accent-color: var(--text); }
+
+/* loader / timeout dialog / hint inside the slot */
+.booking-3d .b3d-loader { inset: auto 50% 50% auto; transform: translate(50%, 50%); width: max-content; padding: 10px 16px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--surface) 92%, transparent); box-shadow: var(--sh-2); font-weight: 600; }
+.b3d-dialog { display: grid; gap: 10px; box-shadow: var(--sh-3); border-radius: var(--r-card); padding: 20px; }
+.b3d-dialog p { margin: 0; }
+.b3d-dialog button { min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; font: 700 14px/1 var(--font-sans); cursor: pointer; }
+.b3d-dialog button:first-of-type { background: var(--accent); color: #fff; }
+.b3d-dialog button + button { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); }
+.b3d-hint { box-shadow: var(--sh-2); font-weight: 600; }
+
+/* ---------- Step 1 below 1024 (ТЗ 6.9, §12; R-FINAL F-01) ----------
+   tablet 768–1023: model + one side panel («Запись» + CTA), «Помощь» from «?» in a bottom sheet;
+   phone < 768: the model fills the screen under the header; «Запись» is a bottom sheet (peek / half / full) above a
+   fixed CTA bar that sits over the home indicator; «Помощь» from «?» in a modal bottom sheet. */
+.b3d-help-btn { position: absolute; z-index: 4; right: 10px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--surface); color: var(--text);
+  box-shadow: var(--sh-1), inset 0 0 0 1px var(--field-border); display: none; align-items: center; justify-content: center; cursor: pointer; }
+.b3d-help-btn .i { width: 22px; height: 22px; }
+.bsheet__head { display: none; }
+.booking-3d__right { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.b3d-count { font-size: 13px; color: var(--muted); }
+/* help sheet: native modal dialog pinned to the bottom */
+dialog.sheet-dialog { margin: auto 0 0; padding: 0; width: 100%; max-width: none; max-height: 85svh; border: 0; border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  background: var(--surface); color: var(--text); box-shadow: var(--sh-sheet); overflow: auto; overscroll-behavior: contain; }
+dialog.sheet-dialog::backdrop { background: var(--scrim); }
+dialog.sheet-dialog[open] { animation: bk-sheet-in var(--d-2, 400ms) var(--e-out) both; }
+.sheet-dialog__in { padding: 0 var(--edge) calc(20px + env(safe-area-inset-bottom)); }
+.sheet-dialog__top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: flex-end; height: 52px; background: var(--surface); }
+.sheet-dialog__top .grab { position: absolute; left: 50%; top: 10px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: var(--line); }
+.sheet-dialog .b3d-left { padding: 0; box-shadow: none; background: transparent; }
+@keyframes bk-sheet-in { from { transform: translateY(40px); opacity: 0; } }
+@media (min-width: 768px) { dialog.sheet-dialog { width: min(640px, 100%); margin: auto auto 0; } }
+
+@media (max-width: 1023px) {
+  .booking-3d__left { display: contents; }
+  .booking-3d__left > .b3d-left { display: none; } /* «Помощь / Противопоказания / Цены» live in the «?» sheet */
+  .booking-3d__model { order: 1; } .booking-3d__right { order: 2; }
+  .b3d-help-btn { display: inline-flex; }
+}
+/* + short landscape phones under 768 (SE 667×325, 740×360): the same two columns (RC-3; lib/ui/media LAND_PHONE_MQ) */
+@media (min-width: 768px) and (max-width: 1023px), (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
+  .booking-3d { grid-template-columns: minmax(0, 1fr) clamp(288px, 36vw, 340px); gap: 20px; align-items: start; }
+  .booking-3d__left > .bk-head, .booking-3d__left > .booking-restore { grid-column: 1 / -1; }
+  .booking-3d__right { position: sticky; top: calc(var(--header-h) + 16px); }
+  .booking-3d__model .b3d-slot { height: clamp(420px, calc(100svh - var(--demo-h, 0px) - var(--header-h) - 285px), 900px); }
+  .b3d-help-btn { top: 70px; } /* below the toolbar row */
+}
+/* the phone blocks of step 1 below use the sheet layout's query (lib/ui/media SHEET_MQ): under 768, but not the short
+   landscape phones — those take the two-column landscape layout (F25), RC-3 */
+@media (max-width: 767px) and (orientation: portrait), (max-width: 767px) and (min-height: 481px) {
+  /* R-FINAL-2 F2-01 (ТЗ 6.9 «модель на весь экран»): step 1 on phones = header 64 · one step row 40 · the model · the
+     peeking «Запись» 44 · the CTA bar 56. The model gets the rest: ≥ 50 % of the visible height on iPhone SE 548, ≥ 55 % from
+     13 mini 629 up (measured below the toolbar). The demo bar is hidden here, the stepper nav is visually hidden (read by
+     screen readers), «Шаг 1 из 7» + the H1 form one row. */
+  body:has(.bk-step--zones) { --bk-row-h: 40px; --bk-cta-h: 56px; --bk-peek: 44px; padding-bottom: calc(var(--bk-cta-h) + var(--bk-peek) + env(safe-area-inset-bottom)); }
+  html:root:has(.bk-step--zones) { --demo-h: 0px; --header-h: 72px; } /* RC-8: 8 px of air between the pill (bottom 64) and the row «Шаг 1 из 7»; the model and the sheet below are computed from --header-h */
+  body:has(.bk-step--zones) .demo-notice { display: none; }
+  .bk-page:has(.bk-step--zones) { padding-top: 0; }
+  .booking:has(.bk-step--zones), .bk-step--zones, .bk-step--zones .booking-3d { gap: 0; }
+  .booking:has(.bk-step--zones) > nav { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .bk-step--zones .bk-head { display: flex; align-items: center; gap: 8px; height: var(--bk-row-h); min-width: 0; }
+  .bk-step--zones .bk-head__step { display: block; flex: none; font-size: 13px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+  .bk-step--zones .bk-head .h2 { min-width: 0; font-size: 17px; line-height: 1.2; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* the model fills what is left of the screen above the peeking sheet and the CTA bar (no fixed floor; 180 px guards
+     a keyboard-squeezed viewport) */
+  .booking-3d__model { position: relative; gap: 0; margin-inline: calc(var(--edge) * -1); }
+  /* RC-8, BD D-3: one background from the pill through the step row to the model, no white band with a hard edge (the canvas is transparent) */
+  .booking-3d__model .b3d-slot { border-radius: 0; box-shadow: none; background: var(--bg); height: max(180px, calc(100svh - var(--header-h) - var(--bk-row-h) - var(--bk-peek) - var(--bk-cta-h) - env(safe-area-inset-bottom))); }
+  .booking-3d .b3d-toolbar { position: absolute; z-index: 3; top: 6px; left: 8px; right: 64px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; } /* right: room for «?» (8 + 44 + 12) */
+  /* the row scrolls: the edge with more buttons behind it fades out (data-fade from StepZones) */
+  .booking-3d .b3d-toolbar[data-fade="end"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+  .booking-3d .b3d-toolbar[data-fade="start"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+  .booking-3d .b3d-toolbar[data-fade="both"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+  .booking-3d .b3d-toolbar::-webkit-scrollbar { display: none; }
+  .booking-3d .b3d-toolbar > * { flex: none; }
+  .booking-3d .b3d-toolbar > [role="group"] { background: color-mix(in srgb, var(--surface) 88%, transparent) !important; box-shadow: var(--sh-1); }
+  .booking-3d .b3d-toolbar > button:not([data-testid]) { margin-left: 0; background: var(--surface); }
+  .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: static; }
+  .booking-3d .b3d-toolbar > [role="group"]:not(:first-child) { order: 0; } /* one scrolling row: М/Ж, tools, reset, 2D */
+  .b3d-help-btn { top: 6px; right: 8px; }
+  .b3d-list-link { position: absolute; z-index: 3; left: 8px; bottom: 8px; padding: 0 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text); }
+  .booking-3d__model .b2d-mode { padding-bottom: calc(8px + 44px + 12px); } /* 2D: «Попробовать 3D ещё раз» ends above the floating zone-list link (it covered the button in EN) */
+  .booking-3d__right { display: contents; }
+  /* «Запись»: non-modal sheet above the CTA bar; snaps by transform (BottomSheet) */
+  .bsheet { --peek: var(--bk-peek); --half: 45svh; /* «половина» ≤ 45 % (F2-01): the marker and the model stay in view */ position: fixed; z-index: 30; left: 0; right: 0; bottom: calc(var(--bk-cta-h) + env(safe-area-inset-bottom) + var(--kb, 0px));
+    height: calc(100svh - var(--header-h) - var(--bk-cta-h) - 12px - env(safe-area-inset-bottom) - var(--kb, 0px)); display: grid; grid-template-rows: auto minmax(0, 1fr);
+    background: var(--surface); border-radius: var(--r-sheet) var(--r-sheet) 0 0; box-shadow: var(--sh-sheet);
+    transform: translateY(calc(100% - var(--peek))); transition: transform var(--d-2, 400ms) var(--e-out); }
+  .bsheet[data-snap="half"] { transform: translateY(calc(100% - var(--half))); }
+  .bsheet[data-snap="full"] { transform: none; }
+  .bsheet[data-dragging] { transition: none; }
+  /* peek = one 44 px row: the grip on top, «Запись» left, the latest marker right; the whole row is the handle */
+  .bsheet__head { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; height: var(--bk-peek); padding: 6px var(--edge) 0; touch-action: none; cursor: grab; position: relative; }
+  .bsheet__grab { position: absolute; inset: 0; height: auto; min-height: 44px; margin: 0; border: 0; background: transparent; cursor: grab; }
+  .bsheet__grab::before { content: ""; position: absolute; left: 50%; top: 5px; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--field-border); }
+  .bsheet__title { position: relative; margin: 0; display: flex; align-items: baseline; gap: 12px; min-width: 0; font-size: 15px; pointer-events: none; }
+  .bsheet__title b { flex: none; }
+  .bsheet__title span { margin-left: auto; min-width: 0; font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bsheet__body { overflow: auto; overscroll-behavior: contain; padding: 0 var(--edge) 16px; }
+  .bsheet[data-snap="peek"] .bsheet__body { visibility: hidden; transition: visibility 0s linear var(--d-2, 400ms); } /* off-screen content is not focusable */
+  .bsheet .b3d-panel { padding: 0; box-shadow: none; background: transparent; }
+  .bsheet .b3d-panel > h2, .bsheet .b3d-panel > h2 + p { display: none; } /* the sheet head carries «Запись · N маркеров» */
+  /* RC-6: the restored-draft offer in the peek row — the two actions side by side, 44 px, the row's height unchanged (the
+     6 px top padding and the grip give way while it is there); the card's copy of the offer is for wider screens */
+  .bsheet .b3d-panel > .booking-restore { display: none; }
+  .bsheet__head:has(.booking-restore--peek) { padding-top: 0; }
+  .bsheet__head:has(.booking-restore--peek) .bsheet__grab::before { display: none; }
+  /* .bsheet__head prefix: the base .booking-restore (padding 16, grid) comes later in this file and would win */
+  .bsheet__head .booking-restore--peek { position: relative; display: flex; padding: 0; background: none; border-radius: 0; }
+  .bsheet__head .booking-restore--peek .booking-restore__acts { flex: 1; flex-wrap: nowrap; gap: 8px; }
+  .bsheet__head .booking-restore--peek .booking-restore__acts > .btn { flex: 1 1 0; min-width: 0; padding-inline: 8px; }
+  /* the CTA bar: always visible above the home indicator */
+  .bk-step--zones .bk-cta { position: fixed; z-index: 31; left: 0; right: 0; bottom: var(--kb, 0px); min-height: var(--bk-cta-h); display: flex; align-items: center; gap: 8px;
+    padding: 6px var(--edge) calc(6px + env(safe-area-inset-bottom)); background: var(--bg); box-shadow: 0 -1px 0 var(--line); }
+  .bk-step--zones .bk-cta .btn { min-height: 44px; }
+  .bk-step--zones .bk-cta .btn:not(.btn--text) { flex: 1.25; width: auto; }
+  .bk-step--zones .bk-cta .btn--text { flex: 1; justify-content: center; font-size: 13px; line-height: 1.2; white-space: normal; text-align: center; padding: 0 4px; }
+  .bk-step--zones .bk-cta .btn--text .i { display: none; }
+  .bk-step--zones .bk-cta .hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* read via aria-describedby */
+}
+/* ≤ 340 (RC-5, lead: no heading cut by «…»): the step-1 H1 in the head row was clipped in EN on 320 («Mark the areas on the
+   mod…», 227 px in 216). 16 px and a slightly tighter tracking keep RU and EN on one line with ≥ 4 px to spare; if a font ever
+   runs wider, the heading wraps onto a second line — never an ellipsis (the row grows instead) */
+@media (max-width: 340px) {
+  .bk-step--zones .bk-head { height: auto; min-height: var(--bk-row-h); }
+  .bk-step--zones .bk-head .h2 { font-size: 16px; letter-spacing: -0.015em; white-space: normal; overflow: visible; text-overflow: clip; }
+}
+/* design audit (BD, site/review/design-audit-mobile.html), phones:
+   F01 — the 3D tools never scroll under «?»: the top row keeps «Мужчина / Женщина» only; the tools + «Сброс вида» are a
+   column on the left edge (the model stands in the middle of the canvas, the column never covers it); «Схема тела (2D)»
+   sits bottom-right, «Список зон» bottom-left. The toolbar box spans the canvas but lets the pointer through.
+   F02 — in 2D the row stays a row (switch + «Модель (3D)»); the 2D content starts below it (no badge peeking between
+   the pills, 14 px of air); both segmented switches have the same grey track and white thumb.
+   F03 — the sticky «Назад / Далее» of steps 2–6 is opaque, with a soft fade above it. */
+@media (max-width: 767px) and (orientation: portrait), (max-width: 767px) and (min-height: 481px) {
+  .booking-3d .b3d-toolbar { inset: 6px 8px 8px 8px; right: 8px; display: block; overflow: visible; pointer-events: none; }
+  .booking-3d .b3d-toolbar > * { pointer-events: auto; }
+  .booking-3d .b3d-toolbar > .b3d-switch { position: absolute; left: 0; top: 0; }
+  .booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch) { position: absolute; left: 0; top: 60px; flex-direction: column; align-items: stretch; border-radius: 26px; }
+  .booking-3d .booking-3d__model .b3d-toolbar > [role="group"]:not(.b3d-switch) button { justify-content: flex-start; padding: 0 14px; }
+  .booking-3d .b3d-toolbar > button:not([data-testid]) { position: absolute; left: auto; right: 0; top: 52px; } /* «Сброс вида» under «?» on the right — under the tools column the model's hand reached it (344 px, Hard Reviewer T1) */
+  .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: absolute; top: auto; right: 0; bottom: 0; background: var(--surface); box-shadow: var(--sh-1); }
+  /* one look for both switches: an opaque grey track (it floats over the model) and a white thumb */
+  .booking-3d .b3d-toolbar > [role="group"] { background: color-mix(in srgb, var(--text) 7%, var(--bg)) !important; }
+  /* 2D: a plain row again; the 2D content starts below it */
+  .booking-3d__model:has(.b3d-slot[data-mode2d]) .b3d-toolbar { inset: 6px 64px auto 8px; display: flex; overflow-x: auto; }
+  .booking-3d__model:has(.b3d-slot[data-mode2d]) .b3d-toolbar > * { position: static; }
+  .booking-3d__model .b3d-slot[data-mode2d] .b2d-mode { padding-top: 72px; } /* 6 + 52 (the row) + 14 */
+}
+/* the model's crown clears «Мужчина / Женщина» by ≥ 8 px (reviewer MINOR, RC-2: 0–2 px on SE RU, the head beside the
+   switch's rounded end): the canvas and the poster start 12–40 px lower inside the white slot (more on shorter windows: the canvas is shorter) (the camera frames the body in
+   whatever box it gets, so the whole figure moves down and shrinks by ~5 %); 2D is untouched */
+@media (max-width: 767px) and (orientation: portrait), (max-width: 767px) and (min-height: 481px) {
+  .booking-3d__model .b3d-slot:not([data-mode2d]) :is(.b3d-host, .b3d-poster) { top: clamp(12px, calc(100px - 14svh), 40px); height: auto; bottom: 0; } /* SE 548: 23, in-app 448: 37, ≥ 630: 12 */
+}
+/* very short windows (Instagram / Facebook on an iPhone SE: 375×448; ≤ 500 px high): the left stack (switch, tools,
+   «Сброс вида», «Список зон») no longer fits the canvas — «Сброс вида» overlapped «Список зон» by 30 px. «Сброс вида» now
+   sits under «?» on every phone; here «Список зон» joins it (8 px apart); «Схема тела (2D)» bottom-right */
+@media (max-width: 767px) and (max-height: 500px) and (orientation: portrait) {
+  .booking-3d__model .b3d-list-link { top: 110px; bottom: auto; left: auto; right: 8px; }
+}
+/* landscape under 768 wide (SE 667×325, 740×360): until RC-2 the phone layout with a 120–180 px canvas (AD's interim
+   one-row toolbar, 3fc4499); since RC-3 the two-column landscape layout below (F25) — BottomSheet follows SHEET_MQ */
+/* «Модель (3D)» → «3D» in the 2D row on RU phones under 375 px: «Мужчина / Женщина» + «Модель (3D)» did not fit next to
+   «?» (−51 px on 320, −27 on 344, −11 on 360) and the button went under the fade. EN and ≥ 375 keep the full label;
+   the accessible name stays full (aria-label) */
+.b3d-sw__short { display: none; }
+@media (max-width: 374px) {
+  :lang(ru) .b3d-toolbar [data-testid="switch-3d"] .b3d-sw__full { display: none; }
+  :lang(ru) .b3d-toolbar [data-testid="switch-3d"] .b3d-sw__short { display: inline; }
+}
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) { .bsheet { transition: none; } dialog.sheet-dialog[open] { animation: none; } }
+
+
+/* R-FINAL F-02: on phones the step actions stick to the bottom of the screen (safe area), in flow, so they never cover
+   the end of the step; step 1 has its own fixed CTA bar under the «Запись» sheet */
+@media (max-width: 1023px) {
+  .bk-step:not(.bk-step--zones) .bk-actions { position: sticky; bottom: 0; z-index: 6; margin-inline: calc(var(--edge) * -1); padding: 10px var(--edge) calc(10px + env(safe-area-inset-bottom));
+    background: var(--bg); box-shadow: 0 -1px 0 var(--line); } /* opaque: nothing reads through the buttons (design audit F03) */
+  .bk-step:not(.bk-step--zones) .bk-actions::before { content: ""; position: absolute; left: 0; right: 0; bottom: calc(100% + 1px); height: 20px; background: linear-gradient(to bottom, transparent, var(--bg)); pointer-events: none; } /* the content fades out above the bar */
+  .bk-step:not(.bk-step--zones) .bk-actions .btn { flex: 1; }
+  .bk-step:not(.bk-step--zones) .bk-actions > :only-child { flex: 1; }
+}
+
+/* ---------- States from the booking logic (Frontend Builder's classes) ---------- */
+.booking-restore { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 14px; align-items: start; padding: 16px; border-radius: var(--r-card); background: var(--card-sand); }
+.booking-restore p { margin: 0; }
+.booking-restore p + p { font-size: 14px; color: var(--muted-card); }
+.booking-restore__ic { width: 40px; height: 40px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; }
+.booking-restore__acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+@media (min-width: 768px) { .booking-restore { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; } .booking-restore__acts { grid-column: auto; } }
+/* RC-6: in the «Запись» card (≥ 768, short landscape) the offer stacks — the card is ~290–350 px wide */
+.b3d-panel > .booking-restore { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.b3d-panel > .booking-restore .booking-restore__acts { grid-column: 1 / -1; }
+
+.booking-empty .btn { justify-self: start; }
+
+.times { display: grid; gap: 16px; }
+.slots-h { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: 0; }
+
+
+/* «Очистить все»: native modal dialog + undo toast (Frontend Builder's logic) */
+dialog.b3d-confirm { border: 0; padding: 24px; width: min(420px, calc(100% - 32px)); border-radius: var(--r-modal); background: var(--surface); color: var(--text); box-shadow: var(--sh-3); }
+dialog.b3d-confirm::backdrop { background: var(--scrim); }
+dialog.b3d-confirm[open] { display: flex; flex-wrap: wrap; gap: 10px; animation: bm-modal-in var(--d-1) var(--e-out); }
+dialog.b3d-confirm p { flex-basis: 100%; margin: 0 0 8px; font-size: var(--fs-h3); }
+dialog.b3d-confirm button { min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; font: 700 14px/1 var(--font-sans); cursor: pointer; }
+dialog.b3d-confirm button:first-of-type { background: var(--error); color: #fff; }
+dialog.b3d-confirm button + button { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.b3d-toast { position: fixed; z-index: 50; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 14px; min-height: 56px;
+  padding: 6px 6px 6px 18px; border-radius: var(--r-card-sm); background: var(--dark); color: var(--bg); box-shadow: var(--sh-3); animation: bm-toast-in var(--d-1) var(--e-out); }
+.b3d-toast button { min-height: 44px; padding: 0 14px; border: 0; background: transparent; color: var(--bg); font: 700 14px/1 var(--font-sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.b3d-toast button:focus-visible { outline-color: var(--focus-ring-on-dark); }
+@keyframes bm-toast-in { from { opacity: 0; transform: translate(-50%, var(--shift-1)); } }
+
+.booking-done__actions { display: grid; gap: 10px; }
+.booking-done__actions .lbl-u { margin: 0; color: var(--muted); }
+.booking-done__actions .chip .i { width: 16px; height: 16px; }
+.booking h1[tabindex="-1"]:focus { outline: none; } /* focus is moved to the step heading programmatically (announcement), no ring */
+.b2d-list { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+
+/* 2D mode (Frontend Builder's host + Brand Designer's module): frame only — nothing inside the SVG is restyled */
+.b2d-mode { display: grid; gap: 12px; padding: 16px 20px 20px; }
+.b2d-mode > p { margin: 0; font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.b2d-mode > p:first-child { color: var(--text); font-weight: 600; }
+.b2d-mode .demo-badge, .b2d-mode .b2d-reason-badge { background: var(--dark); color: #fff; }
+.b2d-mode .b2d-views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.b2d-mode .b2d-figure { margin: 0; min-width: 0; }
+.b2d-mode > button { justify-self: start; min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); font: 700 14px/1 var(--font-sans); cursor: pointer; }
+@media (hover: hover) { .b2d-mode > button:hover { background: var(--text); color: var(--bg); } }
+
+/* intensity 1–10: one row only when the card is wide enough for 44 px targets, otherwise 5 × 2 (44 px wins) */
+.b3d-markers > li { container-type: inline-size; }
+.b3d-markers .scale { grid-template-columns: repeat(5, minmax(44px, 1fr)); }
+@container (min-width: 480px) { .b3d-markers .scale { grid-template-columns: repeat(10, minmax(44px, 1fr)); } }
+
+/* 2D on phones (lead decision): < 600 px one figure + «Спереди / Сзади» segmented (markup in Fallback2D, Frontend Builder);
+   >= 600 px both figures side by side. The hidden figure is display:none — the module re-lays out by ResizeObserver. */
+.b2d-side { display: none; }
+@media (max-width: 599px) {
+  .b2d-mode .b2d-side { display: inline-flex; }
+  .b2d-mode .b2d-views { grid-template-columns: minmax(0, 1fr); }
+  .b2d-views[data-side="front"] > .b2d-figure:nth-child(2), .b2d-views[data-side="back"] > .b2d-figure:nth-child(1) { display: none; }
+}
+
+/* ---------- short screens and landscape phones (design audit BD F25–F27, RC-2) ----------
+   SHORT = phones under 700 px of visible height (SE 548, in-app 448–540, 13 mini 629…); LAND = landscape phones
+   (768–1023 wide, ≤ 480 high: iPhone 852×334, Pixel 915×360).
+   Steps 2–6 (F26, F27): «Шаг N из 7» moves into the H1 row (the stepper's own label, positioned there — the nav stays in
+   the DOM), the progress is a 3 px line under the row, the H1 22 px, the site header 52 px, tighter gaps, a 56 px bar:
+   the first service card starts at ~135 px instead of 239 (SE 548: 25 %, in-app 448: 30 %). */
+@media (max-width: 767px) and (max-height: 700px), (min-width: 768px) and (max-width: 1023px) and (max-height: 480px) {
+  html:root:has(.booking) { --header-h: 52px; } /* RC-8: the pill 4…48 + this page's 4 px padding = 8 px of air */
+  html:root:has(.bk-step--zones) { --header-h: 56px; } /* step 1 has no padding on top */
+  body:has(.booking) .site-header { --pill-y: 4px; --pill-h: 44px; }
+  body:has(.booking) .demo-notice { padding-block: 4px; } /* the demo line stays on the steps with prices / schedule, just thinner */
+  .bk-page:has(.booking) { padding-top: 4px; }
+  .booking:not(:has(.bk-step--zones)) { position: relative; gap: 8px; }
+  .booking:not(:has(.bk-step--zones)) > nav { position: absolute; z-index: 1; top: 0; left: 0; right: 0; height: 36px; padding: 0; border: 0; pointer-events: none; }
+  .booking:not(:has(.bk-step--zones)) > nav .mstep { display: flex; align-items: center; height: 36px; gap: 0; }
+  .booking:not(:has(.bk-step--zones)) > nav .mstep__name { display: none; } /* «Шаг 2 из 7 · Услуга» → «Шаг 2 из 7» (the H1 names the step) */
+  .booking:not(:has(.bk-step--zones)) > nav .mstep b { font-size: 13px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+  .booking:not(:has(.bk-step--zones)) > nav .mstep .prog { position: absolute; left: 0; right: 0; bottom: -4px; height: 3px; }
+  .booking:not(:has(.bk-step--zones)) .bk-step h1 { min-height: 36px; display: flex; align-items: center; padding-left: 84px; font-size: 22px; line-height: 1.15; }
+  .bk-step:not(.bk-step--zones) { gap: 12px; }
+  .bk-step:not(.bk-step--zones) .bk-actions { padding-block: 6px calc(6px + env(safe-area-inset-bottom)); }
+  .bk-step:not(.bk-step--zones) .bk-actions .btn { min-height: 44px; }
+}
+/* < 360 px (320×560, 344×640): the H1 does not fit next to «Шаг N из 7» and wrapped under the progress line, which read as a red
+   strike-through («Выберите дату и время», RC-3 S01). Here the step label is its own row with the line under it, the H1
+   starts below and wraps freely */
+@media (max-width: 359px) and (max-height: 700px) {
+  .booking:not(:has(.bk-step--zones)) > nav { position: relative; height: 24px; }
+  .booking:not(:has(.bk-step--zones)) > nav .mstep { height: 24px; }
+  .booking:not(:has(.bk-step--zones)) .bk-step h1 { min-height: 0; padding-left: 0; }
+}
+/* step 4 on tablets (768–1023, one column): the calendar and the slots ≤ 640 px — full width made 120 px day pills on
+   the Fold (desktop audit V5); left-aligned with the H1, not centred (two axes, RC-4) */
+@media (min-width: 768px) and (max-width: 1023px) { .bk-time { width: 100%; max-width: 640px; margin-inline: 0; } } /* on the H1's axis (one left edge), RC-4 */
+/* landscape phones: the site header scrolls away (it is not sticky on booking) */
+@media (min-width: 768px) and (max-width: 1023px) and (max-height: 480px), (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
+  body:has(.booking) .site-header { position: relative; top: 0; }
+  html:root:has(.booking) { --header-h: 48px; } /* RC-8: no height to spare for the air under the pill: 8 px off the canvas pushed the tools out of it on 640×300 and cut the card on 667×325 */
+}
+/* F25 — landscape phones, step 1: the model takes the screen. Two columns (model | «Запись» + actions), one step row
+   («Шаг 1 из 7» + H1 20 px), no demo bar on this screen, the 3D tools float over the model (switch top-left, «Сброс вида»
+   top-right next to «?», the tools as a column on the left, «Схема тела (2D)» bottom-right). Since RC-3 also the short
+   landscape phones under 768 (SE 667×325, 740×360). */
+@media (min-width: 768px) and (max-width: 1023px) and (max-height: 480px), (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
+  html:root:has(.bk-step--zones) { --demo-h: 0px; }
+  body:has(.bk-step--zones) .demo-notice { display: none; }
+  .bk-page:has(.bk-step--zones) { padding-top: 0; }
+  .booking:has(.bk-step--zones) { gap: 0; }
+  .booking:has(.bk-step--zones) > nav { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .bk-step--zones { gap: 0; }
+  .bk-step--zones .booking-3d { row-gap: 0; column-gap: 16px; align-items: start; }
+  .bk-step--zones .bk-head { display: flex; align-items: center; gap: 8px; height: 40px; min-width: 0; }
+  .bk-step--zones .bk-head__step { display: block; flex: none; font-size: 13px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+  .bk-step--zones .booking-3d__left .h2 { min-width: 0; font-size: 20px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .booking-3d .booking-3d__model { position: relative; gap: 0; }
+  .booking-3d__model .b3d-slot { height: max(200px, calc(100svh - var(--header-h) - 48px)); }
+  .booking-3d .b3d-toolbar { position: absolute; z-index: 3; inset: 6px 8px 8px 8px; display: block; pointer-events: none; }
+  .booking-3d .b3d-toolbar > * { pointer-events: auto; }
+  .booking-3d .b3d-toolbar > .b3d-switch { position: absolute; left: 0; top: 0; }
+  .booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch) { position: absolute; left: 0; top: 60px; flex-direction: column; align-items: stretch; border-radius: 26px; }
+  .booking-3d .booking-3d__model .b3d-toolbar > [role="group"]:not(.b3d-switch) button { justify-content: flex-start; padding: 0 14px; }
+  .booking-3d .b3d-toolbar > button:not([data-testid]) { position: absolute; top: 0; right: 56px; margin: 0; background: var(--surface); }
+  .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: absolute; top: auto; right: 0; bottom: 0; background: var(--surface); box-shadow: var(--sh-1); }
+  .booking-3d .b3d-toolbar > [role="group"] { background: color-mix(in srgb, var(--text) 7%, var(--bg)) !important; }
+  .booking-3d__model .b3d-help-btn { top: 6px; right: 8px; }
+  .booking-3d__model .b3d-list-link { position: absolute; z-index: 3; top: 58px; right: 8px; padding: 0 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text); } /* out of the flow: the model box = the canvas; under «?» on the right — bottom-left it lay on the tools column by 18–24 px (Hard Reviewer MAJOR) */
+  .booking-3d__model:has(.b3d-slot[data-mode2d]) .b3d-toolbar { inset: 6px 64px auto 8px; display: flex; overflow-x: auto; }
+  .booking-3d__model:has(.b3d-slot[data-mode2d]) .b3d-toolbar > * { position: static; }
+  .booking-3d__model .b3d-slot[data-mode2d] .b2d-mode { padding-top: 72px; }
+  /* the column ends with the canvas inside the window (it starts under the header + step row, not at the sticky top: the
+     old 100svh − 16 px put its end 72 px below the screen) and «Оформить запись» sticks to its bottom — visible after a
+     marker without any scroll (Hard Reviewer MAJOR, RC-2: the page could not be scrolled over the model or the column) */
+  .booking-3d__right { top: 8px; max-height: max(200px, calc(100svh - var(--header-h) - 48px)); overflow: auto; overscroll-behavior: contain; }
+  /* the column IS the «Запись» card (S04, Brand Designer: the sticky CTA on the page colour covered the white panel after
+     70–95 px — «Маркеров пока нет» cut in half, the hint and both buttons on the page without a card). White ground,
+     border and radius on the whole scrolling column, the panel inside transparent, the CTA pinned at the card's bottom on
+     the same white, the content fading out above it (Hard Reviewer polish) */
+  .booking-3d__right { gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); }
+  .booking-3d__right .b3d-panel { background: transparent; box-shadow: none; padding: 16px 16px 8px; }
+  .booking-3d__right > .bk-cta { position: sticky; bottom: 0; z-index: 2; padding: 8px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--surface); box-shadow: 0 -1px 0 var(--line); }
+  .booking-3d__right > .bk-cta::before { content: ""; position: absolute; left: 0; right: 0; bottom: calc(100% + 1px); height: 24px; background: linear-gradient(to bottom, color-mix(in srgb, var(--surface) 0%, transparent), var(--surface)); pointer-events: none; }
+  .booking-3d__right > .bk-cta .hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* as on portrait phones: read via aria-describedby; the panel itself says «Нажмите на модель…» — the pinned block stays low, the card's title clear of the fade */
+}
+/* short landscape phones under 768 (RC-3): the model column is only ~330 px wide (667×325) — «Сброс вида» at the top
+   next to «?» overlapped «Мужчина / Женщина» by 16 px; it goes under «?» (as on portrait phones), «Список зон» under it */
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
+  .booking-3d .b3d-toolbar > button:not([data-testid]) { top: 52px; right: 0; }
+  .booking-3d__model .b3d-list-link { top: 110px; }
+  /* the crown under «Мужчина / Женщина» (the switch reaches past the column's centre here): the model starts under the
+     switch row, as on portrait phones — smaller (~170 px on 667×325), whole; 2D untouched */
+  .booking-3d__model .b3d-slot:not([data-mode2d]) :is(.b3d-host, .b3d-poster) { top: 58px; height: auto; bottom: 0; }
+}
+/* RC-4 (with FB's camera framing in rc4-fb): on short landscape phones under 768 the step row «Шаг 1 из 7 + H1» moves into
+   the right column above «Запись» (label over an 18 px H1, the same 40 px) and the model takes the full height from the
+   top: +40 px of canvas on 640×300 / 667×325 */
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
+  .booking-3d__left > .bk-head { grid-column: 2; grid-row: 1; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; }
+  .bk-step--zones .booking-3d__left .h2 { font-size: 18px; }
+  .booking-3d__model { grid-column: 1; grid-row: 1 / span 2; }
+  .booking-3d__right { grid-column: 2; grid-row: 2; }
+  .booking-3d__model .b3d-slot { height: max(200px, calc(100svh - var(--header-h) - 8px)); }
+}
+/* «Сброс вида»: the icon is for the very short landscape below only */
+.b3d-reset .i { display: none; }
+.b3d-list-link .i { display: none; } /* «Список зон»: the icon only on SE landscape (≤ 330 high, below) */
+/* very short landscape phones (Moto G4 640×300: a 204 px canvas, Hard Reviewer MINOR RC-3): «?», «Сброс вида», «Список зон»
+   and «Схема тела (2D)» no longer fit one above the other on the right — «Список зон» touched «Схема тела (2D)» (−2 px).
+   «Сброс вида» becomes a 44 px icon in the top row between the switch and «?» (its label stays the accessible name),
+   «Список зон» moves up under «?» */
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 320px) {
+  .booking-3d .b3d-toolbar > button.b3d-reset:not([data-testid]) { top: 0; right: 52px; display: inline-flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; padding: 0; } /* beats the «under «?»» rule above (0,3,1) */
+  .b3d-reset .i { display: block; width: 20px; height: 20px; }
+  .b3d-reset .b3d-reset__t { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .booking-3d__model .b3d-list-link { top: 58px; }
+  /* the tools column (≈ 144 px) started at 66 and ran ~7 px past the 204 px canvas; with the switch it did not fit at all:
+     the tracks of both get 2 px instead of 4 (the buttons stay 44 px) — switch 48, column 140, 4 px between them, 6 to the
+     canvas edge */
+  .booking-3d .b3d-toolbar > [role="group"] { padding: 2px; }
+  .booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch) { top: 52px; }
+}
+/* RC-4 (lead: option 2, CSS only; FB frames the camera tighter in rc4-fb): on short landscape phones under 768 the model
+   switch stands vertically at the top of the left column, the tools under it — full labels, both tracks 112 px wide —, so
+   the top row is free and the model starts 12 px under the canvas top (the figure ≥ 190 px with FB's framing) */
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
+  .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > .b3d-switch { flex-direction: column; align-items: stretch; width: 112px; border-radius: 26px; } /* 3D only: 2D keeps its row */
+  .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > .b3d-switch button { padding: 0 14px; text-align: left; }
+  .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > [role="group"]:not(.b3d-switch) { top: 106px; width: 112px; } /* switch 2 × 44 + 2 + 2 × 4 = 98, 8 between */
+  .booking-3d__model .b3d-slot:not([data-mode2d]) :is(.b3d-host, .b3d-poster) { top: 12px; }
+}
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 320px) {
+  .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > [role="group"]:not(.b3d-switch) { top: 98px; } /* 2 px tracks: switch 94, 4 between, the column ends at the canvas bottom (244 on 640×300) */
+}
+/* SE landscape (< 768, ≤ 330 high: 640×300, 667×325 — RC-4, lead: option A): the figure ≥ 190 px (FB's framing) did not fit
+   between the tools column (120 px) and the text buttons on the right — Hard Reviewer T1 / T3. On the right a column of
+   44 px icons: «?» 6–50, «Сброс вида» 58–102, «Список зон» 110–154 (full names stay the accessible name and the title),
+   «Схема тела (2D)» → «2D» bottom-right; the canvas shifts 34 px right at its full width — the model stands in the middle
+   of the free strip (120 … width − 52) and the camera framing is unchanged. 740×360 and taller: nothing changes */
+@media (max-width: 767px) and (orientation: landscape) and (max-height: 330px) {
+  .booking-3d .b3d-toolbar > button.b3d-reset:not([data-testid]) { top: 52px; right: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; min-width: 44px; padding: 0; }
+  .b3d-reset .i { display: block; width: 20px; height: 20px; }
+  .b3d-reset .b3d-reset__t, .b3d-list-link .b3d-list-link__t { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .booking-3d__model .b3d-list-link { top: 110px; right: 8px; width: 44px; min-width: 44px; height: 44px; padding: 0; justify-content: center; border-radius: 50%; background: var(--surface); box-shadow: var(--sh-1), inset 0 0 0 1px var(--field-border); text-decoration: none; } /* the same ring as «?» above it */
+  .b3d-list-link .i { display: block; width: 20px; height: 20px; }
+  .booking-3d [data-testid="switch-2d"] .b3d-sw__full { display: none; }
+  .booking-3d [data-testid="switch-2d"] .b3d-sw__short { display: inline; }
+  .booking-3d__model .b3d-slot:not([data-mode2d]) :is(.b3d-host, .b3d-poster) { left: 34px; right: -34px; }
+}

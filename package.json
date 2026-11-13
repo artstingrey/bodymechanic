@@ -1,0 +1,43 @@
+{
+  "name": "bodymechanic-site",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "sync": "node scripts/sync-assets.mjs",
+    "dev": "next dev",
+    "build": "next build && node scripts/fix-export-segments.mjs && node scripts/lp-postexport.mjs",
+    "serve": "node scripts/serve-out.mjs",
+    "i18n": "node scripts/check-i18n.mjs",
+    "gate": "node scripts/check-i18n.mjs && playwright test",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test:matrix": "node scripts/test-matrix.mjs",
+    "gate:clean": "node scripts/clean-build.mjs"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.9",
+    "@react-three/fiber": "^9.8.2",
+    "gsap": "^3.15.1",
+    "next": "16.4.5",
+    "next-intl": "^4.14.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "^0.187.0",
+    "three-mesh-bvh": "^0.9.18"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.187.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

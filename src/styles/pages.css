@@ -1,0 +1,246 @@
+/* =====================================================================
+   The Body Mechanic · inner templates (ТЗ §10): services, service, prices, team, specialist, journal, article,
+   contacts, documents, account, 404. Same language as the home page: A + C hairlines + B photo rhythm.
+   ===================================================================== */
+.page { padding-block: 12px var(--section-y); }
+.page-head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding-bottom: 28px; margin-bottom: 32px; border-bottom: 1px solid var(--line); }
+/* RC-6 (lead + AD, option б): one H1 formula for every inner page. Below ≈ 376 px the size follows the viewport, 9.75vw − 3.7px:
+   27.5 px on 320, 29.4 on 340, 31.4 on 360, 32.9 on 375, so /privacy no longer sits 5 px below its neighbours (it was the only page
+   lowered for its long word); from 376 px (33 px) the clamp as before. Service H1 [data-long], low landscape and ≥ 1024 keep their
+   own rules below. */
+.page-head .h1 { font-size: min(clamp(1.875rem, 1.5rem + 2.4vw, 3.75rem), calc(9.75vw - 3.7px)); overflow-wrap: break-word; text-wrap: balance; } /* no hanging last word (F11; iOS < 17.5: lib/typo noWidow) */
+/* RC-5 (lead): a word longer than a phone column at 30 px («конфиденциальности», 326 px on 320) lowers the H1 just enough to stay
+   whole — --word = its width in em (PageHead → lib/typo longWordEm, 5 % reserve). RC-6: kept as a safeguard inside the same min,
+   so /privacy is 26.7 px on 320, 28.5 on 340, 30.4 on 360 (0.8–1.1 px under its neighbours) and the usual size from ≈ 395 */
+.page-head .h1[data-word] { font-size: min(clamp(1.875rem, 1.5rem + 2.4vw, 3.75rem), calc(9.75vw - 3.7px), calc((100vw - 2 * var(--edge)) / var(--word))); }
+.page-head .lead { max-width: 760px; }
+.page-head .crumbs { margin-left: -4px; }
+.page-head .eyebrow { margin: 4px 0 0; }
+.page-head__badge { justify-self: start; } /* «Демо» under the specialist's name (F18) */
+.page-sec { margin-top: 40px; display: grid; gap: 16px; }
+.page-sec > .h3 { margin: 0; }
+.page-cta { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; justify-content: space-between; padding-top: 24px; border-top: 1px solid var(--line); }
+.page-cta .cap { margin: 0; }
+@media (min-width: 1024px) { .page-head { padding-bottom: 36px; margin-bottom: 40px; } }
+
+/* lists of cards */
+.list-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; margin-bottom: 24px; }
+.list-bar .cap { margin: 0; }
+.card-grid { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.card-grid > li { display: flex; min-width: 0; }
+.card-grid > li > * { flex: 1; }
+@media (min-width: 600px) { .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } } /* tablets 600–767 (AD's V1, lead) */
+@media (min-width: 768px) { .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; } }
+@media (min-width: 1024px) { .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } .card-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 2560px) { .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .card-grid--4 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.link-list { margin: 0; padding: 0; list-style: none; display: grid; }
+.link-list li { border-top: 1px solid var(--line); }
+.link-list li:last-child { border-bottom: 1px solid var(--line); }
+.link-list a { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; font-weight: 700; text-decoration: none; }
+.link-list a::after { content: "→"; color: var(--accent-ink); }
+@media (hover: hover) { .link-list a:hover { text-decoration: underline; text-underline-offset: 4px; } }
+
+/* ---------- service ---------- */
+.svc-hero { display: grid; gap: 24px; }
+.svc-hero__photo picture, .svc-hero__photo img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r-card); }
+.svc-hero__photo .photo-cap { font-size: var(--fs-caption); color: var(--muted); margin: 6px 4px 0; }
+/* tablets 600–1023 (AD's V1, lead: D-03 and the order «price → button → description → photo» stay): the full-width 4:5 photo
+   was ≈ 940×1100 on Fold 7 984 — capped at 60 % of the screen, cropped by object-fit around the photo's focal point */
+@media (min-width: 600px) and (max-width: 1023px) { .svc-hero__photo picture, .svc-hero__photo img { max-height: 60svh; } }
+.svc-hero__text { display: grid; gap: 20px; align-content: start; }
+.svc-hero__text .page-head { margin-bottom: 0; }
+.svc-hero__text .btn-book { justify-self: start; }
+.facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--text); }
+.facts > div { display: grid; gap: 4px; padding: 14px 0 0; }
+.facts > div + div { border-left: 1px solid var(--line); padding-left: 16px; }
+.facts dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+@media (min-width: 1024px) {
+  .svc-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
+  .svc-hero__photo { position: sticky; top: calc(var(--header-h) + 16px); }
+}
+/* Service and specialist first screen (R-FINAL-2 D-03, lead's option A; one template for both pages). The DOM follows the phone
+   order: head (crumbs, eyebrow, H1) → price → «Записаться» → description → photo. Below 1024 the photo goes after the text and
+   the head drops its bottom rule (the price block's dark rule separates them); ≥ 1024 the description returns under the H1,
+   above the head's rule, exactly as before. */
+.hero-lead { max-width: 760px; margin: 0; }
+/* long service names on phones (lead, design audit F11): 26 px, so «Классический массаж с инфракрасной капсулой» sets in two even lines
+   instead of three with «капсулой» hanging; short names keep the scale */
+@media (max-width: 767px) { .svc-hero__text .page-head .h1[data-long] { font-size: min(1.625rem, calc((100vw - 2 * var(--edge)) / var(--tail, 1))); } }
+/* ↑ --tail (PageHead → lib/typo tailEm): the last-line unit in em; on 320–359 px 26 px would leave «капсулой» alone (RC-2) */
+/* the same on two columns (lead, RC-2: H1 ≥ 40 px): on 1024–1408 the 7fr column (533–672 px) left «капсулой» alone at 48–58 px;
+   the head is the size container, so 100cqi = the H1 column; the size steps down only as far as the unit needs (41–52 px) */
+@media (min-width: 1024px) {
+  .svc-hero__text > .page-head { container-type: inline-size; }
+  .svc-hero__text .page-head .h1[data-long] { font-size: max(40px, min(clamp(1.875rem, 1.5rem + 2.4vw, 3.75rem), 100cqi / var(--tail, 0.01))); }
+}
+@media (max-width: 1023px) {
+  .svc-hero__photo, .profile__photo { order: 2; }
+  .svc-hero__text > .page-head, .profile__text > .page-head { padding-bottom: 0; border-bottom: 0; }
+}
+@media (min-width: 1024px) {
+  .svc-hero__text > .page-head, .profile__text > .page-head { order: -2; padding-bottom: 0; border-bottom: 0; }
+  .svc-hero__text > .hero-lead, .profile__text > .hero-lead { order: -1; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
+  .svc-hero__text > .hero-lead { margin-top: -8px; }   /* gap 20 → 12, the head's own gap */
+  .profile__text > .hero-lead { margin-top: -4px; }    /* gap 16 → 12 */
+  .profile__text > .profile__slots { order: 0; }
+  .profile__text > .btn-book { order: 1; }
+  .profile__text > .btn--text { order: 2; }
+}
+/* low landscape phones (852×340, 915×360): H1 one step smaller, price and «Записаться» in one row */
+@media (orientation: landscape) and (max-height: 519px) and (max-width: 1023px) {
+  .svc-hero__text .page-head .h1, .profile__text .page-head .h1 { font-size: 2rem; }
+  .svc-hero__text { grid-template-columns: minmax(0, 1fr) auto; align-items: end; column-gap: 24px; }
+  .svc-hero__text > :not(.facts, .btn-book) { grid-column: 1 / -1; }
+}
+/* short portrait phones (visible height ≤ 560: in-app SE 448 and Moto G4 540, 320×560, SE 548; R-FINAL-2 F2-03): the price and
+   «Записаться» share a row and the duration is one line below, so the button stays in the first screen on every service. The price
+   block and the button share one grid cell: the button sits at the end of the price row, the price keeps clear of it (no change to
+   the <dl>). Landscape keeps price, duration and button in one row (rule above). */
+@media (max-width: 1023px) and (max-height: 560px) and (orientation: portrait) {
+  .svc-hero__text > .page-head { grid-row: 1; }
+  .svc-hero__text > .facts, .svc-hero__text > .btn-book { grid-row: 2; grid-column: 1; }
+  .svc-hero__text > .hero-lead { grid-row: 3; }
+  .svc-hero__text > .btn-book { justify-self: end; align-self: start; margin-top: 12px; padding-inline: 20px; position: relative; z-index: 1; }
+  .svc-hero__text > .facts { grid-template-columns: minmax(0, 1fr); }
+  .svc-hero__text > .facts > div:first-child { padding-right: 148px; }
+  :lang(en) .svc-hero__text > .facts > div:first-child { padding-right: 104px; } /* «Book» is narrower than «Записаться» */
+  .svc-hero__text > .facts > div + div { border-left: 0; padding: 6px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+}
+.doc-sections { margin-top: 48px; display: grid; gap: 0 32px; }
+.doc-sections > section { display: grid; gap: 10px; align-content: start; padding: 20px 0; border-top: 1px solid var(--line); }
+.doc-sections > section .h3, .doc-sections > section p { margin: 0; }
+@media (min-width: 768px) { .doc-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); } .doc-sections__wide { grid-column: 1 / -1; } }
+
+/* ---------- prices ---------- */
+.table-wrap { overflow-x: auto; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.price-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.price-table th, .price-table td { text-align: left; padding: 6px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.price-table thead th { padding-block: 12px; font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); background: var(--bg); }
+.price-table tbody th { font-weight: 600; }
+.price-table tbody th a { text-decoration: none; }
+@media (hover: hover) { .price-table tbody th a:hover { text-decoration: underline; text-underline-offset: 4px; } }
+.price-table tbody tr:last-child > * { border-bottom: 0; }
+.price-table td { white-space: nowrap; font-weight: 700; }
+.price-table td .badge { margin-left: 6px; }
+.price-table td:not(.price-table__price) { font-weight: 500; color: var(--muted); } /* the price leads, the duration follows (F16) */
+@media (max-width: 599px) {
+  .price-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .price-table, .price-table tbody, .price-table tr, .price-table th, .price-table td { display: block; }
+  .price-table td:empty { display: none; } /* no duration → nothing, not a «—» before «Цена — по запросу» (F16) */
+  .price-table tr { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .price-table tbody tr:last-child { border-bottom: 0; }
+  .price-table th, .price-table td { padding: 0; border: 0; }
+  .price-table td { display: inline-flex; align-items: center; margin-right: 12px; font-size: 14px; }
+}
+
+/* ---------- specialist ---------- */
+.profile { display: grid; gap: 24px; }
+.profile__photo .ph { max-width: 420px; }
+.profile__text { display: grid; gap: 16px; align-content: start; }
+.profile__text .page-head { margin-bottom: 0; }
+.profile__text .btn { justify-self: start; }
+.profile__slots { display: grid; gap: 10px; }
+.profile__slots .h3 { margin: 0; }
+.profile__slots ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+.profile__slots li > a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border);
+  color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color var(--d-hover) var(--e-out), color var(--d-hover) var(--e-out); }
+@media (hover: hover) { .profile__slots li > a:hover { background: var(--text); color: var(--bg); box-shadow: none; } }
+/* below 1024 the slots sit in the first screen above the photo (D-03): one slot per row, so the list height never depends on
+   the text width, and the loading line reserves the height of the 4 windows (NearestSlots shows up to 4), so the photo below
+   does not jump when they arrive after hydration (Lighthouse CLS 0.065 → 0) */
+@media (max-width: 1023px) {
+  .profile__slots ul { flex-direction: column; align-items: stretch; } /* full-width windows, not a left column (design audit F18) */
+  .profile__slots li > a { width: 100%; }
+  .profile__slots .booking-loading { min-height: calc(4 * 44px + 3 * 8px); align-items: flex-start; padding-top: 12px; }
+}
+/* tablets 600–1023 (AD's V2, lead): the windows as pills two by two, not full-width bars; the grid fixes the height
+   (2 rows for the 4 windows), and the loading line reserves exactly that — no shift when they arrive (CLS ≤ 0.1) */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .profile__slots ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 560px; }
+  .profile__slots li > a { justify-content: center; }
+  .profile__slots .booking-loading { min-height: calc(2 * 44px + 8px); }
+}
+@media (min-width: 1024px) { .profile { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: start; } }
+
+/* ---------- journal ---------- */
+.post { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.post__cover { aspect-ratio: 16 / 9; border-radius: var(--r-photo); overflow: hidden; background: var(--card-sand); }
+.post__cover picture, .post__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.post .eyebrow, .post .h3, .post .todo, .post__badge { margin: 0; }
+.post .h3 a { text-decoration: none; }
+.post .h3 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--r-photo); }
+.post .btn--text { align-self: flex-start; pointer-events: none; }
+.post:has(a:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 4px; border-radius: var(--r-photo); }
+.post a:focus-visible { outline: none; }
+@media (hover: hover) { .post:hover .h3 a { text-decoration: underline; text-underline-offset: 4px; } .post:hover .btn--text .i { transform: translateX(4px); } }
+.post-cover { margin-bottom: 32px; aspect-ratio: 16 / 9; border-radius: var(--r-card); overflow: hidden; background: var(--card-sand); }
+.post-cover picture, .post-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.post-body { display: grid; gap: 24px; }
+.post-toc, .post-author { display: grid; gap: 10px; align-content: start; padding: 20px; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.post-toc .lbl-u, .post-author .lbl-u { margin: 0; color: var(--muted); font-size: var(--fs-micro); }
+.post-author__row { display: flex; align-items: center; gap: 12px; }
+.post-author .btn { justify-self: start; }
+.post-text { max-width: 720px; font-size: 18px; line-height: 1.65; }
+@media (min-width: 1024px) {
+  .post-body { grid-template-columns: 260px minmax(0, 1fr) 280px; gap: 40px; align-items: start; }
+  .post-toc, .post-author { position: sticky; top: calc(var(--header-h) + 16px); }
+}
+
+/* ---------- contacts ---------- */
+.contacts { display: grid; gap: 24px; }
+.contacts__list { margin: 0; display: grid; }
+.contacts__list > div { display: grid; gap: 4px; padding: 14px 0; border-top: 1px solid var(--line); }
+.contacts__list > div:first-child { border-top: 0; padding-top: 0; } /* one rule under the H1, not two 33 px apart (design audit F09) */
+.contacts__list dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
+.contacts__list dd { margin: 0; }
+.contacts__list .pending { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; font-size: 16px; } /* S03: one line + one «Демо» */
+.map-facade { position: relative; margin: 0; min-height: 320px; border-radius: var(--r-card); background: var(--card-sky); display: grid; place-items: center; align-content: center; gap: 12px; padding: 24px; overflow: hidden;
+  background-image: linear-gradient(var(--hairline) 1px, transparent 1px), linear-gradient(90deg, var(--hairline) 1px, transparent 1px); background-size: 48px 48px; }
+.map-facade .space__tick { position: absolute; left: 50%; top: 24%; } /* in the upper part, clear of the «Открыть карту» button (F09) */
+.map-facade .btn { position: relative; margin-top: 64px; background: var(--surface); }
+.map-facade figcaption { position: relative; color: var(--muted-card); }
+/* no address yet (reviewer, RC-2): the brand map placeholder, the landing's «Как добраться» in the site's scale — Bone plate (as the
+   photo placeholders), the copper pin, the line «Адрес появится перед запуском» + «Демо» at the bottom like .ph__cap */
+.map-facade--pending { background: color-mix(in srgb, var(--text) 5%, var(--bg)); background-image: none; }
+.map-facade__pin { position: absolute; left: 50%; top: 46%; width: 20px; height: 20px; margin: -20px 0 0 -10px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }
+.map-facade .map-facade__cap { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 14px; line-height: 1.3; color: var(--muted); }
+@media (min-width: 1024px) { .contacts { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; } .map-facade { min-height: 480px; } }
+
+/* ---------- documents ---------- */
+.doc-text { max-width: 760px; font-size: 18px; line-height: 1.65; }
+
+/* ---------- account (Frontend Builder's markup, styled from here) ---------- */
+.account > div, .account form { display: grid; gap: 16px; max-width: 760px; }
+.account form { padding: 24px; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+/* D-05: the login form uses the kit fields (components/ui/Field) — the bare-control rules below must not restyle them
+   (a second border inside .input, «*» on its own line); same PhoneField as on the home page */
+.account label:not(.field > label) { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.account input:not(.input > input):not([type="checkbox"]):not([type="radio"]) { min-height: 52px; border: 0; border-radius: var(--r-field); box-shadow: inset 0 0 0 1px var(--field-border); background: var(--surface); padding: 0 14px; font: 400 16px/1.4 var(--font-sans); color: var(--text); }
+.account input:not(.input > input):focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--text); }
+.account input:not(.input > input):disabled { background: var(--bg); color: var(--muted); }
+.account button:not(.link-button) { min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); font: 700 14px/1 var(--font-sans); cursor: pointer; }
+.account button[type="submit"] { justify-self: start; min-height: 52px; padding: 0 26px; background: var(--accent); color: #fff; box-shadow: none; font-size: 15px; }
+.account button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
+.account section { display: grid; gap: 12px; margin-top: 8px; }
+.account h2 { font-size: var(--fs-h3); margin: 0; }
+.account ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.account .card { display: grid; gap: 8px; padding: 20px; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.account .card h3 { margin: 0; font-size: 18px; }
+.account .card p { margin: 0; }
+.account-late { padding: 12px 14px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--warning) 10%, var(--surface)); color: var(--warning); font-weight: 600; }
+.account-reschedule { display: grid; gap: 12px; padding: 16px; border-radius: var(--r-card-sm); background: var(--bg); }
+.account-reschedule h3 { margin: 0; font-size: 16px; }
+.account-reschedule h3:focus { outline: none; }
+.account .dates { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.account .dates button, .account .times button { box-shadow: inset 0 0 0 1px var(--field-border); font-weight: 700; font-variant-numeric: tabular-nums; }
+.account .dates button[aria-disabled="true"] { background: repeating-linear-gradient(135deg, var(--bg) 0 4px, var(--surface) 4px 8px); color: var(--muted); box-shadow: none; cursor: not-allowed; font-weight: 500; }
+.account .dates button[aria-pressed="true"], .account .times button[aria-pressed="true"] { background: var(--text); color: var(--bg); box-shadow: none; }
+.account .times { display: flex; flex-wrap: wrap; gap: 8px; }
+dialog.account-cancel[open] { display: grid; gap: 12px; padding: 24px; border: 0; border-radius: var(--r-modal); box-shadow: var(--sh-3); width: min(440px, calc(100% - 32px)); }
+dialog.account-cancel button { min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; font: 700 14px/1 var(--font-sans); cursor: pointer; }
+dialog.account-cancel button:first-of-type { background: var(--error); color: #fff; }
+dialog.account-cancel button + button { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); }
+
+/* ---------- 404: the model with a crosshair aimed at empty space ---------- */

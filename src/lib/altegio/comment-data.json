@@ -1,0 +1,115 @@
+{
+ "modes": [
+  "ru",
+  "en",
+  "both"
+ ],
+ "default": "both",
+ "prefixes": {
+  "prefix3d": "[Сайт/3D]",
+  "prefixForm": "[Сайт/форма]",
+  "prefixLp": "[Сайт/LP]"
+ },
+ "labels": {
+  "profile": {
+   "ru": "Пол: {gender} · Возраст: {age}",
+   "en": "Gender: {gender} · Age: {age}"
+  },
+  "genderMale": {
+   "ru": "М",
+   "en": "M"
+  },
+  "genderFemale": {
+   "ru": "Ж",
+   "en": "F"
+  },
+  "zonesLabel": {
+   "ru": "Зоны: {list}",
+   "en": "Areas: {list}"
+  },
+  "zoneItem": {
+   "ru": "{n}) {zone}",
+   "en": "{n}) {zone}"
+  },
+  "zoneIntensity": {
+   "ru": "{value}/10",
+   "en": "{value}/10"
+  },
+  "zoneNote": {
+   "ru": "«{note}»",
+   "en": "«{note}»"
+  },
+  "stateLabel": {
+   "ru": "Состояние: {text}",
+   "en": "Condition: {text}"
+  },
+  "utmLabel": {
+   "ru": "UTM: {utm}",
+   "en": "UTM: {utm}"
+  }
+ },
+ "pairJoiner": " / ",
+ "joiners": {
+  "zones": "; ",
+  "zoneParts": " — ",
+  "lines": "\n"
+ },
+ "maxLength": 1000,
+ "examples": {
+  "ru": "[Сайт/3D] Пол: М · Возраст: 34\nЗоны: 1) Поясничный отдел — 6/10 — «тянет после бега»; 2) Задняя поверхность бедра, левая сторона — 4/10\nСостояние: готовлюсь к полумарафону, боль после длинных пробежек\nUTM: google / cpc / sports_massage",
+  "en": "[Сайт/3D] Gender: M · Age: 34\nAreas: 1) Lower back — 6/10 — «тянет после бега»; 2) Back of thigh, left side — 4/10\nCondition: готовлюсь к полумарафону, боль после длинных пробежек\nUTM: google / cpc / sports_massage",
+  "both": "[Сайт/3D] Пол / Gender: М / M · Возраст / Age: 34\nЗоны / Areas: 1) Поясничный отдел / Lower back — 6/10 — «тянет после бега»; 2) Задняя поверхность бедра, левая сторона / Back of thigh, left side — 4/10\nСостояние / Condition: готовлюсь к полумарафону, боль после длинных пробежек\nUTM: google / cpc / sports_massage"
+ },
+ "zones": {
+  "ru": {
+   "neck_collar": "Шейно-воротниковый отдел",
+   "shoulder_girdle": "Плечевой пояс",
+   "chest": "Грудной отдел",
+   "abdomen": "Брюшная полость",
+   "thoracic_spine": "Грудной отдел позвоночника",
+   "lumbar": "Поясничный отдел",
+   "gluteal": "Ягодичный отдел",
+   "hip_joint": "Тазобедренный сустав",
+   "quadriceps": "Передняя поверхность бедра",
+   "hamstrings": "Задняя поверхность бедра",
+   "knee": "Колено",
+   "calves": "Икроножные мышцы",
+   "ankle": "Голеностоп",
+   "foot": "Стопа",
+   "shoulder_joint": "Плечевой сустав",
+   "elbow_forearm": "Локоть / предплечье",
+   "hand": "Кисть",
+   "shin": "Голень (передняя поверхность)",
+   "left": "{zone}, левая сторона",
+   "right": "{zone}, правая сторона",
+   "sideFront": "Спереди",
+   "sideBack": "Сзади",
+   "unknown": "Зона не определена"
+  },
+  "en": {
+   "neck_collar": "Neck & upper back",
+   "shoulder_girdle": "Shoulder girdle",
+   "chest": "Chest",
+   "abdomen": "Abdomen",
+   "thoracic_spine": "Thoracic spine",
+   "lumbar": "Lower back",
+   "gluteal": "Glutes",
+   "hip_joint": "Hip joint",
+   "quadriceps": "Front thigh",
+   "hamstrings": "Back of thigh",
+   "knee": "Knee",
+   "calves": "Calves",
+   "ankle": "Ankle",
+   "foot": "Foot",
+   "shoulder_joint": "Shoulder joint",
+   "elbow_forearm": "Elbow / forearm",
+   "hand": "Hand",
+   "shin": "Shin",
+   "left": "{zone}, left side",
+   "right": "{zone}, right side",
+   "sideFront": "Front",
+   "sideBack": "Back",
+   "unknown": "Area not identified"
+  }
+ }
+}

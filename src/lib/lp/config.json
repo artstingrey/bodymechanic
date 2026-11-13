@@ -1,0 +1,156 @@
+{
+ "versions": {
+  "a": {
+   "waTag": "[LP-A]",
+   "defaultH1": "lp.h1.a1",
+   "subKey": "lp.a.sub",
+   "situationKey": "lp.a.situation",
+   "waMessageKey": "lp.a.wa.message",
+   "seoTitleKey": "lp.a.seo.title",
+   "seoDescriptionKey": "lp.a.seo.description",
+   "services": [
+    {
+     "id": "sports",
+     "titleKey": "mock.services.sports.title",
+     "descriptionKey": "lp.services.desc.sports",
+     "priceMin": 650
+    },
+    {
+     "id": "sportsInfrared",
+     "titleKey": "mock.services.sportsInfrared.title",
+     "descriptionKey": "lp.services.desc.sportsInfrared",
+     "priceMin": 750
+    },
+    {
+     "id": "fullComplex",
+     "titleKey": "mock.services.fullComplex.title",
+     "descriptionKey": "lp.services.desc.fullComplex",
+     "priceMin": 900
+    }
+   ],
+   "chips": [
+    {
+     "id": "recovery",
+     "key": "lp.chips.recovery"
+    },
+    {
+     "id": "event",
+     "key": "lp.chips.event"
+    },
+    {
+     "id": "neckShoulders",
+     "key": "lp.chips.neckShoulders"
+    },
+    {
+     "id": "lowerBack",
+     "key": "lp.chips.lowerBack"
+    },
+    {
+     "id": "notSure",
+     "key": "lp.chips.notSure"
+    }
+   ]
+  },
+  "b": {
+   "waTag": "[LP-B]",
+   "defaultH1": "lp.h1.b1",
+   "subKey": "lp.b.sub",
+   "situationKey": "lp.b.situation",
+   "waMessageKey": "lp.b.wa.message",
+   "seoTitleKey": "lp.b.seo.title",
+   "seoDescriptionKey": "lp.b.seo.description",
+   "services": [
+    {
+     "id": "classic",
+     "titleKey": "mock.services.classic.title",
+     "descriptionKey": "lp.services.desc.classic",
+     "priceMin": 650
+    },
+    {
+     "id": "sports",
+     "titleKey": "mock.services.sports.title",
+     "descriptionKey": "lp.services.desc.sports",
+     "priceMin": 650
+    },
+    {
+     "id": "thai",
+     "titleKey": "mock.services.thai.title",
+     "descriptionKey": "lp.services.desc.thai",
+     "priceMin": 650
+    }
+   ],
+   "chips": [
+    {
+     "id": "neckShoulders",
+     "key": "lp.chips.neckShoulders"
+    },
+    {
+     "id": "lowerBack",
+     "key": "lp.chips.lowerBack"
+    },
+    {
+     "id": "recovery",
+     "key": "lp.chips.recovery"
+    },
+    {
+     "id": "notSure",
+     "key": "lp.chips.notSure"
+    }
+   ]
+  }
+ },
+ "offer": {
+  "id": "first_visit_example",
+  "status": "example",
+  "percent": 20,
+  "currency": "AED",
+  "demoPrice": 650,
+  "demoSalePrice": 520,
+  "keys": {
+   "badge": "lp.offer.badge",
+   "body": "lp.offer.body",
+   "service": "lp.offer.service",
+   "full": "lp.offer.full",
+   "urgency": "lp.offer.urgency",
+   "terms": "lp.offer.terms"
+  },
+  "exampleBadge": {
+   "key": "lp.offer.exampleBadge",
+   "shortKey": "lp.offer.exampleBadgeShort"
+  }
+ },
+ "notifications": {
+  "telegram": {
+   "includeMarks": false,
+   "marksLineRu": "Есть отметки: да",
+   "marksHintRu": "Клиент отметил, что важно, уточните при подтверждении времени"
+  }
+ },
+ "faq": {
+  "order": [
+   "lp.faq.duration",
+   "home.faq.prepare",
+   "lp.faq.contraindications",
+   "lp.faq.afterRequest",
+   "home.faq.reschedule",
+   "lp.faq.price"
+  ]
+ },
+ "blockTitleKeys": {
+  "why": "lp.why.title",
+  "steps": "lp.steps.title",
+  "services": "lp.services.title",
+  "studio": "lp.studio.title",
+  "risk": "lp.risk.title",
+  "faq": "home.faq.title",
+  "final": "lp.final.title"
+ },
+ "directions": {
+  "titleKey": "booking.done.directions",
+  "keys": [
+   "lp.directions.district",
+   "lp.directions.building",
+   "lp.directions.mapLink"
+  ]
+ }
+}

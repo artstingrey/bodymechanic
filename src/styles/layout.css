@@ -1,0 +1,317 @@
+/* =====================================================================
+   The Body Mechanic · global chrome: demo bar, header, burger, FAB, footer, cookie banner.
+   Owner: art director (README «РАБОТА В ОДНОМ КОДЕ»). Spec: site/design/hifi/ui-kit.html, motion-spec.html.
+   ===================================================================== */
+
+/* ---------- Prototype bar ---------- */
+.demo-notice { margin: 0; padding: 8px var(--edge); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px;
+  font-size: var(--fs-caption); line-height: 1.35; color: var(--muted); background: var(--bg); border-bottom: 1px solid var(--line); text-align: center; }
+:root:has(.demo-notice) { --demo-h: 37px; } /* prototype bar above the header (the full-screen 3D on /booking subtracts it) */
+/* phones: the notice wraps to two lines instead of «— пр…» (design audit F04: a sentence cut by an ellipsis at the very top read as
+   an error). --demo-h is only used by /booking on tablets; on /booking step 1 phones the bar is hidden (booking.css) */
+.demo-notice__short { display: none; }
+@media (max-width: 767px) { .demo-notice { display: block; font-size: var(--fs-caption); line-height: 18px; text-align: left; } .demo-notice .demo-badge { margin-right: 6px; } :root:has(.demo-notice) { --demo-h: 52px; }
+  .demo-notice:has(.demo-notice__short) .demo-notice__full { display: none; } .demo-notice__short { display: inline; } :root:has(.demo-notice__short) { --demo-h: 34px; } }
+.demo-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(38, 34, 31, 0.08);
+  color: var(--text); font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* ---------- Header: a floating pill (RC-8, the client's approved layout: review/skill-bakeoff/variant-final.html). The element keeps the
+   in-flow height of the old bar (--header-h): nothing below moves, the sticky / anchor offsets that use --header-h stay right and
+   clear the pill (64 > 8 + 56; 80 > 8 + 64). --pill-y = the pill's top in the bar; stuck, it rests at max(8px, the safe area). ---------- */
+.site-header { --pill-y: 8px; --pill-h: min(56px, calc(var(--header-h) - 4px)); --pill-x: max(12px, env(safe-area-inset-left), env(safe-area-inset-right)); --logo-end: 140px;
+  position: sticky; top: max(calc(8px - var(--pill-y)), calc(env(safe-area-inset-top) - var(--pill-y))); z-index: 40; height: var(--header-h); pointer-events: none; transition: z-index 0s linear 170ms; }
+/* above the cookie card (45) while the menu is open */
+.site-header:has(dialog[open]) { z-index: 46; transition-delay: 0s; }
+.site-header__bar { position: absolute; z-index: 2; left: var(--pill-x); right: var(--pill-x); top: min(var(--pill-y), calc(var(--header-h) - var(--pill-h))); height: var(--pill-h); pointer-events: none; transition: transform var(--d-1) var(--e-out); }
+/* solid by default; translucent only where the browser can blur what is under it. Under the lockup it stays solid --bg, the colour
+   of the plate inside the logo file (force-dark, D-06): no box around the logo over a dark block or under the menu's scrim */
+.site-header__bg { position: absolute; inset: 0; border-radius: var(--r-pill); background: var(--bg); box-shadow: var(--sh-2), inset 0 0 0 1px rgba(38, 34, 31, 0.08); }
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .site-header__bg { background: linear-gradient(90deg, var(--bg) var(--logo-end), rgba(247, 244, 240, 0.97) calc(var(--logo-end) + 48px)); -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); }
+}
+@media (prefers-reduced-transparency: reduce) { .site-header__bg { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.site-header__row { position: relative; height: 100%; display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 16px; pointer-events: none; }
+.site-header__row > * { pointer-events: auto; } /* only the controls catch clicks */
+@media (min-width: 1024px) {
+  .site-header { --pill-y: 12px; --pill-h: 64px; --pill-x: max(8px, calc((100% - var(--container) - 48px) / 2)); --logo-end: 168px; }
+  .site-header__row { gap: 20px; padding: 8px 8px 8px 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .site-header__bar { transition: none; } }
+
+.site-logo { position: relative; display: flex; align-items: center; min-height: 44px; flex: 0 1 auto; min-width: 0; margin-left: 3px; margin-right: auto; } /* may give up a few px on 320 (the image stays whole), the burger keeps its place */
+/* the lockups are the «-plate» copies (D-06): --logo-h = the mark's height, --logo-pad = plate padding / viewBox height
+   (scripts/brand-plate.mjs: horizontal (64/9)/64 = 1/9, nano 6/40); the negative margin gives the padding back — same layout box as before */
+.site-logo img { display: block; width: auto; max-width: none; height: calc(var(--logo-h) * (1 + 2 * var(--logo-pad))); margin: calc(var(--logo-h) * var(--logo-pad) * -1); }
+.site-logo .logo-full { display: none; --logo-h: 27.82px; --logo-pad: calc(1 / 9); }
+.site-logo .logo-nano { --logo-h: 20px; --logo-pad: 0.15; }
+@media (min-width: 1024px) {
+  .site-logo .logo-full { display: block; }
+  .site-logo .logo-nano { display: none; }
+}
+
+.site-nav { display: none; }
+.site-nav ul { display: flex; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.site-nav a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 12px; font-size: 15px; font-weight: 600; color: var(--text); text-decoration: none; border-radius: var(--r-pill); white-space: nowrap; transition: background-color var(--d-fade) var(--e-out); }
+@media (hover: hover) { .site-nav a:hover { background: rgba(38, 34, 31, 0.07); } }
+@media (min-width: 1280px) { .site-nav { display: block; margin-left: 8px; margin-right: auto; } .site-logo { margin-right: 0; } }
+
+.site-header .btn-book { display: none; padding-inline: 20px; font-size: 15px; }
+@media (min-width: 768px) { .site-header .btn-book { display: inline-flex; } }
+
+/* RU · EN */
+.lang-switch { display: inline-flex; align-items: center; white-space: nowrap; font-size: 13px; font-weight: 700; }
+.lang-switch a, .lang-switch [aria-current] { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 2px; color: var(--muted); text-decoration: none; border-radius: var(--r-pill); }
+.lang-switch a { min-width: 44px; }
+.lang-switch [aria-current="true"] { color: var(--text); min-width: 28px; }
+.lang-switch .sep { color: var(--muted); padding: 0 2px; } /* R-CODE-01 N-01: text contrast ≥ 4.5 */
+@media (hover: hover) { .lang-switch a:hover { color: var(--text); } }
+.lang-switch--long { gap: 20px; }
+.lang-switch--long a, .lang-switch--long [aria-current] { font-size: 15px; font-weight: 600; justify-content: flex-start; }
+
+/* in the pill: both codes the same 44 px cell, no separator; hidden while the menu is open (its own switch is in the panel) */
+.site-header__row .lang-switch { gap: 2px; font-size: 15px; transition: opacity 160ms var(--e-out); }
+.site-header__row .lang-switch .sep { display: none; }
+.site-header__row .lang-switch [aria-current="true"] { min-width: 44px; padding: 0; }
+.site-header__row .lang-switch a { padding: 0; }
+.site-header:has(dialog[open]) .site-header__row .lang-switch { opacity: 0; pointer-events: none; }
+
+/* ---------- Burger → cross: transforms only ---------- */
+.burger { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; padding: 0; border: 1.5px solid var(--field-border); border-radius: 50%; background: transparent; color: var(--text); cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform 160ms var(--e-out), background-color 160ms var(--e-out), border-color 160ms var(--e-out), color 160ms var(--e-out); }
+.burger svg { display: block; width: 18px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; overflow: visible; }
+.burger line { transform-box: fill-box; transform-origin: center; transition: transform 260ms var(--e-out), opacity 120ms var(--e-out); }
+.burger[aria-expanded="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+.burger[aria-expanded="true"] line:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.burger[aria-expanded="true"] line:nth-child(2) { opacity: 0; transform: scaleX(0.4); }
+.burger[aria-expanded="true"] line:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+.burger:active { transform: scale(0.94); transition-duration: 90ms; }
+.burger[data-noring]:focus-visible { outline: none; }
+@media (hover: hover) { .burger:not([aria-expanded="true"]):hover { background: rgba(38, 34, 31, 0.06); border-color: var(--text); } }
+
+/* ---------- The menu: full screen on phones, a panel under the burger from 768. A non-modal <dialog>, a sibling of the pill and under
+   it (BurgerMenu.tsx); it stays laid out while closed, so opening and closing are plain transitions that can be interrupted.
+   Everything is done within ~450 ms; the exit answers at once and takes the same path back. ---------- */
+html:has(dialog.burger-dialog[open]) { overflow: hidden; } /* the gutter (scrollbar-gutter: stable) keeps the width: nothing shifts */
+/* the gutter takes the root's background, and a fixed element cannot paint into it: dim the root while the menu is open, or a light strip
+   stays on the right of the scrim; the body keeps the page's own colour */
+@media (min-width: 768px) {
+  html { transition: background-color 150ms var(--e-out); }
+  body { background: var(--bg); }
+  html:has(dialog.burger-dialog[open]) { background: color-mix(in srgb, var(--text) 48%, var(--bg)); transition-duration: 220ms; }
+}
+dialog.burger-dialog { display: block; position: fixed; inset: 0; z-index: 1; width: auto; height: auto; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text); overflow: visible; visibility: hidden; pointer-events: none; transition: visibility 0s linear 170ms; }
+dialog.burger-dialog[open] { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+/* 100vw: the scrim also covers the scrollbar gutter, no light strip on the right */
+.burger-dialog__scrim { position: absolute; top: 0; bottom: 0; left: 0; width: 100vw; background: var(--scrim); opacity: 0; transition: opacity 150ms var(--e-out); }
+dialog.burger-dialog[open] .burger-dialog__scrim { opacity: 1; transition: opacity 220ms var(--e-out); }
+.burger-dialog__panel { position: absolute; inset: 0; display: flex; flex-direction: column; padding: var(--menu-top, 76px) var(--edge) 0; background: var(--bg); outline: none; opacity: 0; transform: translateY(-6px); transition: opacity 150ms var(--e-out), transform 170ms var(--e-out); }
+dialog.burger-dialog[open] .burger-dialog__panel { opacity: 1; transform: none; transition: opacity 200ms var(--e-out), transform 260ms var(--e-out); }
+/* the phone panel runs past the screen edges: no row of the page shows at fractional pixel ratios, during the entrance or on the iOS rubber
+   band; the padding gives the extra back. The global :focus-visible must not round it (the scrim would show in the corners) */
+@media (max-width: 767px) {
+  .burger-dialog__panel { bottom: -48px; padding-bottom: 48px; left: -2px; right: -2px; padding-inline: calc(var(--edge) + 2px); }
+  .burger-dialog__panel:focus-visible { border-radius: 0; }
+}
+.burger-dialog__guard { position: absolute; width: 1px; height: 1px; outline: none; }
+.burger-dialog__scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 12px; scrollbar-width: thin; }
+.burger-dialog .big { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; }
+.burger-dialog .big a { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text); text-decoration: none; line-height: 1.1; font-weight: 700; -webkit-tap-highlight-color: transparent; transition: transform 140ms var(--e-out); }
+.burger-dialog .big a:active { transform: translateX(3px); transition-duration: 80ms; }
+.burger-dialog .is-major { grid-column: 1 / -1; }
+.burger-dialog .is-major a { min-height: clamp(44px, 9.2svh, 76px); font-size: clamp(30px, 5.8svh, 44px); letter-spacing: -0.03em; }
+.burger-dialog .is-minor a { min-height: 44px; padding-right: 12px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; justify-content: flex-start; }
+.burger-dialog .is-minor:nth-child(5), .burger-dialog .is-minor:nth-child(6) { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+.burger-dialog .arr { opacity: 0; font-size: 18px; color: var(--accent-ink); transform: translateX(-6px); transition: opacity var(--d-fade) var(--e-out), transform var(--d-fade) var(--e-out); }
+@media (hover: hover) { .burger-dialog .is-major a:hover .arr { opacity: 1; transform: none; } .burger-dialog .is-minor a:hover { text-decoration: underline; text-underline-offset: 4px; } }
+:is(.burger-dialog, .nf-menu__panel) .acct { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-height: 60px; margin-top: 14px; padding: 8px 14px 8px 12px; border-radius: var(--r-card-sm); border: 1.5px solid var(--field-border); color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+:is(.burger-dialog, .nf-menu__panel) .acct b { display: block; font-size: 16px; line-height: 1.2; font-weight: 700; }
+:is(.burger-dialog, .nf-menu__panel) .acct small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.3; font-weight: 400; color: var(--muted); }
+:is(.burger-dialog, .nf-menu__panel) .acct .av { width: 36px; height: 36px; border-radius: 50%; background: var(--card-sand); display: grid; place-items: center; color: var(--accent-ink-card); }
+:is(.burger-dialog, .nf-menu__panel) .acct:active { background: var(--surface); }
+@media (hover: hover) { :is(.burger-dialog, .nf-menu__panel) .acct:hover { border-color: var(--text); background: var(--surface); } }
+:is(.burger-dialog, .nf-menu__panel) .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin-top: 6px; color: var(--muted); font-size: 14px; }
+:is(.burger-dialog, .nf-menu__panel) .meta .lang-switch--long :is(a, [aria-current]) { font-weight: 700; }
+.burger-dialog .soc { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.burger-dialog__cta { padding: 12px 0 max(14px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg); }
+/* entrance: the sections one after another, then the actions; closed, they stay put until the panel has faded and reset unseen */
+.burger-dialog .big li, .burger-dialog .acct, .burger-dialog .meta, .burger-dialog__cta { opacity: 0; transform: translateY(8px); transition: opacity 0s linear 170ms, transform 0s linear 170ms; }
+dialog.burger-dialog[open] :is(.big li, .acct, .meta, .burger-dialog__cta) { opacity: 1; transform: none; }
+dialog.burger-dialog[open] .big li { transition: opacity 220ms var(--e-out) calc(var(--i, 0) * 22ms + 40ms), transform 260ms var(--e-out) calc(var(--i, 0) * 22ms + 40ms); }
+dialog.burger-dialog[open] .burger-dialog__cta { transition: opacity 220ms var(--e-out) 110ms, transform 260ms var(--e-out) 110ms; }
+dialog.burger-dialog[open] .acct { transition: opacity 220ms var(--e-out) 170ms, transform 260ms var(--e-out) 170ms, border-color var(--d-fade), background-color var(--d-fade); }
+dialog.burger-dialog[open] .meta { transition: opacity 220ms var(--e-out) 190ms, transform 260ms var(--e-out) 190ms; }
+@media (max-width: 767px) and (max-height: 699px) {
+  .burger-dialog .is-major a { min-height: 44px; font-size: 30px; }
+  .burger-dialog .is-minor:nth-child(5), .burger-dialog .is-minor:nth-child(6) { margin-top: 2px; padding-top: 2px; }
+  .burger-dialog__scroll { padding-bottom: 4px; }
+  :is(.burger-dialog, .nf-menu__panel) .acct { min-height: 52px; margin-top: 8px; padding-block: 4px; }
+  :is(.burger-dialog, .nf-menu__panel) .acct .av { width: 32px; height: 32px; }
+  :is(.burger-dialog, .nf-menu__panel) .meta { margin-top: 2px; }
+}
+@media (max-width: 359px) {
+  :is(.burger-dialog, .nf-menu__panel) .meta { gap: 0 8px; font-size: 13px; }
+  :is(.burger-dialog, .nf-menu__panel) .meta .lang-switch--long { gap: 12px; }
+  :is(.burger-dialog, .nf-menu__panel) .meta .lang-switch--long :is(a, [aria-current]) { font-size: 14px; }
+}
+@media (min-width: 768px) {
+  .burger-dialog__panel { inset: auto; top: var(--menu-top, 76px); right: var(--menu-right, 24px); width: min(500px, calc(100vw - 2 * var(--edge))); max-height: calc(100dvh - var(--menu-top, 76px) - 16px); padding: 20px 20px 0; border-radius: var(--r-card); box-shadow: var(--sh-3), inset 0 0 0 1px var(--line); transform-origin: calc(100% - 22px) 0; transform: translateY(-6px) scale(0.97); }
+  .burger-dialog .big { grid-template-columns: repeat(4, 1fr); }
+  .burger-dialog .is-major { grid-column: span 2; }
+  .burger-dialog .is-major a { min-height: 60px; font-size: 30px; }
+  .burger-dialog .is-minor a { font-size: 16px; }
+  .burger-dialog .is-minor:nth-child(7), .burger-dialog .is-minor:nth-child(8) { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+  .burger-dialog__cta { padding: 14px 0 19px; margin-block: 6px 1px; } /* 1 px above the panel's edge: its background painted over the inset ring */
+}
+/* reduced motion: short fades only */
+@media (prefers-reduced-motion: reduce) {
+  .burger { transition: background-color 120ms linear, border-color 120ms linear, color 120ms linear; }
+  .burger:active, .burger-dialog .big a:active { transform: none; }
+  .burger line { transition: opacity 120ms linear; }
+  dialog.burger-dialog { transition-duration: 0s; transition-delay: 120ms; }
+  dialog.burger-dialog[open] { transition-delay: 0s; }
+  .burger-dialog__panel, dialog.burger-dialog[open] .burger-dialog__panel { transform: none !important; transition: opacity 120ms linear !important; }
+  .burger-dialog__scrim, dialog.burger-dialog[open] .burger-dialog__scrim { transition: opacity 120ms linear !important; }
+  .burger-dialog .big li, .burger-dialog .acct, .burger-dialog .meta, .burger-dialog__cta { transform: none !important; transition: opacity 0s linear 120ms !important; }
+  dialog.burger-dialog[open] :is(.big li, .acct, .meta, .burger-dialog__cta) { transition: opacity 120ms linear !important; transition-delay: 0s !important; }
+}
+
+/* ---------- FAB «Записаться», phones only (< 768): a copper pill across the content width at the bottom (R-FINAL-2 D-04, lead's
+   option 1 — the old vertical tab covered the ends of text lines, DEV-04). BookFab hides it near the hero / page head and the
+   footer; here it also hides while the cookie card, a dialog (menu, confirmations) or a focused form field (keyboard) is up.
+   Motion (README п.15): translate + opacity, 300 ms in / 200 ms out; reduced motion: opacity only. When hidden the wrapper is
+   hidden too, so no invisible full-width box is left over the end of the page. ---------- */
+.fab-wrap { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(12px + 52px + 32px + env(safe-area-inset-bottom)); overflow: hidden; pointer-events: none; transition: visibility 0s linear 0s; }
+.fab { position: absolute; left: var(--edge); right: var(--edge); bottom: calc(12px + env(safe-area-inset-bottom)); min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 24px;
+  pointer-events: auto; border-radius: var(--r-pill); background: var(--accent); color: #fff; text-decoration: none; font: 700 15px/1 var(--font-sans); box-shadow: var(--sh-3);
+  transition: translate var(--d-1) var(--e-out), opacity var(--d-1) var(--e-out); }
+:is(.fab-wrap:has(> .fab[data-hidden="true"]), body:has(.cookie) .fab-wrap, body:has(dialog[open]) .fab-wrap,
+  body:has(:is(input:not([type="checkbox"], [type="radio"]), textarea, select):focus) .fab-wrap) { visibility: hidden; transition: visibility 0s linear var(--d-fade); }
+:is(.fab-wrap:has(> .fab[data-hidden="true"]), body:has(.cookie) .fab-wrap, body:has(dialog[open]) .fab-wrap,
+  body:has(:is(input:not([type="checkbox"], [type="radio"]), textarea, select):focus) .fab-wrap) > .fab {
+  translate: 0 calc(100% + 12px + env(safe-area-inset-bottom)); opacity: 0; pointer-events: none; /* no taps while it slides out */
+  transition: translate var(--d-fade) var(--e-in), opacity var(--d-fade) var(--e-in); }
+@media (hover: hover) { .fab:hover { background: color-mix(in srgb, var(--accent) 88%, #000); } }
+@media (min-width: 768px) { .fab-wrap { display: none; } }
+@media (prefers-reduced-motion: reduce) { .fab-wrap > .fab { translate: none !important; } }
+
+/* ---------- Footer with the giant mark ---------- */
+.site-footer { background: var(--dark); color: var(--bg); padding: 48px 0 calc(24px + env(safe-area-inset-bottom)); line-height: 1.55; }
+.site-footer .container { display: grid; }
+.site-footer__logo { margin: 0; }
+.site-footer__logo img { display: block; width: 100%; height: auto; }
+.site-footer__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; }
+.site-footer__cols h2 { margin: 0 0 2px; font-size: 13px; font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted-on-dark); line-height: 1.3; }
+.site-footer__cols ul { margin: 0; padding: 0; list-style: none; }
+.site-footer__cols li { min-height: 44px; display: flex; flex-direction: column; justify-content: center; font-size: 15px; }
+.site-footer a { color: var(--bg); text-decoration: none; }
+.site-footer__cols a { min-height: 44px; display: inline-flex; align-items: center; }
+@media (hover: hover) { .site-footer a:hover { text-decoration: underline; text-underline-offset: 4px; } }
+.site-footer .badge { background: rgba(247, 244, 240, 0.12); color: var(--bg); } /* «Демо» on the dark footer */
+.site-footer .ct { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; } /* «label · Демо» */
+.site-footer .ct--pending { flex-wrap: wrap; gap: 4px 10px; padding-block: 8px; color: var(--muted-on-dark); line-height: 1.35; } /* RC-4: one line + one «Демо» while every contact is TODO */
+.site-footer .lang-switch a { color: var(--muted-on-dark); padding-left: 0; }
+.site-footer .lang-switch [aria-current="true"] { color: var(--bg); }
+.site-footer .lang-switch--long a, .site-footer .lang-switch--long [aria-current] { font-size: var(--fs-body); font-weight: 400; }
+.site-footer :focus-visible { outline-color: var(--focus-ring-on-dark); }
+.site-footer__legal { display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; margin-top: 28px; border-top: 1px solid var(--hairline-on-dark); padding-top: 12px; color: var(--muted-on-dark); font-size: 13px; }
+.site-footer__legal p { margin: 0 auto 0 0; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; }
+.site-footer__docs { display: flex; flex-wrap: wrap; gap: 0 20px; margin: 0; padding: 0; list-style: none; }
+.site-footer__docs a, .site-footer__docs .link-button { min-height: 44px; display: inline-flex; align-items: center; color: var(--muted-on-dark); text-decoration: none; font-size: 13px; }
+/* Phones (< 768). RC-7 (lead, Brand Designer's variant B, review/design-audit-footer-text-rc6.html): ONE axis. Before, the logo
+   was centred and every text row sat on the left edge, 132–184 px off the screen's axis (the client's «всё криво» from an
+   iPhone 17 Pro Max, again). Now:
+   - the logo is centred, min(100 %, 380 px) wide (343 px on 375, 380 on 440);
+   - the groups stand one under another in the DOM order Услуги, О студии, Контакты, Язык: a centred heading, then the group's
+     links in a centred wrapped row (≤ 290 px), «О студии» always 3 + 2; every target ≥ 44 × 44 px;
+   - a contact without a value stays one «label · Демо» row (RC-4 empty state), centred; the TODO note stays in [data-todo];
+   - legal: three centred rows — «© … Демо», «Политика», «Условия · Настройки cookie» as a pair.
+   The footer is 42–47 px shorter than the two-column layout (BD). ≥ 768 renders as before. */
+@media (max-width: 767px) {
+  .site-footer { text-align: center; }
+  .site-footer__logo img { width: min(100%, 380px); margin-inline: auto; }
+  .site-footer__cols { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .site-footer__cols ul { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 22px; max-width: 290px; margin-inline: auto; }
+  .site-footer__cols li { align-items: center; }
+  /* the link's box is its text (+ 2 px), so a row of links is centred by its visible text; the ≥ 44 px target is an ::after
+     centred on the link (a min-width put a short last link — EN «Book», 39 px — in the middle of a 44 px box and moved the
+     row's text 1.4 px off the axis). A pseudo-element is part of the link for taps; gaps of 22 px keep the targets apart */
+  .site-footer__cols a { position: relative; justify-content: center; padding-inline: 2px; }
+  .site-footer__cols a::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: max(100%, 44px); transform: translateX(-50%); }
+  /* «О студии» 3 + 2 in both languages: EN «Approach · Team · Reviews · Journal» would fit four in a row (≈ 288 of 290 px). An
+     empty full-width flex item after the third link breaks the row; the reading and tab order stay the DOM order */
+  .site-footer__cols > :nth-child(2) ul::after { content: ''; flex-basis: 100%; order: 1; }
+  .site-footer__cols > :nth-child(2) li:nth-child(n + 4) { order: 2; }
+  .site-footer .ct { flex: 0 0 100%; justify-content: center; text-align: center; }
+  .site-footer .lang-switch { display: flex; justify-content: center; }
+  .site-footer .lang-switch a, .site-footer .lang-switch [aria-current] { padding-inline: 2px; justify-content: center; }
+  .site-footer__legal { display: grid; justify-items: center; gap: 0; }
+  .site-footer__legal p { margin: 0; justify-content: center; gap: 0 10px; }
+  /* the documents (BD F21: «Настройки cookie» never alone): the privacy policy on its row, then «Условия · Настройки cookie»
+     as a centred pair — fits from 320 in RU and EN */
+  .site-footer__docs { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 20px; }
+  .site-footer__docs > li:first-child { flex: 0 0 100%; display: flex; justify-content: center; }
+}
+/* the link columns on 768–899 tablets (BD F21: «Услуги» 3 links beside «О студии» 5 left a hole under «Записаться»): left
+   «Услуги» over «Язык», right «О студии» across both rows (3 links + «Язык» ≈ 5 links), «Контакты» full width below. DOM
+   order unchanged (≥ 900: four columns Services, Studio, Contacts, Language; < 768: one centred column, above) */
+@media (min-width: 768px) and (max-width: 899px) {
+  .site-footer__cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 16px; align-items: start; }
+  .site-footer__cols > :nth-child(1) { grid-area: 1 / 1; }
+  .site-footer__cols > :nth-child(2) { grid-area: 1 / 2 / 3 / 3; }
+  .site-footer__cols > :nth-child(4) { grid-area: 2 / 1; }
+  .site-footer__cols > :nth-child(3) { grid-area: 3 / 1 / 4 / 3; }
+}
+@media (min-width: 768px) { .site-footer { padding-top: 64px; } .site-footer__cols { margin-top: 48px; } }
+@media (min-width: 900px) { .site-footer__cols { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 16px; } }
+@media (min-width: 1024px) { .site-footer { padding-top: 72px; } }
+
+/* ---------- Cookie banner ---------- */
+/* bottom: above the /booking CTA bar on phones (--bk-cta-h, booking.css), so the bar's «Оформить запись» stays free (DEV-06) */
+.cookie { position: fixed; z-index: 45; left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); bottom: calc(8px + var(--bk-cta-h, 0px) + env(safe-area-inset-bottom)); max-height: calc(100svh - 16px); overflow-y: auto;
+  background: var(--surface); color: var(--text); border-radius: var(--r-card); box-shadow: var(--sh-3), inset 0 0 0 1px var(--line); padding: 20px; display: grid; gap: 14px;
+  animation: bm-cookie-in var(--d-2) var(--e-out) both; }
+@media (min-width: 768px) and (max-width: 1023px) { .cookie { left: max(24px, env(safe-area-inset-left)); right: auto; bottom: 24px; width: min(560px, calc(100% - 48px)); } }
+.cookie__msg { display: grid; gap: 8px; }
+.cookie h2 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; margin: 0; line-height: 1.3; }
+.cookie p { margin: 0; font-size: 14px; color: var(--muted); }
+/* Phones and low landscape, before a choice (R-FINAL-2 D-02): ≤ 30 % of the visible area on the whole device matrix.
+   Title + policy link + «Настроить» on top, «Принять все» / «Только необходимые» below; the full text and the categories open
+   in the «Настроить» sheet ([data-custom]: the full card, scrolls inside 100svh). */
+@media (max-width: 767px), (orientation: landscape) and (max-height: 519px) {
+  .cookie:not([data-custom]) { padding: 12px; gap: 8px; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "msg msg cust" "acc nec nec"; align-items: center; }
+  .cookie:not([data-custom]) .cookie__msg { grid-area: msg; gap: 2px; }
+  .cookie:not([data-custom]) h2 { font-size: 15px; }
+  .cookie:not([data-custom]) p { font-size: 13px; line-height: 1.35; }
+  .cookie:not([data-custom]) .cookie__text { display: none; }
+  .cookie:not([data-custom]) .acts { display: contents; }
+  .cookie:not([data-custom]) .acts > :nth-child(1) { grid-area: acc; }
+  .cookie:not([data-custom]) .acts > :nth-child(2) { grid-area: nec; }
+  .cookie:not([data-custom]) .acts > :nth-child(3) { grid-area: cust; }
+  .cookie:not([data-custom]) .btn--sm:not(.btn--text) { padding-inline: 12px; }
+}
+@media (max-width: 359px) { .cookie:not([data-custom]) h2 { font-size: 14px; } } /* «Мы используем cookie» stays on one line at 320 */
+/* low landscape: one strip — message, then the three actions in one row */
+@media (orientation: landscape) and (max-height: 519px) {
+  .cookie:not([data-custom]) { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); width: auto; grid-template-columns: minmax(0, 1fr) auto auto auto; grid-template-areas: "msg acc nec cust"; gap: 12px; }
+}
+/* low screens (in-app browsers ≈ 375×448, landscape): at the bottom even the compact card would cover the first screen's main
+   button (home «Начать» ends at ≈ 386 px), so it sits at the top, over the header, until a choice is made */
+@media (max-height: 519px) {
+  .cookie:not([data-custom]) { top: calc(8px + env(safe-area-inset-top)); bottom: auto; animation-name: bm-cookie-in-top; }
+}
+@keyframes bm-cookie-in-top { from { opacity: 0; transform: translateY(calc(var(--shift-1) * -1)); } }
+.cookie .cats { margin: 0; padding: 0; border: 0; display: grid; }
+.cookie .row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+.cookie .row b { display: block; font-size: 15px; }
+.cookie .row small { display: block; font-size: 13px; color: var(--muted); }
+.cookie .acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 4px; border-top: 1px solid var(--line); }
+/* ≥ 1024: a thin strip at the bottom, never over the hero text and CTA (R-CODE-01 F-02) */
+@media (min-width: 1024px) {
+  .cookie { left: 0; right: 0; bottom: 16px; margin-inline: auto; width: min(calc(100% - 48px), 1320px); grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 32px; padding: 14px 16px 14px 24px; }
+  .cookie h2 { font-size: 15px; }
+  .cookie__msg { grid-column: 1; gap: 4px; }
+  .cookie__msg p { font-size: 13px; }
+  .cookie .acts { grid-column: 2; grid-row: 1; border-top: 0; padding-top: 0; flex-wrap: nowrap; }
+  .cookie .cats { grid-column: 1 / -1; grid-row: 2; }
+}
+@keyframes bm-cookie-in { from { opacity: 0; transform: translateY(var(--shift-1)); } }

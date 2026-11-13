@@ -1,0 +1,646 @@
+{
+ "male": {
+  "width": 1350,
+  "height": 1800,
+  "zones": {
+   "ankle_l": {
+    "u": 0.538,
+    "v": 0.8493,
+    "visible": true
+   },
+   "foot_l": {
+    "u": 0.5352,
+    "v": 0.8906,
+    "visible": true
+   },
+   "ankle_r": {
+    "u": 0.462,
+    "v": 0.8493,
+    "visible": true
+   },
+   "foot_r": {
+    "u": 0.4648,
+    "v": 0.8906,
+    "visible": true
+   },
+   "hand_l": {
+    "u": 0.6727,
+    "v": 0.5497,
+    "visible": true
+   },
+   "elbow_forearm_l": {
+    "u": 0.6445,
+    "v": 0.466,
+    "visible": true
+   },
+   "hand_r": {
+    "u": 0.3273,
+    "v": 0.5496,
+    "visible": true
+   },
+   "elbow_forearm_r": {
+    "u": 0.3556,
+    "v": 0.466,
+    "visible": true
+   },
+   "hip_joint_l": {
+    "u": 0.5455,
+    "v": 0.513,
+    "visible": true
+   },
+   "hip_joint_r": {
+    "u": 0.4545,
+    "v": 0.513,
+    "visible": true
+   },
+   "knee_l": {
+    "u": 0.5441,
+    "v": 0.6918,
+    "visible": true
+   },
+   "knee_r": {
+    "u": 0.4559,
+    "v": 0.6916,
+    "visible": true
+   },
+   "shoulder_joint_l": {
+    "u": 0.6049,
+    "v": 0.2989,
+    "visible": true
+   },
+   "shoulder_joint_r": {
+    "u": 0.3951,
+    "v": 0.2989,
+    "visible": true
+   },
+   "neck_collar": {
+    "u": 0.5006,
+    "v": 0.2648,
+    "visible": true
+   },
+   "thoracic_spine": {
+    "u": 0.4972,
+    "v": 0.3573,
+    "visible": false
+   },
+   "gluteal_r": {
+    "u": 0.4727,
+    "v": 0.5043,
+    "visible": false
+   },
+   "gluteal_l": {
+    "u": 0.5273,
+    "v": 0.5043,
+    "visible": false
+   },
+   "lumbar": {
+    "u": 0.506,
+    "v": 0.4629,
+    "visible": false
+   },
+   "chest": {
+    "u": 0.5059,
+    "v": 0.3487,
+    "visible": true
+   },
+   "abdomen": {
+    "u": 0.507,
+    "v": 0.4776,
+    "visible": true
+   },
+   "quadriceps_r": {
+    "u": 0.4501,
+    "v": 0.5956,
+    "visible": true
+   },
+   "quadriceps_l": {
+    "u": 0.5499,
+    "v": 0.5956,
+    "visible": true
+   },
+   "shoulder_girdle_r": {
+    "u": 0.4468,
+    "v": 0.3511,
+    "visible": false
+   },
+   "shoulder_girdle_l": {
+    "u": 0.5532,
+    "v": 0.3511,
+    "visible": false
+   },
+   "shin_r": {
+    "u": 0.4521,
+    "v": 0.7719,
+    "visible": true
+   },
+   "hamstrings_l": {
+    "u": 0.5475,
+    "v": 0.6064,
+    "visible": false
+   },
+   "shin_l": {
+    "u": 0.5385,
+    "v": 0.7779,
+    "visible": true
+   },
+   "hamstrings_r": {
+    "u": 0.4525,
+    "v": 0.6064,
+    "visible": false
+   },
+   "calves_r": {
+    "u": 0.4581,
+    "v": 0.7692,
+    "visible": false
+   },
+   "calves_l": {
+    "u": 0.5419,
+    "v": 0.7692,
+    "visible": false
+   }
+  }
+ },
+ "female": {
+  "width": 1350,
+  "height": 1800,
+  "zones": {
+   "neck_collar": {
+    "u": 0.5013,
+    "v": 0.2462,
+    "visible": true
+   },
+   "thoracic_spine": {
+    "u": 0.5011,
+    "v": 0.3444,
+    "visible": false
+   },
+   "ankle_l": {
+    "u": 0.537,
+    "v": 0.8237,
+    "visible": true
+   },
+   "foot_l": {
+    "u": 0.5422,
+    "v": 0.8447,
+    "visible": true
+   },
+   "ankle_r": {
+    "u": 0.463,
+    "v": 0.8237,
+    "visible": true
+   },
+   "foot_r": {
+    "u": 0.4578,
+    "v": 0.8447,
+    "visible": true
+   },
+   "hand_l": {
+    "u": 0.6701,
+    "v": 0.5293,
+    "visible": true
+   },
+   "elbow_forearm_l": {
+    "u": 0.646,
+    "v": 0.4458,
+    "visible": true
+   },
+   "hand_r": {
+    "u": 0.3299,
+    "v": 0.5293,
+    "visible": true
+   },
+   "elbow_forearm_r": {
+    "u": 0.354,
+    "v": 0.4458,
+    "visible": true
+   },
+   "hip_joint_l": {
+    "u": 0.5563,
+    "v": 0.4986,
+    "visible": true
+   },
+   "hip_joint_r": {
+    "u": 0.4437,
+    "v": 0.4986,
+    "visible": true
+   },
+   "knee_l": {
+    "u": 0.54,
+    "v": 0.6645,
+    "visible": true
+   },
+   "knee_r": {
+    "u": 0.46,
+    "v": 0.6644,
+    "visible": true
+   },
+   "shoulder_joint_l": {
+    "u": 0.6142,
+    "v": 0.3005,
+    "visible": true
+   },
+   "shoulder_joint_r": {
+    "u": 0.3858,
+    "v": 0.3005,
+    "visible": true
+   },
+   "gluteal_l": {
+    "u": 0.5236,
+    "v": 0.4846,
+    "visible": false
+   },
+   "gluteal_r": {
+    "u": 0.4764,
+    "v": 0.4846,
+    "visible": false
+   },
+   "lumbar": {
+    "u": 0.4952,
+    "v": 0.4456,
+    "visible": false
+   },
+   "chest": {
+    "u": 0.4855,
+    "v": 0.318,
+    "visible": true
+   },
+   "abdomen": {
+    "u": 0.5033,
+    "v": 0.4749,
+    "visible": true
+   },
+   "quadriceps_l": {
+    "u": 0.5345,
+    "v": 0.5754,
+    "visible": true
+   },
+   "quadriceps_r": {
+    "u": 0.4655,
+    "v": 0.5754,
+    "visible": true
+   },
+   "shin_r": {
+    "u": 0.4653,
+    "v": 0.7441,
+    "visible": true
+   },
+   "hamstrings_l": {
+    "u": 0.5534,
+    "v": 0.5936,
+    "visible": false
+   },
+   "shin_l": {
+    "u": 0.5347,
+    "v": 0.7442,
+    "visible": true
+   },
+   "calves_l": {
+    "u": 0.5346,
+    "v": 0.7401,
+    "visible": false
+   },
+   "hamstrings_r": {
+    "u": 0.4466,
+    "v": 0.5936,
+    "visible": false
+   },
+   "shoulder_girdle_l": {
+    "u": 0.5458,
+    "v": 0.3351,
+    "visible": false
+   },
+   "shoulder_girdle_r": {
+    "u": 0.4469,
+    "v": 0.3383,
+    "visible": false
+   },
+   "calves_r": {
+    "u": 0.4654,
+    "v": 0.7401,
+    "visible": false
+   }
+  }
+ },
+ "male@lod1": {
+  "width": 1350,
+  "height": 1800,
+  "zones": {
+   "ankle_l": {
+    "u": 0.5386,
+    "v": 0.8494,
+    "visible": true
+   },
+   "foot_l": {
+    "u": 0.5451,
+    "v": 0.8748,
+    "visible": true
+   },
+   "ankle_r": {
+    "u": 0.4614,
+    "v": 0.8494,
+    "visible": true
+   },
+   "foot_r": {
+    "u": 0.4549,
+    "v": 0.8749,
+    "visible": true
+   },
+   "hand_l": {
+    "u": 0.6728,
+    "v": 0.5508,
+    "visible": true
+   },
+   "elbow_forearm_l": {
+    "u": 0.648,
+    "v": 0.4624,
+    "visible": true
+   },
+   "hand_r": {
+    "u": 0.3272,
+    "v": 0.5508,
+    "visible": true
+   },
+   "elbow_forearm_r": {
+    "u": 0.352,
+    "v": 0.4624,
+    "visible": true
+   },
+   "hip_joint_l": {
+    "u": 0.5384,
+    "v": 0.5111,
+    "visible": true
+   },
+   "gluteal_l": {
+    "u": 0.526,
+    "v": 0.4977,
+    "visible": false
+   },
+   "hip_joint_r": {
+    "u": 0.4616,
+    "v": 0.5111,
+    "visible": true
+   },
+   "knee_l": {
+    "u": 0.5517,
+    "v": 0.6946,
+    "visible": true
+   },
+   "knee_r": {
+    "u": 0.4483,
+    "v": 0.6946,
+    "visible": true
+   },
+   "shoulder_joint_l": {
+    "u": 0.6052,
+    "v": 0.3214,
+    "visible": true
+   },
+   "neck_collar": {
+    "u": 0.5001,
+    "v": 0.267,
+    "visible": true
+   },
+   "shoulder_joint_r": {
+    "u": 0.3948,
+    "v": 0.3214,
+    "visible": true
+   },
+   "thoracic_spine": {
+    "u": 0.5002,
+    "v": 0.3575,
+    "visible": false
+   },
+   "gluteal_r": {
+    "u": 0.474,
+    "v": 0.4977,
+    "visible": false
+   },
+   "lumbar": {
+    "u": 0.506,
+    "v": 0.4629,
+    "visible": false
+   },
+   "chest": {
+    "u": 0.4924,
+    "v": 0.3304,
+    "visible": true
+   },
+   "abdomen": {
+    "u": 0.5113,
+    "v": 0.4878,
+    "visible": true
+   },
+   "quadriceps_r": {
+    "u": 0.4521,
+    "v": 0.5844,
+    "visible": true
+   },
+   "quadriceps_l": {
+    "u": 0.5479,
+    "v": 0.5844,
+    "visible": true
+   },
+   "shoulder_girdle_r": {
+    "u": 0.4472,
+    "v": 0.3493,
+    "visible": false
+   },
+   "shoulder_girdle_l": {
+    "u": 0.5528,
+    "v": 0.3493,
+    "visible": false
+   },
+   "shin_r": {
+    "u": 0.4464,
+    "v": 0.7735,
+    "visible": true
+   },
+   "shin_l": {
+    "u": 0.5536,
+    "v": 0.7735,
+    "visible": true
+   },
+   "hamstrings_l": {
+    "u": 0.5476,
+    "v": 0.6065,
+    "visible": false
+   },
+   "calves_l": {
+    "u": 0.543,
+    "v": 0.7494,
+    "visible": false
+   },
+   "hamstrings_r": {
+    "u": 0.4524,
+    "v": 0.6065,
+    "visible": false
+   },
+   "calves_r": {
+    "u": 0.457,
+    "v": 0.7494,
+    "visible": false
+   }
+  }
+ },
+ "female@lod1": {
+  "width": 1350,
+  "height": 1800,
+  "zones": {
+   "neck_collar": {
+    "u": 0.4974,
+    "v": 0.2454,
+    "visible": true
+   },
+   "thoracic_spine": {
+    "u": 0.5053,
+    "v": 0.3432,
+    "visible": false
+   },
+   "ankle_l": {
+    "u": 0.5351,
+    "v": 0.825,
+    "visible": true
+   },
+   "foot_l": {
+    "u": 0.538,
+    "v": 0.8447,
+    "visible": true
+   },
+   "ankle_r": {
+    "u": 0.4649,
+    "v": 0.825,
+    "visible": true
+   },
+   "foot_r": {
+    "u": 0.462,
+    "v": 0.8447,
+    "visible": true
+   },
+   "hand_l": {
+    "u": 0.6698,
+    "v": 0.5289,
+    "visible": true
+   },
+   "elbow_forearm_l": {
+    "u": 0.6458,
+    "v": 0.4455,
+    "visible": true
+   },
+   "hand_r": {
+    "u": 0.3301,
+    "v": 0.529,
+    "visible": true
+   },
+   "elbow_forearm_r": {
+    "u": 0.3539,
+    "v": 0.4458,
+    "visible": true
+   },
+   "hip_joint_l": {
+    "u": 0.549,
+    "v": 0.499,
+    "visible": true
+   },
+   "gluteal_l": {
+    "u": 0.5273,
+    "v": 0.4864,
+    "visible": false
+   },
+   "hip_joint_r": {
+    "u": 0.451,
+    "v": 0.499,
+    "visible": true
+   },
+   "gluteal_r": {
+    "u": 0.4727,
+    "v": 0.4864,
+    "visible": false
+   },
+   "knee_l": {
+    "u": 0.5475,
+    "v": 0.6652,
+    "visible": true
+   },
+   "knee_r": {
+    "u": 0.4525,
+    "v": 0.6652,
+    "visible": true
+   },
+   "shoulder_joint_l": {
+    "u": 0.6037,
+    "v": 0.2977,
+    "visible": true
+   },
+   "shoulder_joint_r": {
+    "u": 0.3963,
+    "v": 0.2977,
+    "visible": true
+   },
+   "chest": {
+    "u": 0.4976,
+    "v": 0.3188,
+    "visible": true
+   },
+   "lumbar": {
+    "u": 0.4978,
+    "v": 0.4391,
+    "visible": false
+   },
+   "abdomen": {
+    "u": 0.5001,
+    "v": 0.4747,
+    "visible": true
+   },
+   "quadriceps_l": {
+    "u": 0.5363,
+    "v": 0.5756,
+    "visible": true
+   },
+   "quadriceps_r": {
+    "u": 0.4637,
+    "v": 0.5756,
+    "visible": true
+   },
+   "shin_r": {
+    "u": 0.4657,
+    "v": 0.734,
+    "visible": true
+   },
+   "shin_l": {
+    "u": 0.5343,
+    "v": 0.734,
+    "visible": true
+   },
+   "shoulder_girdle_l": {
+    "u": 0.5515,
+    "v": 0.3357,
+    "visible": false
+   },
+   "shoulder_girdle_r": {
+    "u": 0.4485,
+    "v": 0.3357,
+    "visible": false
+   },
+   "hamstrings_l": {
+    "u": 0.5451,
+    "v": 0.5835,
+    "visible": false
+   },
+   "calves_l": {
+    "u": 0.544,
+    "v": 0.7304,
+    "visible": false
+   },
+   "hamstrings_r": {
+    "u": 0.4549,
+    "v": 0.5835,
+    "visible": false
+   },
+   "calves_r": {
+    "u": 0.456,
+    "v": 0.7304,
+    "visible": false
+   }
+  }
+ }
+}

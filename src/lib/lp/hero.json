@@ -1,0 +1,204 @@
+{
+ "a": {
+  "band": {
+   "ar": [
+    1990,
+    1000
+   ],
+   "widths": [
+    430,
+    860
+   ],
+   "co": [
+    {
+     "n": 1,
+     "key": "lp.zoneShort.knee",
+     "x": 58.0,
+     "y": 67.7,
+     "side": "l",
+     "len": 44,
+     "phone": false
+    },
+    {
+     "n": 2,
+     "key": "lp.zoneShort.quadriceps",
+     "x": 42.0,
+     "y": 32.9,
+     "side": "r",
+     "len": 40,
+     "phone": true
+    }
+   ],
+   "kb": {
+    "430.avif": 5.0,
+    "430.webp": 5.9,
+    "860.avif": 12.6,
+    "860.webp": 14.9
+   }
+  },
+  "short": {
+   "ar": [
+    2955,
+    1000
+   ],
+   "widths": [
+    430,
+    860
+   ],
+   "co": [
+    {
+     "n": 1,
+     "key": "lp.zoneShort.knee",
+     "x": 58.0,
+     "y": 42.9,
+     "side": "l",
+     "len": 44,
+     "phone": true
+    }
+   ],
+   "kb": {
+    "430.avif": 3.5,
+    "430.webp": 4.2,
+    "860.avif": 9.0,
+    "860.webp": 10.4
+   }
+  },
+  "tall": {
+   "ar": [
+    800,
+    1000
+   ],
+   "widths": [
+    576,
+    1152
+   ],
+   "co": [
+    {
+     "n": 1,
+     "key": "lp.zoneShort.knee",
+     "x": 58.0,
+     "y": 52.1,
+     "side": "l",
+     "len": 44,
+     "phone": false
+    },
+    {
+     "n": 2,
+     "key": "lp.zoneShort.quadriceps",
+     "x": 42.0,
+     "y": 38.1,
+     "side": "r",
+     "len": 40,
+     "phone": false
+    }
+   ],
+   "kb": {
+    "576.avif": 17.1,
+    "576.webp": 20.4,
+    "1152.avif": 34.0,
+    "1152.webp": 51.1
+   }
+  }
+ },
+ "b": {
+  "band": {
+   "ar": [
+    1990,
+    1000
+   ],
+   "widths": [
+    430,
+    860
+   ],
+   "co": [
+    {
+     "n": 2,
+     "key": "lp.zoneShort.thoracic_spine",
+     "x": 50.0,
+     "y": 53.9,
+     "side": "r",
+     "len": 44,
+     "phone": true
+    }
+   ],
+   "kb": {
+    "430.avif": 5.4,
+    "430.webp": 7.3,
+    "860.avif": 14.3,
+    "860.webp": 18.4
+   }
+  },
+  "short": {
+   "ar": [
+    2955,
+    1000
+   ],
+   "widths": [
+    430,
+    860
+   ],
+   "co": [
+    {
+     "n": 1,
+     "key": "lp.zoneShort.neck_collar",
+     "x": 62.0,
+     "y": 42.8,
+     "side": "l",
+     "len": 40,
+     "phone": true
+    }
+   ],
+   "kb": {
+    "430.avif": 3.2,
+    "430.webp": 3.7,
+    "860.avif": 7.7,
+    "860.webp": 9.0
+   }
+  },
+  "tall": {
+   "ar": [
+    800,
+    1000
+   ],
+   "widths": [
+    576,
+    1152
+   ],
+   "co": [
+    {
+     "n": 1,
+     "key": "lp.zoneShort.neck_collar",
+     "x": 62.0,
+     "y": 11.6,
+     "side": "l",
+     "len": 40,
+     "phone": false
+    },
+    {
+     "n": 2,
+     "key": "lp.zoneShort.thoracic_spine",
+     "x": 50.0,
+     "y": 31.6,
+     "side": "r",
+     "len": 44,
+     "phone": false
+    },
+    {
+     "n": 3,
+     "key": "lp.chips.lowerBack",
+     "x": 46.0,
+     "y": 63.0,
+     "side": "r",
+     "len": 48,
+     "phone": false
+    }
+   ],
+   "kb": {
+    "576.avif": 17.5,
+    "576.webp": 23.0,
+    "1152.avif": 39.1,
+    "1152.webp": 57.9
+   }
+  }
+ }
+}

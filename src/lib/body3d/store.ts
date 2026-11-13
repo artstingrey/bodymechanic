@@ -1,0 +1,160 @@
+'use client';
+/**
+ * Shared state of the body module (3D runtime + DOM UI + 2D fallback). Tiny external store (no extra library):
+ * subscribe/getSnapshot for useSyncExternalStore. The booking draft is persisted in sessionStorage (ТЗ 6.8).
+ */
+import { useSyncExternalStore } from 'react';
+import type { BodyMarker, BookingDraft, Locale } from '@/lib/api/types';
+import { track } from '@/lib/analytics/track';
+import { readUtm } from '@/lib/analytics/utm';
+import { draftExpired } from '@/lib/booking/draft-ttl';
+
+export type Gender = 'male' | 'female';
+export type Tool = 'rotate' | 'zoom' | 'marker';
+export type Status = 'idle' | 'loading' | 'ready' | 'error' | 'timeout';
+export type Marker = BodyMarker & { n: number; normal?: [number, number, number] };
+
+/** Events for the aria-live region (formatted with messages by the UI, never hard-coded text). */
+export type LiveEvent =
+  | { type: 'markerAdded'; n: number; zoneId: string }
+  | { type: 'markerRemoved'; n: number }
+  | { type: 'allCleared' } | { type: 'maxReached' } | { type: 'outOfZones' } | { type: 'viewReset' } | { type: 'modelLoaded' }
+  | { type: 'modelSwitched'; model: Gender; kept: number; dropped: number }
+  | { type: 'mode2d' };
+
+export interface BodyState {
+  model: Gender;
+  /** R-FINAL F-04 (lead): «Маркер» by default on /booking — a drag still rotates, a short tap places a marker */
+  tool: Tool;
+  autorotate: boolean;
+  status: Status;
+  progress: number; // 0..1
+  mode2d: false | 'noWebgl' | 'lowFps' | 'user' | 'timeout';
+  markers: Marker[];
+  generalNote: string;
+  live: { seq: number; event: LiveEvent | null };
+  /** recent announcements (≤ 3, last 4 s) — rendered as separate nodes, so a model announcement queues after a marker one
+   *  instead of replacing it before the screen reader has read it (R-CODE-03 MINOR) */
+  liveLog: { seq: number; event: LiveEvent; at: number }[];
+  resetSeq: number; // bumps → runtime resets the view
+  /** Visible hint next to the canvas (body3d.hint.*), e.g. a tap on the head or the front of the shin (outside the zone list). */
+  hint: { seq: number; key: 'outOfZones' } | null;
+  /** 'reduced' = DPR ≤ 1.5 + MeshStandard instead of MeshPhysical (FPS < 30 in the first 3 s; < 20 → 2D, ТЗ 6.11). */
+  quality: 'high' | 'reduced';
+  /** the draft came back from sessionStorage (ТЗ 6.8) → booking step 1 offers «Продолжить / Начать заново» (N-04) */
+  restored: boolean;
+  /** bumps → the runtime retries a failed model load (R-APP-01 F-07) */
+  loadSeq: number;
+}
+
+export const MAX_MARKERS = 10; // ТЗ 6.3
+const KEY = 'bm.bookingDraft';
+
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let state: BodyState = {
+  model: 'male', tool: 'marker', autorotate: true, status: 'idle', progress: 0, mode2d: false,
+  markers: [], generalNote: '', live: { seq: 0, event: null }, liveLog: [], resetSeq: 0, hint: null, quality: 'high', restored: false, loadSeq: 0,
+};
+const listeners = new Set<() => void>();
+let hydrated = false;
+
+function emit() { listeners.forEach((l) => l()); }
+function set(patch: Partial<BodyState>, persist = false) {
+  state = { ...state, ...patch };
+  if (persist) save();
+  emit();
+}
+function announce(event: LiveEvent) {
+  const seq = state.live.seq + 1, at = Date.now();
+  set({ live: { seq, event }, liveLog: [...state.liveLog.filter((e) => at - e.at < 4000), { seq, event, at }].slice(-3) });
+}
+
+function save() {
+  try {
+    const draft: Pick<BookingDraft, 'model' | 'markers' | 'generalNote'> & { v: 1 } = {
+      v: 1, model: state.model, generalNote: state.generalNote,
+      markers: state.markers.map(({ id, zoneId, position, note, intensity }) => ({ id, zoneId, position, note, intensity })),
+    };
+    sessionStorage.setItem(KEY, JSON.stringify({ ...draft, normals: state.markers.map((m) => m.normal ?? null), savedAt: Date.now() }));
+  } catch { /* storage disabled: the draft simply does not survive a reload */ }
+}
+
+/** Restores the draft once on the client (ТЗ 6.8, 3D-13). */
+export function hydrateBody() {
+  if (hydrated || typeof window === 'undefined') return;
+  hydrated = true;
+  const patch: Partial<BodyState> = { autorotate: !reducedMotion() };
+  try {
+    const raw = sessionStorage.getItem(KEY);
+    const d = raw ? JSON.parse(raw) : null;
+    // Ж-5: zones and notes about the visitor's wellbeing do not wait in a restored tab for more than a day
+    if (d && draftExpired(d.savedAt)) sessionStorage.removeItem(KEY);
+    else if (d) {
+      patch.model = d.model === 'female' ? 'female' : 'male';
+      patch.generalNote = typeof d.generalNote === 'string' ? d.generalNote : '';
+      patch.restored = (Array.isArray(d.markers) && d.markers.length > 0) || !!(d.generalNote && String(d.generalNote).trim());
+      patch.markers = (Array.isArray(d.markers) ? d.markers : []).slice(0, MAX_MARKERS)
+        .map((m: BodyMarker, i: number) => ({ ...m, n: i + 1, normal: d.normals?.[i] ?? undefined }));
+    }
+  } catch { /* ignore broken drafts */ }
+  set(patch);
+}
+
+const nextNumber = () => { const used = new Set(state.markers.map((m) => m.n)); let n = 1; while (used.has(n)) n++; return n; };
+
+export const body = {
+  get: () => state,
+  subscribe(l: () => void) { listeners.add(l); return () => listeners.delete(l); },
+  setModel(model: Gender) { if (model !== state.model) { set({ model }, true); track('body_model_switch', { model }); } },
+  setTool(tool: Tool) { set(tool === 'marker' ? { tool, autorotate: false } : { tool }); },
+  setAutorotate(on: boolean) { set({ autorotate: on && !reducedMotion() }); },
+  setStatus(status: Status, progress?: number) { set(progress === undefined ? { status } : { status, progress }); },
+  setProgress(progress: number) { set({ progress }); },
+  setMode2d(reason: BodyState['mode2d']) { set({ mode2d: reason }); if (reason) announce({ type: 'mode2d' }); },
+  resetView() { set({ resetSeq: state.resetSeq + 1 }); announce({ type: 'viewReset' }); },
+  setGeneralNote(generalNote: string) { set({ generalNote: generalNote.slice(0, 1000) }, true); }, // ТЗ 6.5: ≤ 1000
+  /** Adds a marker; returns false when the zone is unknown or the limit is reached. */
+  addMarker(m: { zoneId: string | null; position: [number, number, number]; normal?: [number, number, number] }): boolean {
+    if (!m.zoneId) { set({ hint: { seq: (state.hint?.seq ?? 0) + 1, key: 'outOfZones' } }); announce({ type: 'outOfZones' }); return false; }
+    if (state.markers.length >= MAX_MARKERS) { announce({ type: 'maxReached' }); return false; }
+    const n = nextNumber();
+    const marker: Marker = { id: `m${Date.now().toString(36)}${n}`, n, zoneId: m.zoneId, position: m.position, normal: m.normal };
+    set({ markers: [...state.markers, marker] }, true);
+    announce({ type: 'markerAdded', n, zoneId: m.zoneId });
+    track('body_marker_add', { marker_count: state.markers.length, step: 1, model: state.model }); // no zone (D-01, M7)
+    return true;
+  },
+  updateMarker(id: string, patch: Partial<Pick<Marker, 'note' | 'intensity' | 'position' | 'normal'>>) {
+    const note = patch.note === undefined ? undefined : patch.note.slice(0, 300); // ТЗ 6.5: ≤ 300
+    set({ markers: state.markers.map((m) => (m.id === id ? { ...m, ...patch, ...(note === undefined ? {} : { note }) } : m)) }, true);
+  },
+  removeMarker(id: string) {
+    const m = state.markers.find((q) => q.id === id); if (!m) return;
+    set({ markers: state.markers.filter((q) => q.id !== id) }, true);
+    announce({ type: 'markerRemoved', n: m.n });
+  },
+  /** «Очистить все» (3D-07): returns the snapshot for «Вернуть» */
+  clearMarkers(): Marker[] { const snapshot = state.markers; set({ markers: [] }, true); announce({ type: 'allCleared' }); return snapshot; },
+  /** «Вернуть» after «Очистить все» */
+  restoreMarkers(snapshot: Marker[]) { set({ markers: snapshot.slice(0, MAX_MARKERS) }, true); },
+  /** after a successful booking (ТЗ 6.8 MUST): the draft is gone, silently (no aria-live «all cleared») */
+  resetDraft() { set({ markers: [], generalNote: '', restored: false }, true); try { sessionStorage.removeItem(KEY); } catch { /* ignore */ } },
+  dismissRestored() { if (state.restored) set({ restored: false }); },
+  retryLoad() { set({ status: 'loading', progress: 0, loadSeq: state.loadSeq + 1 }); },
+  /** Used by the runtime after a model switch (markers re-projected; some may be dropped). */
+  replaceMarkers(markers: Marker[], switched?: { model: Gender; dropped: number }) {
+    set({ markers }, true);
+    if (switched) announce({ type: 'modelSwitched', model: switched.model, kept: markers.length, dropped: switched.dropped });
+  },
+  announceLoaded() { announce({ type: 'modelLoaded' }); },
+  clearHint() { if (state.hint) set({ hint: null }); },
+  setQuality(quality: BodyState['quality']) { if (quality !== state.quality) set({ quality }); },
+  draft(locale: Locale): BookingDraft {
+    return { model: state.model, markers: state.markers.map(({ id, zoneId, position, note, intensity }) => ({ id, zoneId, position, note, intensity })), generalNote: state.generalNote || undefined, serviceIds: [], staffId: 0, locale, utm: readUtm() }; // utm: first visit, 30 days (ТЗ §14)
+  },
+};
+
+export function useBody<T>(select: (s: BodyState) => T): T {
+  return useSyncExternalStore(body.subscribe, () => select(state), () => select(state));
+}

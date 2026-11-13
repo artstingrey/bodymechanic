@@ -1,0 +1,575 @@
+{
+ "generated": "2026-11-06",
+ "label_key": "placeholder.illustrativePhoto",
+ "widths": [
+  640,
+  1280,
+  2000
+ ],
+ "formats": [
+  "avif",
+  "webp",
+  "jpg"
+ ],
+ "items": [
+  {
+   "id": "sports",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "sports-v1edit",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 58,
+    "y": 52,
+    "css": "object-position: 58% 52%"
+   },
+   "files": {
+    "640.avif": 26503,
+    "640.webp": 29464,
+    "640.jpg": 63316,
+    "1280.avif": 71639,
+    "1280.webp": 76512,
+    "2000.avif": 162412,
+    "2000.webp": 167346
+   },
+   "title_key": "mock.services.sports.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.sports.title"
+   ],
+   "theme_ru": "Спортивный массаж"
+  },
+  {
+   "id": "classic",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "classic-v2",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 40,
+    "y": 55,
+    "css": "object-position: 40% 55%"
+   },
+   "files": {
+    "640.avif": 28684,
+    "640.webp": 32604,
+    "640.jpg": 67329,
+    "1280.avif": 88457,
+    "1280.webp": 99756,
+    "2000.avif": 283643,
+    "2000.webp": 276168
+   },
+   "title_key": "mock.services.classic.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.classic.title"
+   ],
+   "theme_ru": "Классический массаж"
+  },
+  {
+   "id": "thai",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "thai-v3",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 55,
+    "y": 10,
+    "css": "object-position: 55% 10%"
+   },
+   "files": {
+    "640.avif": 25615,
+    "640.webp": 28248,
+    "640.jpg": 58634,
+    "1280.avif": 80643,
+    "1280.webp": 80126,
+    "2000.avif": 207724,
+    "2000.webp": 198128
+   },
+   "title_key": "mock.services.thai.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.thai.title"
+   ],
+   "theme_ru": "Тайский массаж"
+  },
+  {
+   "id": "sportsInfrared",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "sportsInfrared-v1",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 55,
+    "y": 52,
+    "css": "object-position: 55% 52%"
+   },
+   "files": {
+    "640.avif": 27070,
+    "640.webp": 26056,
+    "640.jpg": 62245,
+    "1280.avif": 90242,
+    "1280.webp": 87358,
+    "2000.avif": 227666,
+    "2000.webp": 216744
+   },
+   "title_key": "mock.services.sportsInfrared.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.sportsInfrared.title"
+   ],
+   "theme_ru": "Спортивный массаж с ИК-капсулой"
+  },
+  {
+   "id": "classicInfrared",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "classicInfrared-v1",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 45,
+    "y": 55,
+    "css": "object-position: 45% 55%"
+   },
+   "files": {
+    "640.avif": 18896,
+    "640.webp": 19978,
+    "640.jpg": 48292,
+    "1280.avif": 47653,
+    "1280.webp": 51720,
+    "2000.avif": 100538,
+    "2000.webp": 109946
+   },
+   "title_key": "mock.services.classicInfrared.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.classicInfrared.title"
+   ],
+   "theme_ru": "Классический массаж с ИК-капсулой"
+  },
+  {
+   "id": "fullComplex",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "fullComplex-v1",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 55,
+    "y": 55,
+    "css": "object-position: 55% 55%"
+   },
+   "files": {
+    "640.avif": 14329,
+    "640.webp": 15468,
+    "640.jpg": 39647,
+    "1280.avif": 39130,
+    "1280.webp": 43712,
+    "2000.avif": 150339,
+    "2000.webp": 140542
+   },
+   "title_key": "mock.services.fullComplex.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.fullComplex.title"
+   ],
+   "theme_ru": "Полный комплекс с ледяной ванной"
+  },
+  {
+   "id": "lfkKinesio",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "lfkKinesio-v1",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 48,
+    "y": 50,
+    "css": "object-position: 48% 50%"
+   },
+   "files": {
+    "640.avif": 26300,
+    "640.webp": 26790,
+    "640.jpg": 60596,
+    "1280.avif": 85440,
+    "1280.webp": 82244,
+    "2000.avif": 237667,
+    "2000.webp": 216470
+   },
+   "title_key": "mock.services.lfkKinesio.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.lfkKinesio.title"
+   ],
+   "theme_ru": "ЛФК и кинезиотерапия"
+  },
+  {
+   "id": "manual",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "manual-v2",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 55,
+    "y": 42,
+    "css": "object-position: 55% 42%"
+   },
+   "files": {
+    "640.avif": 28238,
+    "640.webp": 30816,
+    "640.jpg": 63722,
+    "1280.avif": 114678,
+    "1280.webp": 129892,
+    "2000.avif": 282885,
+    "2000.webp": 299996
+   },
+   "title_key": "mock.services.manual.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.manual.title"
+   ],
+   "theme_ru": "Мануальная терапия"
+  },
+  {
+   "id": "orthoRehab",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "orthoRehab-v2",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 60,
+    "y": 48,
+    "css": "object-position: 60% 48%"
+   },
+   "files": {
+    "640.avif": 27229,
+    "640.webp": 29768,
+    "640.jpg": 63086,
+    "1280.avif": 93070,
+    "1280.webp": 100916,
+    "2000.avif": 229442,
+    "2000.webp": 240044
+   },
+   "title_key": "mock.services.orthoRehab.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.orthoRehab.title"
+   ],
+   "theme_ru": "Ортопедическая реабилитация"
+  },
+  {
+   "id": "mfrPir",
+   "set": "services",
+   "aspect": "4:5",
+   "source": "mfrPir-v1",
+   "source_px": [
+    1856,
+    2304
+   ],
+   "master_px": [
+    1843,
+    2304
+   ],
+   "upscaled_2000": true,
+   "focal": {
+    "x": 55,
+    "y": 55,
+    "css": "object-position: 55% 55%"
+   },
+   "files": {
+    "640.avif": 35034,
+    "640.webp": 38436,
+    "640.jpg": 71544,
+    "1280.avif": 110491,
+    "1280.webp": 140844,
+    "2000.avif": 286639,
+    "2000.webp": 319240
+   },
+   "title_key": "mock.services.mfrPir.title",
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto",
+    "mock.services.mfrPir.title"
+   ],
+   "theme_ru": "Миофасциальный релиз и ПИР"
+  },
+  {
+   "id": "01",
+   "set": "journal",
+   "aspect": "16:9",
+   "source": "j01-v2",
+   "source_px": [
+    2752,
+    1536
+   ],
+   "master_px": [
+    2731,
+    1536
+   ],
+   "upscaled_2000": false,
+   "focal": {
+    "x": 45,
+    "y": 60,
+    "css": "object-position: 45% 60%"
+   },
+   "files": {
+    "640.avif": 8528,
+    "640.webp": 8948,
+    "640.jpg": 21035,
+    "1280.avif": 24346,
+    "1280.webp": 25652,
+    "2000.avif": 60413,
+    "2000.webp": 58834
+   },
+   "title_key": null,
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto"
+   ],
+   "theme_ru": "Восстановление после пробежки"
+  },
+  {
+   "id": "02",
+   "set": "journal",
+   "aspect": "16:9",
+   "source": "j02-v2",
+   "source_px": [
+    2752,
+    1536
+   ],
+   "master_px": [
+    2731,
+    1536
+   ],
+   "upscaled_2000": false,
+   "focal": {
+    "x": 48,
+    "y": 55,
+    "css": "object-position: 48% 55%"
+   },
+   "files": {
+    "640.avif": 20114,
+    "640.webp": 25020,
+    "640.jpg": 40817,
+    "1280.avif": 53293,
+    "1280.webp": 66382,
+    "2000.avif": 108835,
+    "2000.webp": 126718
+   },
+   "title_key": null,
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto"
+   ],
+   "theme_ru": "Утренний бег"
+  },
+  {
+   "id": "03",
+   "set": "journal",
+   "aspect": "16:9",
+   "source": "j03-v2edit",
+   "source_px": [
+    2752,
+    1536
+   ],
+   "master_px": [
+    2731,
+    1536
+   ],
+   "upscaled_2000": false,
+   "focal": {
+    "x": 50,
+    "y": 45,
+    "css": "object-position: 50% 45%"
+   },
+   "files": {
+    "640.avif": 8403,
+    "640.webp": 9134,
+    "640.jpg": 23665,
+    "1280.avif": 21831,
+    "1280.webp": 23758,
+    "2000.avif": 41782,
+    "2000.webp": 44606
+   },
+   "title_key": null,
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto"
+   ],
+   "theme_ru": "Мобильность плеч"
+  },
+  {
+   "id": "04",
+   "set": "journal",
+   "aspect": "16:9",
+   "source": "j04-v1",
+   "source_px": [
+    2752,
+    1536
+   ],
+   "master_px": [
+    2731,
+    1536
+   ],
+   "upscaled_2000": false,
+   "focal": {
+    "x": 50,
+    "y": 55,
+    "css": "object-position: 50% 55%"
+   },
+   "files": {
+    "640.avif": 8547,
+    "640.webp": 10422,
+    "640.jpg": 24772,
+    "1280.avif": 24304,
+    "1280.webp": 30138,
+    "2000.avif": 55921,
+    "2000.webp": 67274
+   },
+   "title_key": null,
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto"
+   ],
+   "theme_ru": "Офисная спина: пауза у стола"
+  },
+  {
+   "id": "05",
+   "set": "journal",
+   "aspect": "16:9",
+   "source": "j05-v1",
+   "source_px": [
+    2752,
+    1536
+   ],
+   "master_px": [
+    2731,
+    1536
+   ],
+   "upscaled_2000": false,
+   "focal": {
+    "x": 50,
+    "y": 50,
+    "css": "object-position: 50% 50%"
+   },
+   "files": {
+    "640.avif": 6740,
+    "640.webp": 7452,
+    "640.jpg": 19216,
+    "1280.avif": 20908,
+    "1280.webp": 22970,
+    "2000.avif": 49339,
+    "2000.webp": 54570
+   },
+   "title_key": null,
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto"
+   ],
+   "theme_ru": "Натюрморт восстановления"
+  },
+  {
+   "id": "06",
+   "set": "journal",
+   "aspect": "16:9",
+   "source": "j06-v1",
+   "source_px": [
+    2752,
+    1536
+   ],
+   "master_px": [
+    2731,
+    1536
+   ],
+   "upscaled_2000": false,
+   "focal": {
+    "x": 47,
+    "y": 50,
+    "css": "object-position: 47% 50%"
+   },
+   "files": {
+    "640.avif": 8386,
+    "640.webp": 9188,
+    "640.jpg": 23001,
+    "1280.avif": 21623,
+    "1280.webp": 22878,
+    "2000.avif": 41562,
+    "2000.webp": 43540
+   },
+   "title_key": null,
+   "alt_hint_keys": [
+    "placeholder.illustrativePhoto"
+   ],
+   "theme_ru": "Офисная спина: раскрыть грудь"
+  }
+ ],
+ "jpgWidths": [
+  640
+ ],
+ "path": "/photos/{set}/{id}-{w}.{fmt}",
+ "fallback": "jpg"
+}

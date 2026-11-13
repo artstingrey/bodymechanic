@@ -1,0 +1,171 @@
+@import "tailwindcss" source(none);
+@import "../styles/tokens.css";
+@import "../styles/ui.css";
+@import "../styles/layout.css";
+@import "../styles/sections.css";
+/* booking.css → app/[locale]/booking/page.tsx, pages.css → PageHead + 404s: route CSS, not on every page (R-CODE-02 F-04) */
+@import "../styles/body2d.css"; /* 2D silhouette states, callouts, markers (Brand Designer, synced) */
+
+/* RC-10. Where Tailwind looks for class names: ONLY here — the interface code and the dictionaries. `source(none)` above
+   switches the automatic search off; left to itself Tailwind reads every file of the project that git does not ignore,
+   documents and tests included. In RC-9 a word in backticks in docs/KNOWN-ISSUES.md (the CSS property for a blurred
+   backdrop) became a utility, and the deployed stylesheet was 1387 bytes larger than the one the gate had run on; two
+   more utilities had long been coming from comments in the tests. A new folder or a new file in the root is not a
+   source until it is named here. `npm run gate:clean` proves it on every commit: the same tree without the documents,
+   with a class-like word added to e2e/ and to a new file in the root, must build the same CSS, byte for byte. */
+@source "../";
+@source "../../messages";
+
+/* Tailwind theme on the tokens (art director): bg-bg, text-muted, rounded-card, shadow-2, ease-out … all read tokens.css. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-ink-card: var(--accent-ink-card);
+  --color-accent-on-dark: var(--accent-on-dark);
+  --color-dark: var(--dark);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-muted-card: var(--muted-card);
+  --color-muted-on-dark: var(--muted-on-dark);
+  --color-muted-on-dark-raised: var(--muted-on-dark-raised);
+  --color-line: var(--line);
+  --color-field: var(--field-border);
+  --color-card-lavender: var(--card-lavender);
+  --color-card-sand: var(--card-sand);
+  --color-card-sky: var(--card-sky);
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-sans);
+  --radius-card: var(--r-card);
+  --radius-card-sm: var(--r-card-sm);
+  --radius-field: var(--r-field);
+  --radius-photo: var(--r-photo);
+  --radius-sheet: var(--r-sheet);
+  --shadow-1: var(--sh-1);
+  --shadow-2: var(--sh-2);
+  --shadow-3: var(--sh-3);
+  --ease-out: var(--e-out);
+  --ease-in-out: var(--e-io);
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+/* light-only design: Samsung Internet / Chrome forced dark must not invert it (meta color-scheme + the property; Android matrix) */
+html { color-scheme: only light; background: var(--bg); color: var(--text); -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--header-h) + 16px); scrollbar-gutter: stable; }
+/* N2-04 (WCAG 2.4.11 Focus Not Obscured): on phones the FAB pill (layout.css .fab: bottom 12px + safe area, 52px high) must
+   never cover the element focused from the keyboard — scrolling into view keeps it above the pill + 12px */
+@media (max-width: 767px) { html { scroll-padding-bottom: calc(12px + 52px + 12px + env(safe-area-inset-bottom)); } }
+/* open modal dialogs (burger, confirmations) lock the page without a jump: the gutter keeps the width (R-CODE-01 F-03) */
+html:has(dialog[open]:modal) { overflow: hidden; }
+/* Tailwind preflight zeroes margins: give native modal dialogs their centring back (burger overrides it with inset 0) */
+dialog:modal { margin: auto; }
+body { font-family: var(--font-sans); font-size: var(--fs-body); line-height: var(--lh-body); margin: 0; overflow-wrap: break-word; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+/* long RU words («Конфиденциальности» in a 36px H1 at 360px) must wrap, never widen the page (DEL-05) */
+h1, h2, h3 { line-height: var(--lh-heading); margin: 0 0 0.5em; -webkit-hyphens: auto; hyphens: auto; text-wrap: balance; }
+h1 { font-size: var(--fs-h1); font-weight: var(--fw-display); letter-spacing: var(--tracking-display); line-height: 1.04; }
+h2 { font-size: var(--fs-h2); font-weight: var(--fw-heading); letter-spacing: var(--tracking-heading); }
+h3 { font-size: var(--fs-h3); font-weight: 700; letter-spacing: -0.015em; }
+/* D-07 (text scaled to 200 %): a long word wraps inside its box instead of widening the page; «anywhere» also lowers the
+   min-content size, so the grid / flex tracks around headings and labels can shrink (no hyphens: normal sizes unchanged) */
+h1, h2, h3, h4, .h1, .h2, .h3, dt, dd, th, .lbl-u { overflow-wrap: anywhere; min-width: 0; }
+p { text-wrap: pretty; }
+a { color: inherit; }
+img, svg { max-width: 100%; }
+:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: 2px; }
+.on-dark :focus-visible { outline-color: var(--focus-ring-on-dark); }
+::selection { background: var(--card-sand); color: var(--text); }
+/* landscape phones: the side space also clears the notch / Dynamic Island (env() = 0 in portrait → unchanged).
+   max-width: none — Tailwind v4 also generates its own .container utility (max-width 40 / 48 / 64 / 80 / 96rem at its
+   breakpoints, in @layer utilities), which capped our content below --container on every width ≥ 640: 768 on 984 px,
+   1024 on 1100–1279, 1536 on 2560 (Web Art Director, desktop audit). This rule is outside any layer, so it wins. */
+.container { width: min(var(--container), calc(100% - 2 * max(var(--gutter), env(safe-area-inset-left), env(safe-area-inset-right)))); max-width: none; margin-inline: auto; }
+.section { padding-block: var(--section-y); }
+.section--dark { background: var(--dark); color: var(--bg); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip-link { position: absolute; left: 8px; top: -100px; z-index: 60; background: var(--surface); padding: 10px 14px; border-radius: var(--r-field); box-shadow: var(--sh-2); font-weight: 700; }
+.skip-link:focus { top: 8px; }
+.skip-link-inline:focus { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--sh-2); font-weight: 700; }
+.skip-link-inline:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* TODO(content) placeholder (Todo.tsx, lead's empty-state policy): no editor note on the page, only the site's «Демо» badge; the
+   note stays in data-todo. Block-level wrappers (p, dd) hold the badge on their own line, inline ones sit next to their label. */
+.todo { margin: 0; }
+.todo[hidden] { display: none !important; }
+button, [role="button"], input, select, textarea { font: inherit; }
+input, select, textarea { max-width: 100%; } /* long option texts (service names) must not widen the page (DEL-05) */
+button { min-height: var(--tap); min-width: var(--tap); } /* ≥44×44 (A11Y-03, R-3D-01 F-05) */
+main:focus { outline: none; }
+/* standalone links (the only element in a list item, cell or paragraph) get a 44 px target (R-CODE-01 F-01, WCAG 2.5.8) */
+main :is(li, td, th, dd, article) > a, main p > a:only-child { display: inline-flex; align-items: center; min-height: var(--tap); }
+main .chips > a { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 18px; border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); font: 600 14px/1 var(--font-sans); color: var(--text); text-decoration: none; }
+main .chips > a[aria-current] { background: var(--text); color: var(--bg); box-shadow: none; }
+
+/* Reduced motion (motion-spec): keyframe animations end at once; only fades and colour changes may transition — with the
+   components' own durations, the --d-* tokens (120 ms under reduce, tokens.css). RC-6: the old reset forced
+   transition-duration: 120ms on * while transition-property stayed «all», so any change of geometry — an early style
+   pass, a hydration, a cqw resize, a late font — slid for 120 ms (the hero rows and stage, the home cards, the LP copy).
+   Now geometry and transforms change at once, as without reduce. The button spinner keeps turning slowly — it carries
+   state. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+    transition-property: opacity, visibility, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, box-shadow !important; }
+  .btn[aria-busy="true"] .spin { animation-duration: 2.4s !important; animation-iteration-count: infinite !important; }
+  /* RC-5: the * 120 ms above (transition-property defaults to all) animated the border of <html> itself on load — the whole
+     page was 2–3 px narrower for ~100 ms and slid open (iPhone 17 Pro Max: the hero index rows moved 1.9–2.5 px; 0.0
+     without it). html and body have no transitions of their own. Narrowing the * reset is RC-6. */
+  html, body { transition: none !important; }
+}
+
+/*
+ * 3D module — structure only (box, layering, poster → canvas swap). Look & motion come from the style frame.
+ * The slot always has a size, so the poster (LCP) and the canvas never collapse to 0 px.
+ */
+.b3d-slot { position: relative; width: 100%; height: clamp(420px, 70svh, 960px); overflow: hidden; isolation: isolate; }
+.b3d-slot[data-mode="booking"][data-mode2d] { height: auto; }
+/* hero fallback (lead: no 2D silhouette in the hero): the front-view poster stays, the index is built on it */
+.b3d-slot[data-fallback] .b3d-host { display: none; }
+.b3d-slot[data-fallback] .b3d-poster { opacity: 1; }
+.b3d-poster, .b3d-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.b3d-poster { z-index: 0; transition: opacity var(--d-2) ease; }
+.b3d-slot[data-status="ready"]:not([data-mode2d]) .b3d-poster { opacity: 0; pointer-events: none; }
+.b3d-slot[data-mode="booking"][data-mode2d] .b3d-poster, .b3d-slot[data-mode2d] .b3d-host { display: none; }
+.b3d-host { position: absolute; inset: 0; z-index: 1; }
+.b3d-canvas { width: 100%; height: 100%; }
+/* OrbitControls writes touch-action:none inline (and resets it on reconnect), hence !important.
+   Hero: the model is ~70svh tall — vertical pans must scroll the page, horizontal drags rotate.
+   Booking: the canvas is the working tool — every gesture goes to the model. */
+.b3d-slot[data-mode="hero"] canvas { touch-action: pan-y !important; }
+.b3d-slot[data-mode="booking"] canvas { touch-action: none !important; }
+.b3d-loader { position: absolute; inset: auto 0 12px; z-index: 2; text-align: center; font-size: var(--fs-caption); }
+.b3d-dialog { position: absolute; inset: auto 12px 12px; z-index: 3; background: var(--surface); padding: 12px; border-radius: var(--radius-field); }
+.b3d-hint { position: absolute; inset: 12px 12px auto; z-index: 2; margin: 0; background: var(--surface); padding: 8px 12px; border-radius: var(--radius-field); font-size: var(--fs-caption); }
+/* Marker (README §12): accent disc, 3 px white ring, 1 px #26221F outline, white digit.
+   Appearance (R-3D-01 F-04, motion inventory): scale .9 → 1 + ONE ring wave, no loops; reduced-motion → static (global rule). */
+.b3d-pin { position: relative; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--marker-fill); color: var(--marker-digit);
+  box-shadow: 0 0 0 3px var(--marker-ring), 0 0 0 4px var(--marker-outline); font-size: 13px; font-weight: 700; line-height: 1; user-select: none;
+  animation: b3d-pin-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both; transition: opacity calc(var(--d-fade) * 0.75) ease; }
+.b3d-pin::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--marker-fill); pointer-events: none; animation: b3d-pin-wave 700ms ease-out 1 both; }
+.b3d-pin[data-back="true"] { opacity: 0; } /* surface turned away from the camera */
+@keyframes b3d-pin-in { from { transform: scale(0.9); opacity: 0; } }
+@keyframes b3d-pin-wave { from { transform: scale(1); opacity: 0.6; } to { transform: scale(1.9); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .b3d-rot { display: none; } } /* no auto-rotation → nothing to pause */
+/* RC-7 (HR MINOR): under reduce a marker appears as it is — the * reset above only shortens animations to 0.01 ms, and with
+   fill «both» the first frame still drew the pin at scale 0.9 / opacity 0 and the ring at 0.6. No pop-in, no ring wave. */
+@media (prefers-reduced-motion: reduce) {
+  .b3d-pin { animation: none !important; }
+  .b3d-pin::after { animation: none !important; opacity: 0; }
+}
+
+/* Booking step 7 «PDF заявки» = print / save as PDF (R-APP-01 F-01): only the confirmation is printed. */
+@media print {
+  header, footer, .demo-notice, .book-floating, .cookie, .booking > nav, .booking-done__actions, .booking-done > button { display: none !important; }
+}
+/* native modal dialogs (clear all, cancel booking): structure only */
+dialog { max-width: min(92vw, 480px); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 20px; }
+dialog::backdrop { background: rgb(38 34 31 / 0.4); }
+.dates button[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+/* 2D silhouette size (R-APP-02 F-01): a figure never exceeds the screen — the whole body is visible at once; the width
+   follows the aspect ratio of the (callout-widened) viewBox. Layout of the two figures: Web Art Director (booking.css). */
+.b2d-stage svg.b2d { width: auto; max-width: 100%; height: clamp(612px, 82svh, 780px); max-height: none; margin-inline: auto; display: block; } /* Brand Designer, 2D on the device matrix: zone targets ≥ 44.6 px on level A and 320; the figure scrolls in the window between the header and the sheet */

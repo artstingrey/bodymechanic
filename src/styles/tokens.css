@@ -1,0 +1,165 @@
+/* =====================================================================
+   The Body Mechanic · design tokens · hi-fi v1 · 2026-11-06
+   Copy of site/design/hifi/tokens.css (art director). Font: next/font local → --font-manrope (layout.tsx).
+   Palette: TZ §11. AA adjustments: README п.12 (art-director table, R-SF-01 addition).
+   Type scale: TZ §11 via clamp() (360 → 1440 px), 2K step from 1920 px.
+   Containers: TZ §12. Motion bounds: README п.15. One motion library: GSAP.
+   ===================================================================== */
+
+:root{
+  /* ---------- Palette (TZ §11) ---------- */
+  --bg:#F7F4F0;
+  --surface:#FFFFFF;
+  --accent:#B4583A;          /* CTA fill (white text only, 4.78:1), large display, markers */
+  --dark:#2B2724;
+  --text:#26221F;
+  --muted:#6F6760;           /* on --bg / --surface only */
+  --card-lavender:#E4DDF2;
+  --card-sand:#F1E3D6;
+  --card-sky:#CFDCE6;
+  --line:#E7DFD7;            /* decorative dividers only, never a field border */
+
+  /* ---------- AA adjustments (README п.12) ---------- */
+  --accent-ink:#B05639;              /* small accent text on --bg 4.52 / --surface 4.96 */
+  --accent-ink-card:#944830;         /* small accent text on pastel cards ≥ 4.66 */
+  --accent-on-dark:#C47D65;          /* accent text on --dark 4.56 */
+  --muted-card:#655E57;              /* secondary text on pastel cards ≥ 4.57 */
+  --muted-on-dark:#938D88;           /* secondary text on pure --dark only, 4.52 */
+  --muted-on-dark-raised:#A6A09B;    /* on raised dark plates (rgba .08 over --dark ≈ #3B3734) 4.56. Do not change without recalculation (margin 0.03). */
+  --field-border:#928C87;            /* inputs, checkboxes, radios, pagination dots: ≥ 3:1 */
+
+  /* ---------- States ---------- */
+  --error:#A3262A;           /* always with an icon and text, never colour alone */
+  --success:#2F6B3A;
+  --warning:#8A5A00;         /* queued; only on --bg / --surface */
+  --focus-ring:#26221F;      /* 2 px outline, 2 px offset */
+  --focus-ring-on-dark:#F7F4F0;
+  --disabled-opacity:.4;
+  --scrim:rgba(38,34,31,.48);
+  --raised-on-dark:rgba(247,244,240,.08);
+  --hairline:rgba(38,34,31,.16);
+  --hairline-on-dark:rgba(247,244,240,.16);
+
+  /* ---------- 3D / 2D body ---------- */
+  --marker-fill:var(--accent);
+  --marker-ring:#FFFFFF;     /* 3 px; 4.1–4.4:1 to red muscle */
+  --marker-outline:#26221F;  /* 1 px; 7.5–8.7:1 to pale tendons */
+  --marker-digit:#FFFFFF;
+  --zone-veil:rgba(255,255,255,.5);
+  --zone-outline:#26221F;    /* 1.5 px */
+  --zone2d-fill:color-mix(in srgb,var(--accent) 18%,transparent); /* 2D: the white veil is invisible on a white body */
+  --zone2d-outline:#26221F;  /* 2–2.5 px */
+  --reticle:#26221F;
+
+  /* ---------- Intensity scale 1–10 (sand → terracotta) ---------- */
+  --int-1:var(--card-sand);
+  --int-2:color-mix(in srgb,var(--accent) 25%,var(--card-sand));   /* dark digit 9.31 */
+  --int-3:color-mix(in srgb,var(--accent) 50%,var(--card-sand));   /* dark digit 6.75 */
+  --int-4:color-mix(in srgb,var(--accent) 75%,var(--card-sand));   /* dark digit 4.75 (white fails 3.32) */
+  --int-5:var(--accent);                                            /* white digit 4.78 */
+
+  /* ---------- Typography (TZ §11) ---------- */
+  --font-sans:var(--font-manrope),"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --fs-h1:clamp(2.25rem, 1.667rem + 2.593vw, 4rem);      /* 36 → 64 */
+  --fs-h2:clamp(1.75rem, 1.417rem + 1.481vw, 2.75rem);   /* 28 → 44 */
+  --fs-h3:clamp(1.25rem, 1.167rem + .37vw, 1.5rem);      /* 20 → 24 */
+  --fs-body:clamp(1rem, .958rem + .185vw, 1.125rem);     /* 16 → 18 */
+  --fs-small:.875rem;                                     /* 14 */
+  --fs-caption:clamp(.8125rem, .792rem + .093vw, .875rem);/* 13 → 14 */
+  --fs-micro:.8125rem;                                    /* 13: uppercase bold labels, tabular numerals (device matrix: text ≥ 13; was 11) */
+  --lh-heading:1.1;
+  --lh-body:1.5;
+  --fw-display:700;
+  --fw-heading:700;
+  --fw-body:400;
+  --tracking-display:-.035em;
+  --tracking-heading:-.03em;
+  --tracking-label:.08em;
+
+  /* ---------- Spacing (base 4 / 8) ---------- */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px;
+  --sp-10:40px; --sp-12:48px; --sp-14:56px; --sp-16:64px; --sp-20:80px; --sp-24:96px; --sp-30:120px; --sp-40:160px;
+  --section-y:56px;          /* 56 → 120 → 160 */
+  --hit:44px;                /* minimum touch target */
+
+  /* ---------- Containers (TZ §12) ---------- */
+  --gutter:16px;
+  --edge:max(var(--gutter), env(safe-area-inset-left), env(safe-area-inset-right)); /* side space incl. the landscape notch / Dynamic Island */
+  --container:calc(100% - 32px);
+  --grid-cols:12;
+  --grid-gap:12px;
+
+  /* ---------- Radii ---------- */
+  --r-card:20px;
+  --r-card-sm:16px;
+  --r-field:12px;
+  --r-pill:999px;            /* buttons, chips, segmented */
+  --r-sheet:24px;
+  --r-modal:20px;
+  --r-photo:14px;
+
+  /* ---------- Elevation (shadows tinted to --dark, never pure black) ---------- */
+  --sh-1:0 1px 2px rgba(43,39,36,.10);
+  --sh-2:0 1px 0 rgba(43,39,36,.04),0 12px 30px -16px rgba(43,39,36,.35);
+  --sh-3:0 20px 50px -20px rgba(43,39,36,.45);
+  --sh-sheet:0 -12px 30px -10px rgba(43,39,36,.25);
+
+  /* ---------- Layout ---------- */
+  --header-h:64px;           /* 80 on ≥1024, 64 when scrolled */
+  --header-h-compact:64px;
+  --panel-3d:320px;          /* booking step 1 side panels, up to 420 on 2K */
+  --panel-3d-right:380px;
+  --summary-w:420px;         /* «Ваша запись», steps 2–6 */
+
+  /* ---------- Motion (README п.15; GSAP + CSS + View Transitions) ---------- */
+  --e-out:cubic-bezier(.22,1,.36,1);
+  --e-in:cubic-bezier(.55,0,.75,.2);
+  --e-io:cubic-bezier(.65,0,.35,1);
+  --e-overshoot:cubic-bezier(.34,1.56,.64,1);
+  --e-spring:linear(0,.009,.035 2.1%,.141 4.4%,.723 12.9%,.938 16.7%,1.017 19.4%,1.067,1.099 24.3%,1.108 26%,1.099 27.9%,1.067 31%,1.017 35.6%,.993 40%,.987 45%,.999 58%,1);
+  --d-press:120ms;           /* button press */
+  --d-hover:200ms;
+  --d-fade:200ms;            /* short fades (index rows, overlay, FAB, pins) — 120 ms under reduced motion */
+  --d-1:300ms;               /* appearances 300–500 */
+  --d-2:400ms;
+  --d-3:500ms;
+  --shift-1:12px;            /* appearance shifts 12–24 */
+  --shift-2:24px;
+  --stagger:40ms;
+  --sequence-max:1200ms;     /* any choreography incl. hero load and hero → 3D */
+
+  /* ---------- Aliases used by the skeleton code (Frontend Builder) ---------- */
+  --focus-ring-color:var(--focus-ring);
+  --focus-ring-color-on-dark:var(--focus-ring-on-dark);
+  --focus-ring-width:2px;
+  --radius-card:var(--r-card);
+  --radius-field:var(--r-field);
+  --radius-pill:var(--r-pill);
+  --tap:var(--hit);
+  --side-panel:var(--panel-3d);
+  --model-bg:var(--bg);
+}
+
+@media (min-width:768px){
+  :root{ --gutter:24px; --container:calc(100% - 48px); }
+}
+@media (min-width:1024px){
+  :root{ --container:min(1200px, calc(100% - 48px)); --grid-gap:24px; --section-y:120px; --header-h:80px; }
+}
+@media (min-width:1440px){
+  :root{ --container:1320px; }
+}
+@media (min-width:1920px){
+  :root{
+    --container:1440px;
+    --fs-h1:clamp(4rem, 2.714rem + 1.429vw, 5rem);       /* 64 → 80 on 2K */
+    --fs-h2:clamp(2.75rem, 1.786rem + 1.071vw, 3.5rem);  /* 44 → 56 on 2K */
+  }
+}
+@media (min-width:2560px){
+  :root{ --container:1680px; --section-y:160px; --panel-3d:420px; --panel-3d-right:420px; }
+}
+@media (prefers-reduced-motion:reduce){
+  :root{ --d-fade:120ms; --d-1:120ms; --d-2:120ms; --d-3:120ms; --shift-1:0px; --shift-2:0px; --stagger:0ms; }
+  html{ scroll-behavior:auto; }
+}

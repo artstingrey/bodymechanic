@@ -1,0 +1,10 @@
+# LF everywhere (Render builds on Linux; the art director works in a second worktree)
+* text=auto eol=lf
+*.glb binary
+*.wasm binary
+*.woff2 binary
+*.png binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.jpg binary

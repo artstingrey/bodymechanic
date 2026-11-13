@@ -1,0 +1,187 @@
+{
+ "currency": "AED",
+ "categories": [
+  {
+   "key": "massage",
+   "title": {
+    "ru": "Массаж",
+    "en": "Massage"
+   }
+  },
+  {
+   "key": "rehab",
+   "title": {
+    "ru": "Реабилитация",
+    "en": "Rehabilitation"
+   }
+  }
+ ],
+ "services": [
+  {
+   "key": "sports",
+   "categoryKey": "massage",
+   "title": {
+    "ru": "Спортивный массаж",
+    "en": "Sports massage"
+   },
+   "description": {
+    "ru": "Массаж для тех, кто тренируется: перед нагрузкой, после старта и между тренировками.",
+    "en": "Massage for people who train: before a session, after a race and between workouts."
+   },
+   "priceMin": 650,
+   "durationMin": 100,
+   "priceOnRequest": false
+  },
+  {
+   "key": "classic",
+   "categoryKey": "massage",
+   "title": {
+    "ru": "Классический массаж",
+    "en": "Classic massage"
+   },
+   "description": {
+    "ru": "Спокойный классический массаж в приватном кабинете.",
+    "en": "A calm, classic massage in a private room."
+   },
+   "priceMin": 650,
+   "durationMin": 100,
+   "priceOnRequest": false
+  },
+  {
+   "key": "thai",
+   "categoryKey": "massage",
+   "title": {
+    "ru": "Тайский массаж",
+    "en": "Thai massage"
+   },
+   "description": {
+    "ru": "Тайский массаж с мягкими растяжками и вниманием к подвижности.",
+    "en": "Thai massage with gentle stretching and attention to mobility."
+   },
+   "priceMin": 650,
+   "durationMin": 100,
+   "priceOnRequest": false
+  },
+  {
+   "key": "sportsInfrared",
+   "categoryKey": "massage",
+   "title": {
+    "ru": "Спортивный массаж с инфракрасной капсулой",
+    "en": "Sports massage with infrared capsule"
+   },
+   "description": {
+    "ru": "Спортивный массаж в сочетании с сеансом в инфракрасной капсуле.",
+    "en": "Sports massage combined with an infrared capsule session."
+   },
+   "priceMin": 750,
+   "durationMin": 100,
+   "priceOnRequest": false
+  },
+  {
+   "key": "classicInfrared",
+   "categoryKey": "massage",
+   "title": {
+    "ru": "Классический массаж с инфракрасной капсулой",
+    "en": "Classic massage with infrared capsule"
+   },
+   "description": {
+    "ru": "Классический массаж в сочетании с сеансом в инфракрасной капсуле.",
+    "en": "Classic massage combined with an infrared capsule session."
+   },
+   "priceMin": 750,
+   "durationMin": 100,
+   "priceOnRequest": false
+  },
+  {
+   "key": "fullComplex",
+   "categoryKey": "massage",
+   "title": {
+    "ru": "Полный комплекс с ледяной ванной",
+    "en": "Full recovery programme with ice bath"
+   },
+   "description": {
+    "ru": "Массаж, инфракрасная капсула и ледяная ванна за один визит.",
+    "en": "Massage, infrared capsule and ice bath in a single visit."
+   },
+   "priceMin": 900,
+   "durationMin": 100,
+   "priceOnRequest": false
+  },
+  {
+   "key": "lfkKinesio",
+   "categoryKey": "rehab",
+   "title": {
+    "ru": "ЛФК и кинезиотерапия",
+    "en": "Exercise therapy and kinesiotherapy"
+   },
+   "description": {
+    "ru": "Упражнения и работа с движением под руководством специалиста, с планом для занятий дома.",
+    "en": "Exercises and movement work guided by a specialist, with a plan for practising at home."
+   },
+   "priceMin": null,
+   "durationMin": null,
+   "priceOnRequest": true
+  },
+  {
+   "key": "manual",
+   "categoryKey": "rehab",
+   "title": {
+    "ru": "Мануальная терапия",
+    "en": "Manual therapy"
+   },
+   "description": {
+    "ru": "Мануальные техники: работа руками, подобранная под ваш запрос и план.",
+    "en": "Hands-on techniques, chosen to fit your request and plan."
+   },
+   "priceMin": null,
+   "durationMin": null,
+   "priceOnRequest": true
+  },
+  {
+   "key": "orthoRehab",
+   "categoryKey": "rehab",
+   "title": {
+    "ru": "Ортопедическая реабилитация",
+    "en": "Orthopaedic rehabilitation"
+   },
+   "description": {
+    "ru": "Бережная работа с ограничениями подвижности после травм, после согласования с врачом.",
+    "en": "Gentle work on limited mobility after an injury, once your doctor has cleared you."
+   },
+   "priceMin": null,
+   "durationMin": null,
+   "priceOnRequest": true
+  },
+  {
+   "key": "mfrPir",
+   "categoryKey": "rehab",
+   "title": {
+    "ru": "Миофасциальный релиз и ПИР",
+    "en": "Myofascial release and post-isometric relaxation"
+   },
+   "description": {
+    "ru": "Миофасциальный релиз и работа с мышечным напряжением; техника подбирается на этапе оценки.",
+    "en": "Myofascial release and work on muscle tension; the technique is chosen at the assessment stage."
+   },
+   "priceMin": null,
+   "durationMin": null,
+   "priceOnRequest": true
+  }
+ ],
+ "specialist": {
+  "ru": "Специалист студии",
+  "en": "Studio specialist"
+ },
+ "articleTitle": {
+  "ru": "Демо-статья {n}",
+  "en": "Demo article {n}"
+ },
+ "articleTodo": {
+  "ru": "TODO(content): рубрики и статьи журнала; авторы — специалисты студии",
+  "en": "TODO(content): journal topics and articles; authors are the studio’s specialists"
+ },
+ "demo": {
+  "ru": "Демо",
+  "en": "Demo"
+ }
+}

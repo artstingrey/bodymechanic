@@ -1,0 +1,52 @@
+/* body2d.css - 2D body silhouette, style A "anatomical atlas" (TZ 6.10 / 6.11). Colours = TZ tokens + README item 12.
+   Zone states
+     default  : dotted hairline #928C87 (--field-border), no fill
+     hover    : sand fill + solid --accent line + crosshair at the zone anchor
+     focus    : white halo + DASHED 2px #26221F ring + crosshair (keyboard only; never looks like a selected zone)
+     selected : SOLID 2.25px #26221F outline + terracotta hatch over a light terracotta tint + numbered marker (README item 12 marker)
+   The white veil of 3D is NOT used in 2D (invisible on the white body, F-06 / N-04).
+   Animation rule (MO-12): only opacity and transform are animated; the fill lives on the separate .b2d-fx layer. */
+.b2d{color-scheme:only light;--b2d-ink:var(--text,#26221F);--b2d-zone-line:var(--field-border,#928C87);--b2d-body:var(--surface,#FFFFFF);--b2d-detail:var(--field-border,#928C87);
+  --b2d-hover:var(--card-sand,#F1E3D6);--b2d-accent:var(--accent,#B4583A);--b2d-sel-line:#26221F;--b2d-sel-tint:rgba(180,88,58,.14);
+  --b2d-ring:#FFFFFF;--b2d-focus:#26221F;--b2d-halo:#FFFFFF;
+  display:block;width:100%;height:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;font-variant-numeric:tabular-nums}
+.b2d .b2d-silhouette{fill:var(--b2d-body);stroke:none}
+.b2d .b2d-outline{fill:none;pointer-events:none}
+.b2d .b2d-outline path{fill:none;stroke:var(--b2d-ink);stroke-width:1.4px;stroke-linejoin:round}
+.b2d .b2d-silhouette path,.b2d .b2d-outline path,.b2d .b2d-zone,.b2d .b2d-detail *,.b2d .b2d-focus-ring,.b2d .b2d-focus-halo,.b2d .b2d-sel-outline,.b2d .b2d-badge *,.b2d .b2d-cross *,.b2d .b2d-callout *{vector-effect:non-scaling-stroke}
+.b2d .b2d-detail *{stroke:var(--b2d-detail);stroke-opacity:.7;stroke-width:.9px;fill:none}
+/* default */
+.b2d .b2d-zone{fill:transparent;stroke:var(--b2d-zone-line);stroke-width:1px;stroke-dasharray:2 3;cursor:pointer;outline:none}
+.b2d .b2d-hit{fill:transparent;stroke:none;pointer-events:all;cursor:pointer}
+/* fill layer (opacity only): hover = sand, selected = hatch over terracotta tint */
+.b2d .b2d-fx{fill:var(--b2d-hover);stroke:none;opacity:0;pointer-events:none;transition:opacity var(--d-fade) cubic-bezier(.22,1,.36,1)}
+.b2d .b2d-fx.is-hover{opacity:1}
+.b2d .b2d-fx.is-selected{fill:var(--b2d-hatch,var(--b2d-sel-tint));opacity:1}
+/* hover (pointer devices only) */
+@media (hover:hover){.b2d .b2d-zone:hover,.b2d .b2d-zone.is-hover{stroke:var(--b2d-accent);stroke-dasharray:none;stroke-width:1.25px}}
+/* keyboard focus: halo + dashed ring (JS clones the focused zone into .b2d-focus-halo / .b2d-focus-ring) */
+.b2d .b2d-zone:focus-visible{stroke:var(--b2d-focus);stroke-width:2px}
+.b2d .b2d-focus-halo{fill:none;stroke:var(--b2d-halo);stroke-width:5px;stroke-linejoin:round;pointer-events:none}
+.b2d .b2d-focus-ring{fill:none;stroke:var(--b2d-focus);stroke-width:2px;stroke-dasharray:7 4;stroke-linejoin:round;pointer-events:none}
+/* selected: solid outline 2.25px (drawn again on top by .b2d-sel-outline so neighbours cannot cover it) */
+.b2d .b2d-zone.is-selected,.b2d .b2d-zone[aria-checked="true"]{stroke:var(--b2d-sel-line);stroke-width:2.25px;stroke-dasharray:none}
+.b2d .b2d-sel-outline{fill:none;stroke:var(--b2d-sel-line);stroke-width:2.25px;stroke-linejoin:round;pointer-events:none}
+/* disabled */
+.b2d .b2d-zone.is-disabled,.b2d .b2d-zone[aria-disabled="true"]{opacity:.38;pointer-events:none;cursor:not-allowed}
+.b2d .b2d-badges,.b2d .b2d-sel-layer,.b2d .b2d-cross,.b2d .b2d-callouts{pointer-events:none}
+/* crosshair (atlas detail): 1px lines + ring, drawn in CSS px at the zone anchor on hover / focus */
+.b2d .b2d-cross line{stroke:#26221F;stroke-width:1px}
+.b2d .b2d-cross circle{fill:none;stroke:#26221F;stroke-width:1px}
+/* numbered marker, same as in 3D: disc r10 + 3px #FFF ring + 1px #26221F outline, digit #FFF */
+.b2d .b2d-badge .b2d-b-outline{fill:none;stroke:#26221F;stroke-width:1px}
+.b2d .b2d-badge .b2d-b-ring{fill:none;stroke:var(--b2d-ring);stroke-width:3px}
+.b2d .b2d-badge .b2d-b-disk{fill:var(--b2d-accent);stroke:none}
+.b2d .b2d-badge text{fill:#fff;font:700 13px/1 var(--font,Manrope,Inter,system-ui,sans-serif);text-anchor:middle;dominant-baseline:central}
+.b2d .b2d-badge-in{transform-box:fill-box;transform-origin:center}
+.b2d .b2d-badge-in.is-new{animation:b2d-pop .32s cubic-bezier(.22,1,.36,1)}   /* only the marker that was just added; re-layout (resize, fonts) never replays it */
+@keyframes b2d-pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+/* callouts (wide layouts only): hairline leader + "01  Name", tabular figures */
+.b2d .b2d-callout .lead{fill:none;stroke:#26221F;stroke-width:1px}
+.b2d .b2d-callout text,.b2d .b2d-measure text{font:600 13px/1.25 var(--font,Manrope,Inter,system-ui,sans-serif);fill:var(--text,#26221F);font-variant-numeric:tabular-nums}
+.b2d .b2d-callout .num,.b2d .b2d-measure .num{fill:var(--accent-ink-card,#944830);font-weight:800}
+@media (prefers-reduced-motion:reduce){.b2d .b2d-fx{transition:none}.b2d .b2d-badge-in.is-new{animation:none}}
