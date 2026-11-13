@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Проверка API Altegio</title>
+  <style>
+    :root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; color: #182521; background: #f2f5f3; }
+    body { margin: 0; }
+    main { max-width: 52rem; margin: 2.5rem auto; padding: 0 1rem; }
+    h1 { margin: 0 0 .25rem; line-height: 1.2; }
+    h2 { margin: 0 0 .4rem; font-size: 1.2rem; }
+    section { background: #fff; border: 1px solid #d5dfd9; border-radius: .7rem; padding: 1rem; margin-top: .8rem; }
+    button { font: inherit; cursor: pointer; border: 1px solid #215447; border-radius: .4rem; color: #215447; background: #fff; padding: .45rem .75rem; }
+    button[data-action="book"] { color: #fff; border-color: #943721; background: #943721; }
+    button:focus-visible { outline: 3px solid #316b9c; outline-offset: 3px; }
+    button:disabled { opacity: .6; cursor: wait; }
+    p { margin: .25rem 0 .7rem; }
+    .status { margin: .6rem 0 0; }
+    pre { max-height: 26rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; margin: .4rem 0 0; padding: .75rem; background: #edf2ee; border-radius: .4rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Проверка API Altegio</h1>
+    <p>Параметры берутся из локальной конфигурации и <code>api.mjs</code>. Ответ каждого запроса появится под кнопкой.</p>
+    <section>
+      <h2>Каталог филиала</h2>
+      <button type="button" data-action="services" data-method="GET">Получить услуги</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+    <section>
+      <h2>Команда</h2>
+      <button type="button" data-action="staff" data-method="GET">Получить сотрудников</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+    <section>
+      <h2>Доступные даты</h2>
+      <button type="button" data-action="dates" data-method="GET">Получить даты</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+    <section>
+      <h2>Свободные окна</h2>
+      <button type="button" data-action="times" data-method="GET">Получить время</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+    <section>
+      <h2>Проверка окна</h2>
+      <button type="button" data-action="check" data-method="POST">Проверить окно</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+    <section>
+      <h2>Создание записи</h2>
+      <p>Кнопка создаёт реальную запись в журнале выбранного филиала.</p>
+      <button type="button" data-action="book" data-method="POST">Создать тестовую запись</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+    <section>
+      <h2>Подтверждение записи</h2>
+      <button type="button" data-action="verify" data-method="GET">Прочитать созданную запись</button>
+      <p class="status" role="status"></p>
+      <pre hidden tabindex="0"></pre>
+    </section>
+  </main>
+  <script>
+    for (const button of document.querySelectorAll('button[data-action]')) {
+      const section = button.closest('section');
+      const status = section.querySelector('[role="status"]');
+      const output = section.querySelector('pre');
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        output.hidden = true;
+        status.textContent = 'Выполняется запрос…';
+        try {
+          const method = button.dataset.method;
+          const response = await fetch('/api/' + button.dataset.action, {
+            method,
+            headers: method === 'POST' ? { 'X-Altegio-Smoke': '1' } : {},
+          });
+          const result = await response.json();
+          status.textContent = (result.source === 'Altegio' ? 'Altegio' : 'Локальный API') + ' · HTTP ' + response.status;
+          if (result.verified !== undefined) {
+            status.textContent += result.verified ? ' · Запись подтверждена' : ' · Данные записи расходятся';
+          }
+          const body = 'body' in result ? result.body : result;
+          output.textContent = (body === null ? 'Тело ответа пустое.' : JSON.stringify(body, null, 2))
+            + (result.message && 'body' in result ? '\n' + result.message : '');
+          output.hidden = false;
+        } catch {
+          status.textContent = 'Локальный API недоступен.';
+          if (button.dataset.action === 'book') {
+            status.textContent += ' Перед повтором проверьте журнал Altegio.';
+          }
+        } finally {
+          button.disabled = false;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
