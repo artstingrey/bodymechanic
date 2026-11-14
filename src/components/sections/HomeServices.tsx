@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
+import { catalogServiceSlug } from '@/lib/catalog-service-slugs';
 import { getCatalogServices } from '@/server/catalog/services';
 import { ButtonLink } from '@/components/ui/Button';
 import { Carousel } from '@/components/ui/Carousel';
@@ -49,7 +50,7 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
             const src = service.imageUrl && new URL(service.imageUrl).hostname.replace(/\.$/, '') !== 'api.alteg.io'
               ? service.imageUrl : null;
             return (
-              <ServiceCard key={service.id} href="#" linkLabel={t('home.services.cardLink')} index={i + 1} title={title}
+              <ServiceCard key={service.id} href={`/services/${catalogServiceSlug(service.id)}`} linkLabel={t('home.services.cardLink')} index={i + 1} title={title}
                 description={description ?? undefined} tone={TONES[i % TONES.length]}
                 photo={<HomeServicePhoto key={`${src}:${illustration}`} src={src} alt={title}
                   illustration={localPhoto} caption={caption} unavailable={t('home.services.photoUnavailable')} />}
@@ -76,7 +77,7 @@ export async function HomeServices({ locale }: { locale: CatalogLocale }) {
             <h2 id="services-title" className="h2" data-split="" tabIndex={-1}>{t('home.services.title')}</h2>
             <p className="lead">{t('home.services.lead')}</p>
           </div>
-          <ButtonLink href="#" variant="text" prefetch={false} scroll={false}>{t('home.services.all')}</ButtonLink>
+          <ButtonLink href="/services" variant="text">{t('home.services.all')}</ButtonLink>
         </div>
         <Suspense fallback={<div className="home-catalog-state" role="status">{t('home.services.loading')}</div>}>
           <HomeServicesCards locale={locale} t={t} />

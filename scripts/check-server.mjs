@@ -70,7 +70,7 @@ export async function checkServer(origin) {
     // Streaming puts resource hints in the HTTP Link header; prerendered HTML can carry them in the document.
     const headerPreloads = [...(headers.get('link') ?? '').matchAll(/<\/fonts\/v1\/([^>]+)>;\s*rel=preload;\s*as="font"/g)];
     assert.deepEqual([...fontLinks(body), ...headerPreloads].map((link) => link[1]), ['Manrope.woff2']);
-    for (const path of ['services', 'services/sports', 'services/lfk-kinesio', 'team/specialist-1', 'journal/demo-article-1']) {
+    for (const path of ['services', 'services/sports', 'services/manual', 'team/specialist-1', 'journal/demo-article-1']) {
       await redirect(`/${locale}/${path}`, `/${locale}/${path}/`);
       await get(`/${locale}/${path}/`, 200, /<h1/);
     }

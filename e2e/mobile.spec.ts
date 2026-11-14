@@ -951,7 +951,7 @@ test('a choice brought into the booking is never in an address a tag reads: a li
   // 2. the button of a service page
   await page.evaluate(() => sessionStorage.clear());
   seen.length = 0;
-  await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+  await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
   const book = page.locator('main .btn-book').first();
   await expect(book).toHaveAttribute('href', '/en/booking/');
   await book.scrollIntoViewIfNeeded();

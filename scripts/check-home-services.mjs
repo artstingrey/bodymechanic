@@ -52,7 +52,7 @@ async function home(origin, locale = 'en') {
 }
 
 function cardTitles(html) {
-  return [...html.matchAll(/<a\b(?=[^>]*\bhref="#")(?=[^>]*\baria-label="([^"<>]*)\. (?:Подробнее|Learn more)")[^>]*>/g)]
+  return [...html.matchAll(/<a\b(?=[^>]*\bhref="\/(?:en|ru)\/services\/[^"/]+\/")(?=[^>]*\baria-label="([^"<>]*)\. (?:Подробнее|Learn more)")[^>]*>/g)]
     .map(([, title]) => title);
 }
 
@@ -149,12 +149,14 @@ try {
           longTitle, locale === 'ru' ? 'Массаж с диапазоном цен' : 'Range massage',
           'Minimum massage', 'Zero price massage', 'Unknown price massage',
         ]);
-        await expect(block.getByRole('link', { name: locale === 'ru' ? 'Все услуги' : 'All services', exact: true })).toHaveAttribute('href', '#');
-        const cardLinks = cards.locator('h3 a[href="#"]');
+        await expect(block.getByRole('link', { name: locale === 'ru' ? 'Все услуги' : 'All services', exact: true })).toHaveAttribute('href', `/${locale}/services/`);
+        const cardLinks = cards.locator('h3 a');
         await expect(cardLinks).toHaveCount(5);
+        assert.deepEqual(await cardLinks.evaluateAll((links) => links.map((link) => link.getAttribute('href'))),
+          [91201, 91202, 91203, 91204, 91205].map((id) => `/${locale}/services/service-${id}/`));
         await expect(cardLinks.first()).toHaveAttribute('aria-label', `${longTitle}. ${locale === 'ru' ? 'Подробнее' : 'Learn more'}`);
         await expect(cards.locator('.go')).toHaveCount(5);
-        await expect(block.locator('a:not([href="#"]), .badge')).toHaveCount(0);
+        await expect(block.locator('.badge')).toHaveCount(0);
         await expect(block.locator('article .d')).toHaveCount(1);
         await expect(cards.first().locator('.head + .d')).toHaveText(locale === 'ru'
           ? 'Массаж для восстановления после нагрузки.' : 'Massage for post-exercise recovery.');
@@ -249,6 +251,26 @@ try {
     assert.equal(response.status, 200);
     const [service] = (await response.json()).data.services;
     assert.equal(service.title, 'Классический массаж студии');
+
+    for (const [locale, sportsTitle, allLabel] of [
+      ['ru', 'Спортивный массаж', 'Все услуги'],
+      ['en', 'Sports massage', 'All services'],
+    ]) {
+      await browserPage(browser, { width: locale === 'ru' ? 390 : 1280, height: 850 }, async (page, block) => {
+        const homeUrl = `${origin}/${locale}/`;
+        for (const [slug, title] of [['sports', sportsTitle], ['service-91206', 'Новая услуга']]) {
+          await page.goto(homeUrl);
+          const detailPath = `/${locale}/services/${slug}/`;
+          await block.locator(`a[href="${detailPath}"]`).click();
+          await expect(page).toHaveURL(origin + detailPath);
+          await expect(page.locator('.svc-hero h1')).toHaveText(title);
+        }
+        await page.goto(homeUrl);
+        await block.getByRole('link', { name: allLabel, exact: true }).click();
+        await expect(page).toHaveURL(`${origin}/${locale}/services/`);
+        await expect(page.locator('main h1')).toBeVisible();
+      });
+    }
   });
 
   await fs.unlink(release);
@@ -263,7 +285,7 @@ try {
       await expect(block.locator('article')).toHaveCount(5);
     });
   });
-  console.log('Home services: streaming, retry, per-locale shared cache, localized cards and carousel at 320/390/768/1280: OK');
+  console.log('Home services: streaming, retry, localized cards and navigation, shared cache and carousel at 320/390/768/1280: OK');
 } finally {
   await browser?.close();
   await Promise.all([...written, scenario, release].map((file) => fs.unlink(file).catch((error) => {

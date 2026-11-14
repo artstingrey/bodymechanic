@@ -95,14 +95,14 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
   }
   const { service: s } = detail;
   const facts = serviceFacts(t as unknown as Parameters<typeof serviceFacts>[0]);
-  const hasEditorialSections = detail.source === 'demo' ? detail.service.hasCms : s.slug === 'sports';
-  const articles = hasEditorialSections ? getArticles(locale).slice(0, 2) : [];
+  const articles = getArticles(locale).slice(0, 2);
   const staff = detail.source === 'demo' ? await getStaff(locale, s.id) : null;
-  const staffList = staff && (
+  const staffList = staff?.length ? (
     <ul className="card-grid card-grid--4">{staff.map((p) => (
       <li key={p.id}><StaffCard name={p.name} href={`/team/${p.slug}`} photoCaption={t('placeholder.specialistPhoto')} /></li>
     ))}</ul>
-  );
+  ) : null;
+  const placeholder = <Todo as="p">{t('service.todo.body')}</Todo>;
   const illustration = detail.source === 'altegio' ? homeServiceIllustrations.get(s.id) : undefined;
   const imageUrl = detail.source === 'altegio' ? detail.service.imageUrl : null;
   // The API is server-only, including when a catalog image points to its host.
@@ -142,23 +142,16 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
           {s.description ? <p className="lead hero-lead">{s.description}</p> : null}
         </div>
       </div>
-      {hasEditorialSections ? (
-        <div className="doc-sections">
-          {SECTIONS.map((k) => (
-            <section key={k} className={k === 'specialists' || k === 'related' ? 'doc-sections__wide' : undefined}>
-              <h2 className="h3">{t(`service.section.${k}`)}{k === 'specialists' ? demoBadge : null}</h2>
-              {k === 'specialists' ? staffList
-                : k === 'related' ? <ul className="link-list">{articles.map((a) => <li key={a.slug}><Link href={`/journal/${a.slug}`}>{a.title}</Link></li>)}</ul>
-                : <Todo as="p">{t('service.todo.body')}</Todo>}
-            </section>
-          ))}
-        </div>
-      ) : (
-        <section className={detail.source === 'altegio' ? 'page-sec doc-sections__wide' : 'page-sec'}>
-          <h2 className="h3">{t('service.section.specialists')}{demoBadge}</h2>
-          {staffList}
-        </section>
-      )}
+      <div className="doc-sections">
+        {SECTIONS.map((k) => (
+          <section key={k} className={k === 'specialists' || k === 'related' ? 'doc-sections__wide' : undefined}>
+            <h2 className="h3">{t(`service.section.${k}`)}{k === 'specialists' && staffList ? demoBadge : null}</h2>
+            {k === 'specialists' ? staffList ?? placeholder
+              : k === 'related' && articles.length ? <ul className="link-list">{articles.map((a) => <li key={a.slug}><Link href={`/journal/${a.slug}`}>{a.title}</Link></li>)}</ul>
+              : placeholder}
+          </section>
+        ))}
+      </div>
     </article>
   );
 }

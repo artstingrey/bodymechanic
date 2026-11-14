@@ -1,4 +1,12 @@
-const pinnedServices: ReadonlyMap<number, string> = new Map([[13982355, 'sports']]);
+const pinnedServices: ReadonlyMap<number, string> = new Map([
+  [13982355, 'sports'],
+  [13982356, 'classic'],
+  [13982358, 'thai'],
+  [13982379, 'sports-infrared'],
+  [13982380, 'classic-infrared'],
+  [13982351, 'full-complex'],
+  [13983057, 'lfk-kinesio'],
+]);
 const serviceIdsBySlug: ReadonlyMap<string, number> = new Map(
   [...pinnedServices].map(([id, slug]) => [slug, id]),
 );

@@ -342,7 +342,7 @@ try {
       await expect(block.locator('.staff')).toHaveCount(names.length);
     });
     assert.equal(staffCalls(logs).length, 1, 'cold API and Server Component should share one request');
-    for (const route of ['team/', 'team/specialist-1/', 'services/lfk-kinesio/', 'services/service-42/', 'lp/a/', 'lp/b/', 'booking/']) {
+    for (const route of ['team/', 'team/specialist-1/', 'services/manual/', 'services/service-42/', 'lp/a/', 'lp/b/', 'booking/']) {
       const response = await fetch(`${origin}/en/${route}`);
       assert.equal(response.status, 200, route);
       const html = await response.text();

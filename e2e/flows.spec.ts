@@ -235,7 +235,7 @@ test('booking: step and choices live in the URL/session — Back and F5 work, mo
 // RC-10 (Ж-9): the service is handed over at the click, the address is the bare /booking/ — it used to be /booking/?service=ID
 test('service page CTA preselects the service in the booking; the address stays the bare /booking/', async ({ page, baseURL }) => {
   const g = guard(page, baseURL!);
-  await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+  await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
   const title = (await page.locator('h1').textContent())!.trim();
   await page.locator('main .btn-book').first().click();
   await page.waitForURL(/\/en\/booking\/$/);

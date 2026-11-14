@@ -83,6 +83,12 @@ globalThis.fetch = async (input, init) => {
         { id: 91202, title: 'Lower bound massage', price_min: 55.5 },
         { id: 91203, title: 'Exact price massage', price_min: 125, price_max: 125 },
         { id: 91204, title: 'Unknown price massage', comment: '<p>fixture raw upstream detail</p>' },
+        { id: 13982356, title: 'Классический массаж' },
+        { id: 13982358, title: 'Тайский массаж' },
+        { id: 13982379, title: 'Спортивный массаж + ИНФРАКРАСНАЯ КАПСУЛА' },
+        { id: 13982380, title: 'Классический массаж + ИНФРАКРАСНАЯ КАПСУЛА' },
+        { id: 13982351, title: 'ICE BATH - после массажа' },
+        { id: 13983057, title: 'ФУНКЦИОНАЛЬНЫЙ ТРЕНИНГ И МОБИЛЬНОСТЬ' },
       ],
     } });
   }

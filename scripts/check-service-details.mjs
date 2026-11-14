@@ -16,6 +16,14 @@ const paths = {
   api: (slug, query = '') => `/api/catalog/services/${slug}${query}`,
   page: (locale, slug) => `/${locale}/services/${slug}/`,
 };
+const newPins = [
+  [13982356, 'classic', 'Classic massage'],
+  [13982358, 'thai', 'Thai massage'],
+  [13982379, 'sports-infrared', 'Sports massage with infrared capsule'],
+  [13982380, 'classic-infrared', 'Classic massage with infrared capsule'],
+  [13982351, 'full-complex', 'Ice bath after massage'],
+  [13983057, 'lfk-kinesio', 'Functional training and mobility'],
+];
 
 function run(check, currency = 'AED') {
   const env = {
@@ -83,6 +91,9 @@ async function browserChecks(origin) {
     const hero = page.locator('.svc-hero');
     const heading = hero.locator('h1');
     const facts = hero.locator('dd');
+    const sectionHeadings = page.locator('.doc-sections > section > h2');
+    const sectionHeadingsByLocale = new Map();
+    const wideSections = page.locator('.doc-sections > .doc-sections__wide');
     const missingPage = await page.goto(origin + paths.page('ru', 'service-94999'));
     assert.equal(missingPage.status(), 404);
     await expect(page.locator('main .nf')).toBeVisible();
@@ -99,7 +110,10 @@ async function browserChecks(origin) {
       await expect(facts).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/, '']);
       await expect(hero.locator('.badge, img')).toHaveCount(0);
       await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
-      await expect(page.locator('.doc-sections__wide').first().locator('h2')).toBeVisible();
+      await expect(sectionHeadings).toHaveCount(8);
+      sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
+      await expect(wideSections).toHaveCount(2);
+      await expect(wideSections.first().locator('.todo')).toBeVisible();
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
       await expect(page.locator('.demo-notice')).toBeVisible();
       const cta = hero.getByRole('button', { name: locale === 'ru' ? 'Записаться' : 'Book' });
@@ -122,6 +136,14 @@ async function browserChecks(origin) {
       await page.goto(origin + paths.page(locale, 'service-91201'));
       await expect(heading).toHaveText(/длинным названием|very long service title/);
       await expect(hero.locator('.eyebrow, .hero-lead, .badge')).toHaveCount(0);
+      await expect(sectionHeadings).toHaveText(sectionHeadingsByLocale.get(locale));
+      await expect(page.locator('.doc-sections > section > .todo')).toHaveCount(7);
+      await expect(wideSections).toHaveCount(2);
+      await expect(wideSections.first().locator('.todo')).toBeVisible();
+      await expect(wideSections.last().locator(`a[href^="/${locale}/journal/"]`)).toHaveCount(2);
+      await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
+      assert.equal(await page.locator('.doc-sections').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length),
+        width >= 768 ? 2 : 1);
       await expect(facts).toHaveText([/^(?:AED\s+)?0(?:\s+AED)?$/, /90\s+(мин|min)/]);
       await expect.poll(() => hero.locator('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
@@ -134,22 +156,27 @@ async function browserChecks(origin) {
       await expect(facts).toHaveText([price, '']);
     }
     for (const section of ['services', 'prices']) {
-      for (const slug of ['sports', 'lfk-kinesio']) {
+      for (const slug of ['sports', 'lfk-kinesio', 'manual']) {
         await page.goto(`${origin}/en/${section}/`);
         await page.locator(`main a[href="${paths.page('en', slug)}"]`).first().click();
         await expect(page).toHaveURL(origin + paths.page('en', slug));
         if (slug === 'sports') await expect(heading).toHaveText('Sports massage');
-        else {
+        else if (slug === 'lfk-kinesio') {
+          await expect(heading).toHaveText('Functional training and mobility');
+          await expect(hero.getByRole('button', { name: 'Book' })).toBeDisabled();
+        } else {
           const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
           await expect(demoCta).toHaveAttribute('href', '/en/booking/');
           await expect(hero.locator('.facts .badge')).toBeVisible();
+          await expect(sectionHeadings).toHaveCount(8);
+          await expect(wideSections.first().locator('.staff a[href^="/en/team/"]').first()).toBeVisible();
         }
       }
     }
     await hero.getByRole('link', { name: 'Book', exact: true }).click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
     await page.getByRole('button', { name: /I know what I need/ }).click();
-    await expect(page.locator('li', { has: page.locator('input[name="service"]:checked') })).toContainText(/Kinesio|exercise/i);
+    await expect(page.locator('li', { has: page.locator('input[name="service"]:checked') })).toContainText('Manual therapy');
     assert.deepEqual(unexpectedRequests, []);
   } finally {
     await browser.close();
@@ -162,7 +189,7 @@ try {
     for (const query of ['?locale=de', '?locale=', '?locale=ru&locale=en', '?locationId=5', '?locale=en&extra=1']) {
       await detail(origin, 'sports', query, 400, 'INVALID_QUERY');
     }
-    for (const slug of ['unknown', 'service-0', 'service-001', 'service-9007199254740992', 'service-13982355', 'lfk-kinesio']) {
+    for (const slug of ['unknown', 'service-0', 'service-001', 'service-9007199254740992', 'service-13982355', 'manual']) {
       await detail(origin, slug, '', 404, 'SERVICE_NOT_FOUND');
     }
     assert.equal(calls(logs), 0);
@@ -174,7 +201,7 @@ try {
     assert.match(failure.text, /Service temporarily unavailable/);
     assert.doesNotMatch(failure.text, /class="svc-hero"|application\/ld\+json|Sports massage/);
     assert.match(failure.headers.get('cache-control'), /no-store/);
-    const demo = await request(origin, paths.page('en', 'lfk-kinesio'), 200);
+    const demo = await request(origin, paths.page('en', 'manual'), 200);
     assert.match(demo.text, /class="svc-hero"/);
 
     await setScenario('service-detail');
@@ -228,14 +255,34 @@ try {
         assert.match(rsc.headers.get('content-type'), /text\/x-component/);
         assert.ok(rsc.text.includes(titles[index]));
       }
+      for (const [id, slug, englishTitle] of newPins) {
+        const { json } = await detail(origin, slug, useQuery, 200);
+        assert.equal(json.data.service.id, id);
+        assert.equal(json.data.service.slug, slug);
+        assert.ok(!ids.has(id));
+        ids.add(id);
+        const pathname = paths.page(locale, slug);
+        const { text } = await request(origin, pathname, 200);
+        const canonical = text.match(/<link rel="canonical" href="([^"]+)"/)[1];
+        assert.equal(new URL(canonical).pathname, pathname);
+        const serviceLd = JSON.parse(text.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]);
+        assert.equal(serviceLd.name, locale === 'en' ? englishTitle : json.data.service.title);
+        assert.equal(serviceLd.url, canonical);
+        assert.match(text, /class="btn btn--primary btn-book" aria-disabled="true"/);
+        await detail(origin, `service-${id}`, useQuery, 404, 'SERVICE_NOT_FOUND');
+        await checkNotFound(origin, paths.page(locale, `service-${id}`));
+      }
       await detail(origin, 'service-94999', useQuery, 404, 'SERVICE_NOT_FOUND');
       await checkNotFound(origin, paths.page(locale, 'service-94999'));
       await checkNotFound(origin, paths.page(locale, 'service-94999'), { 'User-Agent': 'Twitterbot' });
     }
     assert.equal(calls(logs), 4, 'two failures and one shared catalog load per locale');
     const sitemap = (await request(origin, '/sitemap.xml', 200)).text;
-    assert.match(sitemap, /<loc>[^<]+\/en\/services\/sports\/<\/loc>/);
-    assert.match(sitemap, /<loc>[^<]+\/ru\/services\/sports\/<\/loc>/);
+    for (const locale of ['en', 'ru']) {
+      for (const slug of ['sports', ...newPins.map(([, slug]) => slug)]) {
+        assert.ok(sitemap.includes(`${paths.page(locale, slug)}</loc>`), slug);
+      }
+    }
     assert.doesNotMatch(sitemap, /service-13982355|service-91201/);
     await browserChecks(origin);
   });

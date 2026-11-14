@@ -53,7 +53,7 @@ export function matrixPages(locale: string): string[] {
 }
 
 /** One representative per template for DEL-09 screenshots (other slugs share the template). */
-const SHOT_DETAILS = ['services/lfk-kinesio/', 'team/specialist-1/', 'journal/demo-article-1/'];
+const SHOT_DETAILS = ['services/manual/', 'team/specialist-1/', 'journal/demo-article-1/'];
 export function isShotPage(p: string): boolean {
   if (/^(services|team|journal)\/[^/?]+\/$/.test(p)) return SHOT_DETAILS.includes(p);
   return !p.startsWith('account/record/1234');

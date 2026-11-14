@@ -16,6 +16,7 @@ import { SERVICES } from '../src/lib/api/mock-data';
 import { calendarDays } from '../src/lib/api';
 import { BASE_ZONES, PAIRED } from '../src/lib/body3d/zones';
 import { isPrivatePath } from '../src/lib/analytics/private';
+import { catalogServiceId } from '../src/lib/catalog-service-slugs';
 
 const DECK = { en, ru } as const;
 type Json = Record<string, unknown>;
@@ -157,7 +158,8 @@ test('sitemap.xml: every public page in both languages with ru / en / x-default;
     alt: Object.fromEntries([...m[1].matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((a) => [a[1], a[2]])),
   }));
   const origin = new URL(urls[0].loc).origin;
-  const expected = LOCALES.flatMap((l) => [...builtPages(l), 'services/sports/']
+  const realDetails = SERVICES.filter(({ slug }) => catalogServiceId(slug) !== undefined).map(({ slug }) => `services/${slug}/`);
+  const expected = LOCALES.flatMap((l) => [...builtPages(l), ...realDetails]
     .filter((p) => !p.startsWith('account/') && !p.startsWith('lp/')).map((p) => `${origin}/${l}/${p}`));
   expect(urls.map((u) => u.loc).sort()).toEqual(expected.sort());
   for (const u of urls) {
@@ -705,7 +707,7 @@ test('an account address behind an escaped slash and a parent segment is recogni
 // &date=…&time=…) — and an ad tag reads the href of a clicked link and the address it leads to. Now they carry nothing.
 test('the links that bring a choice into the booking carry nothing of it in their address (Ж-9)', async ({ page }) => {
   await seedConsent(page);
-  await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+  await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
   await expect(page.locator('main a.btn-book').first()).toHaveAttribute('href', '/en/booking/');
   await page.goto('/en/team/specialist-1/', { waitUntil: 'networkidle' });
   await expect(page.locator('main a.btn-book').first()).toHaveAttribute('href', '/en/booking/');
@@ -736,7 +738,7 @@ test.describe('the choice a link brings into the booking is never in an address 
 
   test('service page → «Book»: the bare /booking/, the service preselected, kept through F5; «Назад» returns to the service', async ({ page }) => {
     const seen = await entryProbe(page);
-    await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+    await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
     const title = (await page.locator('h1').textContent())!.trim();
     await page.locator('main .btn-book').first().click();
     await page.waitForURL(/\/en\/booking\/$/);
@@ -747,7 +749,7 @@ test.describe('the choice a link brings into the booking is never in an address 
     await expect(checkedService(page)).toContainText(title);
     await page.goBack(); // step 1
     await page.goBack();
-    await page.waitForURL(/\/en\/services\/lfk-kinesio\/$/);
+    await page.waitForURL(/\/en\/services\/manual\/$/);
     expect(containerRan(seen), 'the container stub ran').toBe(true);
     expect(seen.filter(withChoice), 'no address with the choice, for the page or for the container').toEqual([]);
     expect(await page.evaluate(() => sessionStorage.getItem('bm.bookingPreset')), 'the hand-over was taken and removed').toBeNull();
@@ -850,7 +852,7 @@ test.describe('the choice a link brings into the booking is never in an address 
   // brought was never offered as «a draft found». The address no longer says it: the history entry keeps a flag (no
   // numbers) and the language switch hands that flag over to the entry in the other language.
   test('a service brought by a link is not offered as «a draft found»: not after F5 on step 1, not after the language switch; the choice stays', async ({ page }) => {
-    await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+    await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
     await page.locator('main .btn-book').first().click();
     await page.waitForURL(/\/en\/booking\/$/);
     await expect(page.getByText(en.booking.draft.restoreTitle)).toHaveCount(0);
@@ -894,11 +896,11 @@ test.describe('the choice a link brings into the booking is never in an address 
   // the other side of the time limit: the mark «this document» is put only when a choice is moved out of the address,
   // never at a click — a click that did not end in the booking is forgotten after a minute, in the same document too
   test('a click that did not end in the booking does not surface a minute later', async ({ page }) => {
-    await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+    await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
     // the navigation is stopped the way the account border stops it: the default is prevented before the link's own handler
     await page.evaluate(() => document.addEventListener('click', (e) => { if ((e.target as Element).closest('main .btn-book')) e.preventDefault(); }, true));
     await page.locator('main .btn-book').first().click();
-    expect(page.url()).toMatch(/\/en\/services\/lfk-kinesio\/$/);
+    expect(page.url()).toMatch(/\/en\/services\/manual\/$/);
     expect(await page.evaluate(() => sessionStorage.getItem('bm.bookingPreset')), 'the click handed the choice over').toContain('"service"');
     // more than a minute later, the same document: the booking is opened from the header, without a choice
     await page.evaluate(() => { const real = Date.now.bind(Date); Date.now = () => real() + 120_000; });
@@ -910,7 +912,7 @@ test.describe('the choice a link brings into the booking is never in an address 
   });
 
   test('a new tab (Ctrl + click) opens the bare booking without the choice — the named price of the fix', async ({ page, context }) => {
-    await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
+    await page.goto('/en/services/manual/', { waitUntil: 'networkidle' });
     const [tab] = await Promise.all([context.waitForEvent('page'), page.locator('main .btn-book').first().click({ modifiers: ['ControlOrMeta'] })]);
     await tab.waitForLoadState('networkidle');
     expect(new URL(tab.url()).pathname + new URL(tab.url()).search).toBe('/en/booking/');
