@@ -37,9 +37,20 @@ export async function checkServer(origin) {
   async function get(path, status, pattern) {
     const response = await fetch(origin + path, { redirect: 'manual' });
     assert.equal(response.status, status, path);
+    if (status !== 308) assert.equal(response.headers.get('location'), null, path);
     const body = await response.text();
     if (pattern) assert.match(body, pattern, path);
     return { body, headers: response.headers };
+  }
+
+  async function redirect(from, to) {
+    const { headers } = await get(from, 308);
+    const location = headers.get('location');
+    assert.ok(location, from);
+    const actual = new URL(location, origin);
+    const expected = new URL(to, origin);
+    assert.equal(actual.origin + actual.pathname, expected.origin + expected.pathname, from);
+    assert.deepEqual([...actual.searchParams], [...expected.searchParams], from);
   }
 
   await get('/', 200, /bm\.locale/);
@@ -49,13 +60,23 @@ export async function checkServer(origin) {
   assert.equal(catalog.headers.get('cache-control'), 'no-store');
   await get('/de/', 404, /<h1/);
   await get('/en/no-such-page/', 404, /<h1/);
+  await get('/en/services/no-such-service', 404, /<h1/);
+  await get('/ru/lp/unknown', 404, /<h1/);
   const fontLinks = (html) => [...html.matchAll(/<link(?=[^>]*rel="preload")(?=[^>]*href="\/fonts\/v1\/([^"]+)")[^>]*>/g)];
   for (const locale of ['en', 'ru']) {
+    await redirect(`/${locale}`, `/${locale}/`);
     const { body, headers } = await get(`/${locale}/`, 200, new RegExp(`<html lang="${locale}"`));
     assert.equal(headers.get('x-robots-tag'), 'noindex, nofollow');
     assert.deepEqual(fontLinks(body).map((link) => link[1]), ['Manrope.woff2']);
+    for (const path of ['services', 'services/sports', 'team/specialist-1', 'journal/demo-article-1']) {
+      await redirect(`/${locale}/${path}`, `/${locale}/${path}/`);
+      await get(`/${locale}/${path}/`, 200, /<h1/);
+    }
+    await redirect(`/${locale}/booking?step=4`, `/${locale}/booking/?step=4`);
     await get(`/${locale}/booking/?step=4`, 200, /data-step=/);
     for (const variant of ['a', 'b']) {
+      const query = '?form=sheet&utm_source=campaign%20name&tag=a&tag=b';
+      await redirect(`/${locale}/lp/${variant}${query}`, `/${locale}/lp/${variant}/${query}`);
       const lp = await get(`/${locale}/lp/${variant}/`, 200, /data-lp-form=/);
       const links = fontLinks(lp.body);
       assert.deepEqual(links.map((link) => link[1]).sort(),
@@ -63,6 +84,7 @@ export async function checkServer(origin) {
       assert.ok(links.every((link) => link[0].includes('fetchPriority="low"')));
     }
     for (const path of ['account/', 'account/record/', 'account/record/777/abc123/']) {
+      await redirect(`/${locale}/${path.slice(0, -1)}`, `/${locale}/${path}`);
       const account = await get(`/${locale}/${path}`, 200, /<meta name="referrer" content="no-referrer"/);
       assert.equal(account.headers.get('referrer-policy'), 'no-referrer');
       assert.match(account.headers.get('cache-control') ?? '', /\bno-store\b/);
@@ -73,7 +95,7 @@ export async function checkServer(origin) {
     }
   }
   for (const path of ['Manrope', 'Manrope-400', 'Manrope-600', 'Manrope-700', 'Manrope-800']) {
-    const font = await fetch(`${origin}/fonts/v1/${path}.woff2`);
+    const font = await fetch(`${origin}/fonts/v1/${path}.woff2`, { redirect: 'manual' });
     assert.equal(font.status, 200);
     assert.match(font.headers.get('content-type') ?? '', /font\/woff2/);
     assert.match(font.headers.get('cache-control') ?? '', /immutable/);
@@ -83,5 +105,5 @@ export async function checkServer(origin) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   await withProductionServer(checkServer);
-  console.log('Production routes, private headers and font preloads: OK');
+  console.log('Production routes, canonical redirects, private headers and font preloads: OK');
 }

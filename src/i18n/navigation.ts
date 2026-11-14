@@ -5,8 +5,7 @@ import { routing } from './routing';
 const navigation = createNavigation(routing);
 export const { redirect, usePathname, getPathname, useRouter } = navigation;
 
-// The API accepts a slashless URL, so Next's automatic slash normalization is disabled.
-// Preserve the site's localized page links.
+// Proxy canonicalizes incoming page URLs. Generate canonical links before navigation.
 function pageHref(href: string): string {
   const [pathname] = href.split(/[?#]/, 1);
   if (!pathname.startsWith('/') || pathname.startsWith('//') || pathname.endsWith('/') || /\.[^/]+$/.test(pathname)) return href;

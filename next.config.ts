@@ -14,7 +14,7 @@ if (!process.env.NEXT_PUBLIC_SITE_URL && process.env.NODE_ENV === 'production') 
 
 const nextConfig: NextConfig = {
   trailingSlash: true,
-  // Keep page links with a trailing slash while serving the API URL directly.
+  // Proxy adds a slash to localized pages while the API keeps its direct URL.
   skipTrailingSlashRedirect: true,
   poweredByHeader: false,
   // Images are pre-generated (AVIF/WebP) at build time.

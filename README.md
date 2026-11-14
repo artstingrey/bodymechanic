@@ -42,7 +42,7 @@ npm run start    # http://localhost:3000
 | `npm run dev` | Сервер разработки Next.js |
 | `npm run build` | Серверная сборка Next.js в `.next/` |
 | `npm run start`, `npm run serve` | Production-сервер Next.js. Порт передаётся как `-- --port 3000` или через `PORT` |
-| `npm run test:server` | HTTP-проверки маршрутов, приватных заголовков и предзагрузки шрифтов |
+| `npm run test:server` | HTTP-проверки маршрутов, редиректов, приватных заголовков и предзагрузки шрифтов |
 | `npm run test:catalog` | Production-проверки контракта и кеша с синтетическим ответом |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `next typegen` и `tsc --noEmit` |

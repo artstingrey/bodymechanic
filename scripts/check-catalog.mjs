@@ -17,6 +17,7 @@ const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).
 async function request(origin, query, status) {
   const response = await fetch(origin + endpoint + query, { redirect: 'manual' });
   assert.equal(response.status, status, query);
+  assert.equal(response.headers.get('location'), null, query);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   const text = await response.text();
   assert.ok(privateValues.every((value) => !text.includes(value)), 'public JSON contains private data');
