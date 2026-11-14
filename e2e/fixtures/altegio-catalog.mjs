@@ -19,15 +19,22 @@ globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
   if (url.hostname !== 'api.alteg.io') return fetchOriginal(input, init);
 
-  assert.equal(url.href, `https://api.alteg.io/api/v1/book_services/${process.env.ALTEGIO_LOCATION_ID}?without_seances=1`);
+  const staff = url.pathname.startsWith('/api/v1/book_staff/');
+  const resource = staff ? 'book_staff' : 'book_services';
+  const query = staff ? '' : '?without_seances=1';
+  assert.equal(url.href, `https://api.alteg.io/api/v1/${resource}/${process.env.ALTEGIO_LOCATION_ID}${query}`);
+  assert.equal(init?.method ?? (input instanceof Request ? input.method : 'GET'), 'GET');
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
   assert.equal(headers.get('authorization'), 'Bearer fixture-partner-token');
   assert.equal(headers.get('accept'), 'application/vnd.api.v2+json');
+  assert.equal(headers.get('content-type'), 'application/json');
   const language = headers.get('accept-language');
   assert.ok(language === 'ru-RU' || language === 'en-US');
   assert.equal(init?.redirect ?? input.redirect, 'error');
-  const scenario = readFileSync(process.env.CATALOG_TEST_SCENARIO, 'utf8');
-  console.info('[catalog-fixture]', scenario, language);
+  const scenarioFile = staff ? process.env.STAFF_TEST_SCENARIO : process.env.CATALOG_TEST_SCENARIO;
+  if (staff && !scenarioFile) return new Response(null, { status: 503 });
+  const scenario = readFileSync(scenarioFile, 'utf8');
+  console.info(staff ? '[staff-fixture]' : '[catalog-fixture]', scenario, language);
 
   // Let the 12 concurrent requests reach the cache before the upstream responds.
   if (['success', 'empty', '429', '500'].includes(scenario)) await delay(400);
@@ -41,7 +48,7 @@ globalThis.fetch = async (input, init) => {
   if (scenario === 'invalid-json') return new Response('fixture raw upstream detail');
   if (scenario === 'empty-body') return new Response(null);
   if (scenario === 'rejected') return Response.json({ success: false, meta: { message: 'fixture raw upstream detail' } });
-  if (scenario === 'invalid-schema') return Response.json({ success: true, data: { services: null } });
+  if (scenario === 'invalid-schema') return Response.json({ success: true, data: staff ? { staff: [] } : { services: null } });
   if (scenario === 'invalid-service') return Response.json({ success: true, data: { services: [{ id: 0, title: ' ' }] } });
   if (/^\d{3}$/.test(scenario)) {
     const body = scenario === '403' ? null : new ReadableStream({
@@ -58,18 +65,49 @@ globalThis.fetch = async (input, init) => {
     });
     return new Response(body, { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
-  if (scenario === 'empty') return Response.json({ success: true, data: { services: [], categories: [] } });
+  if (scenario === 'empty') return Response.json({ success: true, data: staff ? [] : { services: [], categories: [] } });
   if (scenario === 'home-translations') return Response.json({ success: true, data: { services: [
     { id: 13982356, title: 'Классический массаж студии', comment: 'Актуальное описание из каталога.' },
     { id: 13982355, title: 'Спортивный массаж' },
     { id: 91206, title: 'Новая услуга', comment: 'Описание новой услуги из каталога.' },
   ] } });
   if (scenario === 'home-slow') {
-    const release = `${process.env.CATALOG_TEST_SCENARIO}.release`;
+    const release = `${scenarioFile}.release`;
     while (!(await fs.stat(release).catch(() => null))) {
       const signal = init?.signal ?? input.signal;
       await delay(30, undefined, { signal });
     }
+  }
+  if (staff) {
+    const profiles = [
+      { id: 91216, name: ' Александра с очень длинным именем для проверки переноса строк ', bookable: false,
+        specialization: language === 'ru-RU' ? ' Специализация RU ' : ' Specialization EN ',
+        position: { title: ' Job title ' }, avatar: 'https://images.example.test/small.webp',
+        avatar_big: 'https://images.example.test/portrait.webp', hidden: 0, fired: 0,
+        user: { detail: 'fixture raw upstream detail' }, information: '<p>fixture raw upstream detail</p>',
+        api_id: 'fixture raw upstream detail', user_id: 123, seances: [{ time: 'fixture raw upstream detail' }] },
+      { id: 91214, name: 'Taylor Example', position: { title: ' Therapist ' },
+        avatar_big: 'https://app.alteg.io/images/no-master.png', avatar: 'https://images.example.test/broken.webp' },
+      { id: 91212, name: 'Sam Example', specialization: ' ', position: [],
+        avatar_big: 'https://user:password@images.example.test/portrait.webp', avatar: '/relative.webp' },
+      { id: 91211, name: 'Robin Example', position: {}, avatar: 'https://app.alteg.io/images/no-master.png' },
+      { id: 91213, name: 'Casey Example', avatar: 'https://images.example.test/no-master.png' },
+      { id: 91215, name: 'Jamie Example', avatar: 'https://api.alteg.io/api/v1/private' },
+      { id: 91220, name: 'Hidden Example', hidden: 1 },
+      { id: 91221, name: 'Dismissed Example', fired: 1 },
+    ];
+    const invalid = {
+      'invalid-member': null,
+      'invalid-id': { id: 0, name: 'Example' },
+      'unsafe-id': { id: Number.MAX_SAFE_INTEGER + 1, name: 'Example' },
+      'string-id': { id: '42', name: 'Example' },
+      'blank-name': { id: 42, name: '  ' },
+      'invalid-name': { id: 42, name: false },
+      'duplicate-id': profiles[0],
+    };
+    if (Object.hasOwn(invalid, scenario)) return Response.json({ success: true, data: [profiles[0], invalid[scenario]] });
+    assert.ok(['success', 'home-slow', 'home-single'].includes(scenario), scenario);
+    return Response.json({ success: true, data: scenario === 'home-single' ? profiles.slice(0, 1) : profiles });
   }
   if (scenario === 'home' || scenario === 'home-slow' || scenario === 'home-single') {
     const services = [

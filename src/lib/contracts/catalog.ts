@@ -20,6 +20,19 @@ export interface CatalogServicesResponse {
   meta: { source: 'altegio'; locale: CatalogLocale };
 }
 
+export interface CatalogStaffMember {
+  id: number;
+  name: string;
+  specialization: string | null;
+  position: string | null;
+  imageUrl: string | null;
+}
+
+export interface CatalogStaffResponse {
+  data: { staff: CatalogStaffMember[] };
+  meta: { source: 'altegio'; locale: CatalogLocale };
+}
+
 export type CatalogErrorCode =
   | 'INVALID_QUERY'
   | 'CATALOG_UNAVAILABLE'

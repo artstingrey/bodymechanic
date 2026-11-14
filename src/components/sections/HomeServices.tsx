@@ -7,7 +7,7 @@ import { Carousel } from '@/components/ui/Carousel';
 import { ServiceCard } from '@/components/ui/Cards';
 import { Photo, hasPhoto } from '@/components/ui/Photo';
 import { HomeServicePhoto } from './HomeServicePhoto';
-import { HomeServicesResult } from './HomeServicesResult';
+import { HomeCatalogResult } from './HomeCatalogResult';
 import { homeServiceIllustrations } from '@/content/home-services';
 
 const CARD_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
@@ -27,7 +27,9 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
   const services = catalog?.data.services;
   const translations = t.raw('home.services.cards') as Record<string, { title: string; description: string } | undefined>;
   return (
-    <HomeServicesResult
+    <HomeCatalogResult
+      headingId="services-title"
+      slides={services?.map(({ id }) => id).join(',') ?? ''}
       failed={!catalog}
       error={t('home.services.errorLoad')}
       retry={t('home.services.retry')}
@@ -63,7 +65,7 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
           })}
         </Carousel>
       ) : services ? <p className="lead" role="status">{t('home.services.empty')}</p> : null}
-    </HomeServicesResult>
+    </HomeCatalogResult>
   );
 }
 
@@ -78,7 +80,7 @@ export async function HomeServices({ locale }: { locale: CatalogLocale }) {
             <p className="lead">{t('home.services.lead')}</p>
           </div>
         </div>
-        <Suspense fallback={<div className="home-services-state" role="status">{t('home.services.loading')}</div>}>
+        <Suspense fallback={<div className="home-catalog-state" role="status">{t('home.services.loading')}</div>}>
           <HomeServicesCards locale={locale} t={t} />
         </Suspense>
       </div>

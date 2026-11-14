@@ -3,13 +3,12 @@ import { ButtonLink } from '@/components/ui/Button';
 import { pageLocale } from '@/lib/locale';
 import { pageMetadata } from '@/lib/seo';
 import { PageLd } from '@/components/seo/PageLd';
-import { getServices, getStaff } from '@/lib/api';
+import { getServices } from '@/lib/api';
 import { HeroAtlas } from '@/components/sections/HeroAtlas';
 import { HomeServices } from '@/components/sections/HomeServices';
+import { HomeTeam } from '@/components/sections/HomeTeam';
 import { QuickForm } from '@/components/booking/QuickForm';
-import { Badge } from '@/components/ui/Badge';
-import { Carousel } from '@/components/ui/Carousel';
-import { StaffCard, ReviewCard, PhotoPlaceholder } from '@/components/ui/Cards';
+import { ReviewCard, PhotoPlaceholder } from '@/components/ui/Cards';
 import { AccordionItem } from '@/components/ui/Misc';
 import { Todo } from '@/components/ui/Todo';
 import { ScopeMessages } from '@/components/i18n/ScopeMessages';
@@ -32,10 +31,9 @@ const FAQ = ['choose', 'duration', 'prepare', 'specialist', 'reschedule', 'contr
 export default async function HomePage() {
   const locale = await pageLocale();
   const t = await getTranslations();
-  const [mockServices, staff] = await Promise.all([getServices(locale), getStaff(locale)]);
+  const mockServices = await getServices(locale);
   const faq = FAQ.filter((k) => t.has(`home.faq.${k}.q`));
   const title = t('home.hero.title');
-  const carT = { label: t('a11y.carousel.label'), prev: t('a11y.carousel.prev'), next: t('a11y.carousel.next'), goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string };
   const [titleA, titleB] = splitTitle(title);
   return (
     <ScopeMessages messages={await pickMessages(['body3d', 'home.hero', 'home.form', 'forms', 'booking.queued', 'booking.done', 'booking.review', 'booking.error'])}>
@@ -94,24 +92,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 5 Team: intro card + specialists (Altegio book_staff; demo placeholders) */}
-      <section className="section section--surface home-sec" aria-labelledby="team-title">
-        <div className="container">
-          <div className="sec-head">
-            <h2 id="team-title" className="h2" data-split="">{t('home.team.title')}</h2>
-            <ButtonLink href="/team" variant="text">{t('nav.main.team')}</ButtonLink>
-          </div>
-          <Carousel label={t('home.team.title')} t={carT}>
-            {[
-              <div key="intro" className="team-intro"><Badge>{t('prototype.demoBadge')}</Badge><p>{t('home.team.intro')}</p><ButtonLink href="/booking" variant="secondary" size="sm">{t('home.team.cta')}</ButtonLink></div>,
-              ...staff.map((s) => (
-                <StaffCard key={s.id} name={s.name} note={s.position !== t('prototype.demoBadge') ? s.position : undefined} href={`/team/${s.slug}`} photoCaption={t('placeholder.specialistPhoto')} />
-              )),
-            ]}
-          </Carousel>
-          <Todo as="p" hidden>{t('home.team.people')}</Todo>
-        </div>
-      </section>
+      <HomeTeam locale={locale} />
 
       {/* 6 Reviews — the place stays (client decision); until real reviews: ONE sample card with «Демо» and «Отзывы скоро появятся»
           (lead's empty-state policy, design audit F07: not three identical cards) */}

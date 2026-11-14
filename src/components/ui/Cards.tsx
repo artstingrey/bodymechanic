@@ -75,11 +75,12 @@ export function PhotoPlaceholder({ caption, num, demo, className }: { caption: s
 /** «Специалист студии 3» → «3» (the placeholder's number); real names give none. */
 export const staffNumber = (name: string) => name.match(/(\d+)\s*$/)?.[1];
 
-/** Specialist card (placeholder until the client sends real photos and names). «Демо» sits under the name (F18). */
-export function StaffCard({ name, note, photoCaption, href, badge }: { name: string; note?: ReactNode; photoCaption: string; href?: Href; badge?: ReactNode }) {
+export function StaffCard({ name, note, photo, photoCaption, href, badge }: {
+  name: string; note?: ReactNode; href?: Href; badge?: ReactNode;
+} & ({ photo: ReactNode; photoCaption?: never } | { photo?: undefined; photoCaption: string })) {
   return (
     <article className="staff">
-      <PhotoPlaceholder caption={photoCaption} num={staffNumber(name)} />
+      {photoCaption === undefined ? photo : <PhotoPlaceholder caption={photoCaption} num={staffNumber(name)} />}
       <b>{href ? <Link href={href}>{name}</Link> : name}</b>
       {badge}
       {note ? <span className="cap">{note}</span> : null}

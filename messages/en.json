@@ -396,6 +396,12 @@
     },
     "team": {
       "title": "People you can trust",
+      "introPublic": "Meet the specialists at our studio.",
+      "loading": "Loading the team…",
+      "empty": "No specialist profiles are currently listed.",
+      "errorLoad": "We couldn’t load the team.",
+      "retry": "Try again",
+      "photoUnavailable": "Photo unavailable",
       "intro": "Meet our specialists and choose who you’d like to book with.",
       "rating": "Rating {rating}",
       "nearest": "Next available: {slot}",

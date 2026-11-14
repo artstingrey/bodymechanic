@@ -46,7 +46,7 @@ export function Carousel({ label, children, t, hideCount }: {
     window.addEventListener('resize', on);
     on();
     return () => { el.removeEventListener('scroll', on); window.removeEventListener('resize', on); if (raf) cancelAnimationFrame(raf); };
-  }, [measure]);
+  }, [measure, items.length]);
 
   const smooth = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth') as ScrollBehavior;
   const step = (dir: 1 | -1) => {

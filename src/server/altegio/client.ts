@@ -1,10 +1,13 @@
 import 'server-only';
 
+import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { getAltegioConfig } from '../config';
 import { AltegioError } from './errors';
 
 const API_BASE = 'https://api.alteg.io/api/v1/';
 const TIMEOUT_MS = 10_000;
+
+export const bookingLanguages = { ru: 'ru-RU', en: 'en-US' } satisfies Record<CatalogLocale, string>;
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
