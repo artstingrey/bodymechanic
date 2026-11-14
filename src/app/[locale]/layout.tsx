@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import localFont from 'next/font/local';
 import { notFound } from 'next/navigation';
 import { locale as rootLocale } from 'next/root-params';
 import { NextIntlClientProvider } from 'next-intl';
@@ -15,16 +14,11 @@ import { MotionRoot } from '@/components/motion/MotionRoot';
 import { Analytics } from '@/components/analytics/Analytics';
 import { PrivateBoundary } from '@/components/layout/PrivateBoundary';
 import { FocusIntoView } from '@/components/layout/FocusIntoView';
+import { PreloadFonts } from '@/components/layout/PreloadFonts';
 import { GLOBAL_CLIENT_MESSAGES } from '@/lib/i18n/pickMessages';
 import '../globals.css';
 import '@/styles/font-fallback.css';
-
-// Manrope variable (wght 200–800), Latin + Cyrillic subset, self-hosted (DS-05); file synced from site/design/brand-kit/fonts.
-// RC-6 (lead + AD): display optional — no swap after the first paint (the late font re-wrapped the copy); the fallback is
-// ours, metric-calibrated per weight and script (styles/font-fallback.css), next/font's own one (no font-weight → a faux
-// bold) is off. The variable file stays preloaded (next/font default).
-const manrope = localFont({ src: '../../fonts/Manrope.woff2', weight: '200 800', display: 'optional', variable: '--font-manrope',
-  adjustFontFallback: false, fallback: ['Manrope Fallback A', 'Manrope Fallback R'] });
+import '@/styles/site-font.css';
 
 export const dynamicParams = false;
 export function generateStaticParams() {
@@ -60,8 +54,9 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
   const all = (await getMessages()) as Record<string, unknown>;
   const messages = Object.fromEntries(CLIENT_NAMESPACES.map((k) => [k, all[k]]));
   return (
-    <html lang={locale} className={manrope.variable}>
+    <html lang={locale}>
       <body>
+        <PreloadFonts />
         <a href="#main" className="skip-link">{t('nav.skipToContent')}</a>
         <NextIntlClientProvider messages={messages}>
           <Body3DProvider>

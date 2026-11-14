@@ -1,4 +1,4 @@
-/** Shared gate helpers: route inventory from the export, network/console guard, page-level checks. */
+/** Shared gate helpers: route inventory from the Next.js build, network/console guard, page-level checks. */
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, type Page, type Request } from '@playwright/test';
@@ -7,10 +7,11 @@ import en from '../messages/en.json';
 export const LOCALES = ['en', 'ru'] as const;
 /** The deck glues one-letter words and some numbers to the next word with U+00A0 (808 / 833): compare text as plain spaces. */
 export const plainSpaces = (s: string) => s.replace(/[\u00A0\u202F]/g, ' ');
-export const OUT = path.resolve(__dirname, '..', 'out');
+export const ROOT = path.resolve(__dirname, '..');
+export const NEXT = path.join(ROOT, '.next');
 
 /**
- * Route templates of the sitemap (ТЗ §04 + README §13). Every one must exist in the export for both locales —
+ * Route templates of the sitemap (ТЗ §04 + README §13). Every one must exist in the server build for both locales —
  * a missing template fails the gate even if nothing links to it.
  */
 export const REQUIRED = [
@@ -19,21 +20,17 @@ export const REQUIRED = [
   'lp/[variant]/', // ad landing (task 01a1b325): own root layout, noindex, not in the sitemap; checked in lp.spec.ts
 ];
 
-/** All exported pages of one locale, as paths relative to /{locale}/ (e.g. 'services/sports/'). */
-export function exportedPages(locale: string): string[] {
-  const root = path.join(OUT, locale);
-  const res: string[] = [];
-  const walk = (dir: string, rel: string) => {
-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (!e.isDirectory()) continue;
-      const r = `${rel}${e.name}/`;
-      if (fs.existsSync(path.join(dir, e.name, 'index.html'))) res.push(r);
-      walk(path.join(dir, e.name), r);
-    }
-  };
-  if (fs.existsSync(path.join(root, 'index.html'))) res.push('');
-  walk(root, '');
-  return res.sort();
+/** Prerendered URLs plus a representative request-time record URL. */
+const manifest = JSON.parse(fs.readFileSync(path.join(NEXT, 'prerender-manifest.json'), 'utf8')) as {
+  routes: Record<string, unknown>;
+};
+
+export function builtPages(locale: string): string[] {
+  const prefix = `/${locale}`;
+  const pages = Object.keys(manifest.routes)
+    .filter((route) => route === prefix || route.startsWith(`${prefix}/`))
+    .map((route) => route === prefix ? '' : `${route.slice(prefix.length + 1)}/`);
+  return [...pages, 'account/record/9001/demo-hash/'].sort();
 }
 
 /** Template of a concrete page path: 'services/sports/' → 'services/[slug]/'. */
@@ -45,12 +42,11 @@ export function templateOf(p: string): string {
 }
 
 /**
- * Pages checked in the width × locale matrix: every exported page, plus URL states that are separate screens
- * (category filter, booking steps from a deep link, a record link resolved by the hosting rewrite).
+ * Pages checked in the width × locale matrix: built pages and URL states for filters, booking and record links.
  */
 export function matrixPages(locale: string): string[] {
   const extra = ['services/?category=massage', 'services/?category=rehab', 'booking/?step=2', 'booking/?step=4&service=101', 'booking/?step=6', 'account/record/1234/abcd/'];
-  return [...exportedPages(locale), ...extra];
+  return [...builtPages(locale), ...extra];
 }
 
 /** One representative per template for DEL-09 screenshots (other slugs share the template). */

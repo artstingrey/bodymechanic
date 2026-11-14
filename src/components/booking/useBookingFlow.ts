@@ -69,7 +69,7 @@ export function useBookingFlow(services: Service[]) {
   useEffect(() => { stepNow.current = step; }, [step]);
   const go = useCallback((n: number, replace = false) => {
     if (n === 3 && stepNow.current === 2 && slotLink.current) n = 4; // forward from the service only; «Назад» from 4 still reaches 3
-    const href = n === 1 ? '/booking' : `/booking?step=${n}`;
+    const href = n === 1 ? '/booking/' : `/booking/?step=${n}`;
     if (replace) router.replace(href); else router.push(href);
   }, [router]);
 

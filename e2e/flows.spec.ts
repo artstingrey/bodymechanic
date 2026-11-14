@@ -8,15 +8,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import en from '../messages/en.json';
-import { LOCALES, OUT, REQUIRED, exportedPages, templateOf, matrixPages, guard, settle3D, domChecks, expectClean, seedConsent, tapMarksRightAway, deepLinksEveryStep } from './helpers';
+import { LOCALES, ROOT, NEXT, REQUIRED, builtPages, templateOf, matrixPages, guard, settle3D, domChecks, expectClean, seedConsent, tapMarksRightAway, deepLinksEveryStep } from './helpers';
 
 test.beforeEach(async ({ page }) => { await seedConsent(page); }); // the cookie card would cover the 3D slot
 
-test('route inventory: every §04 template exported for both locales, no unknown pages', () => {
+test('route inventory: every §04 template built for both locales, no unknown pages', () => {
   for (const l of LOCALES) {
-    const pages = exportedPages(l);
+    const pages = builtPages(l);
     const templates = new Set(pages.map(templateOf));
-    for (const r of REQUIRED) expect(templates.has(r), `/${l}/${r} missing in out/`).toBe(true);
+    for (const r of REQUIRED) expect(templates.has(r), `/${l}/${r} missing in the build`).toBe(true);
     for (const p of pages) expect(REQUIRED.includes(templateOf(p)), `unexpected page /${l}/${p}`).toBe(true);
   }
 });
@@ -126,7 +126,7 @@ test('persistent 3D: hero → booking keeps the WebGL context and never re-reque
 });
 
 test('GLB weight ≤ 5 MB each (DEL-07)', () => {
-  const dir = path.join(OUT, 'models');
+  const dir = path.join(ROOT, 'public', 'models');
   const glbs = fs.readdirSync(dir).filter((f) => f.endsWith('.glb'));
   expect(glbs.length).toBeGreaterThan(0);
   for (const f of glbs) expect(fs.statSync(path.join(dir, f)).size, f).toBeLessThanOrEqual(5 * 1024 * 1024);
@@ -168,14 +168,18 @@ test('no internal notes in the JSON the app imports nor in the build (В-5)', ()
     ['a path of the team folders', /site\/copy|copy\/_src/],
     ['an internal ticket number', /\((?:R-LP|J|D|L)-\d+/],
   ];
-  const built = filesOf(OUT, /\.(?:js|html|txt|json|css|xml|webmanifest)$/);
-  expect(built.length, 'text files in out/').toBeGreaterThan(100);
+  const built = [
+    ...filesOf(path.join(NEXT, 'static'), /\.(?:js|css)$/),
+    ...filesOf(path.join(NEXT, 'server', 'app'), /\.(?:html|rsc|body)$/),
+    ...filesOf(path.join(ROOT, 'public'), /\.(?:js|html|txt|json|css|xml|webmanifest)$/),
+  ];
+  expect(built.length, 'public build files').toBeGreaterThan(100);
   const hits: string[] = [];
   for (const f of built) {
     const s = fs.readFileSync(f, 'utf8');
     for (const [name, rx] of MARKERS) {
       const m = rx.exec(s);
-      if (m) hits.push(`${path.relative(OUT, f).replace(/\\/g, '/')}: ${name} — «…${s.slice(Math.max(0, m.index - 30), m.index + 50).replace(/\s+/g, ' ')}…»`);
+      if (m) hits.push(`${path.relative(ROOT, f).replace(/\\/g, '/')}: ${name} — «…${s.slice(Math.max(0, m.index - 30), m.index + 50).replace(/\s+/g, ' ')}…»`);
     }
   }
   expect(hits, `internal notes in the build:\n  ${hits.slice(0, 12).join('\n  ')}`).toEqual([]);
@@ -244,7 +248,7 @@ test('service page CTA preselects the service in the booking; the address stays 
 
 /**
  * RC-10 (security review Ж-9): no page of the build links into the booking with a choice in the address — not in the
- * markup, not in the router's copy of the page data (inside the HTML and in the .txt files it fetches on a navigation).
+ * markup, not in the router's copy of the page data (inside the HTML and in the RSC responses it fetches on a navigation).
  * The one named exception: JSON-LD of a service page, whose Offer.url is the outside address of the booking
  * (…/booking/?service=ID, ТЗ §07) — a link from outside still works, it is cleaned as the page opens.
  */
@@ -258,10 +262,10 @@ test('no page of the build carries a booking choice in a link address; JSON-LD i
   const plain = (s: string) => s.replace(/\\+"/g, '"').replace(/\\u0026/g, '&');
   const bad: string[] = [];
   let inJsonLd = 0, files = 0;
-  for (const f of filesOf(OUT, /\.(?:html|txt)$/)) {
+  for (const f of filesOf(path.join(NEXT, 'server', 'app'), /\.(?:html|rsc)$/)) {
     files++;
     const raw = fs.readFileSync(f, 'utf8');
-    const rel = path.relative(OUT, f);
+    const rel = path.relative(ROOT, f);
     const isHtml = f.endsWith('.html');
     if (isHtml) {
       const markup = raw.replace(LD, (m) => { if (CHOICE.test(m)) inJsonLd++; return ''; }).replace(ROUTER_DATA, '');
@@ -288,12 +292,11 @@ test('no page of the build carries a booking choice in a link address; JSON-LD i
 test('only src/ and messages/ feed Tailwind: the utilities that documents and tests once brought in are absent from the built CSS', () => {
   const filesOf = (dir: string, rx: RegExp): string[] => fs.readdirSync(dir, { withFileTypes: true })
     .flatMap((e) => (e.isDirectory() ? filesOf(path.join(dir, e.name), rx) : rx.test(e.name) ? [path.join(dir, e.name)] : []));
-  const built = filesOf(path.join(OUT, '_next', 'static'), /\.css$/);
+  const built = filesOf(path.join(NEXT, 'static'), /\.css$/);
   expect(built.length).toBeGreaterThan(0);
   const UTILITY = /\.backdrop-filter\s*\{|\.shrink\s*\{|\.tabular-nums\s*\{|@property --tw-backdrop-|@property --tw-numeric-/;
   const hits = built.filter((f) => UTILITY.test(fs.readFileSync(f, 'utf8'))).map((f) => path.basename(f));
   expect(hits, 'stylesheets with a utility that only a document or a test names').toEqual([]);
-  const ROOT = path.resolve(OUT, '..');
   const docs = [...filesOf(path.join(ROOT, 'docs'), /\.md$/), path.join(ROOT, 'README.md')].filter((f) => fs.existsSync(f));
   expect(docs.some((f) => fs.readFileSync(f, 'utf8').includes('`backdrop-filter`')), 'the documents still name the word in backticks').toBe(true);
   const css = fs.readFileSync(path.join(ROOT, 'src', 'app', 'globals.css'), 'utf8');
@@ -324,12 +327,12 @@ test('no horizontal overflow at 360 px on any page (DEL-05)', async ({ browser, 
 });
 
 test('CSS uses svh/dvh, not 100vh (DEL-05)', () => {
-  const dir = path.join(OUT, '_next', 'static');
+  const dir = path.join(NEXT, 'static');
   const hits: string[] = [];
   const walk = (d: string) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
     const p = path.join(d, e.name);
     if (e.isDirectory()) walk(p);
-    else if (p.endsWith('.css') && /(^|[^.\d])100vh/.test(fs.readFileSync(p, 'utf8'))) hits.push(path.relative(OUT, p));
+    else if (p.endsWith('.css') && /(^|[^.\d])100vh/.test(fs.readFileSync(p, 'utf8'))) hits.push(path.relative(ROOT, p));
   } };
   walk(dir);
   expect(hits, `100vh found in ${hits.join(', ')}`).toEqual([]);

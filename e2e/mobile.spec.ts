@@ -709,7 +709,7 @@ test('a late web font moves nothing on the site\'s first screen: header, H1, lea
     }
     if (!first.size) bad.push(`${path} ${w}×${h}: nothing tracked on the first screen`);
     if (d > 1) bad.push(`${path} ${w}×${h}: moved ${d.toFixed(1)} px when the font came — ${what}`);
-    const foreign = [...new Set(fontFiles.filter((f) => /^Manrope_[4-8]00[.-]/.test(f)))];
+    const foreign = [...new Set(fontFiles.filter((f) => /^Manrope-[4678]00\.woff2$/.test(f)))];
     if (foreign.length) bad.push(`${path} ${w}×${h}: loads the landing's static font files ${foreign.join(', ')}`);
   }
   expect(bad).toEqual([]);

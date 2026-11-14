@@ -3,7 +3,7 @@
  * runtime reads a table instead of computing it after each load (≈ 1 s of main thread on a phone — R-FINAL, /booking TBT).
  * The colouring is deterministic (seeded); a model without an entry still works — it computes in idle.
  * Rerun when the models change (same rule as poster-anchors):
- *   npm run build && node scripts/serve-out.mjs 4173  (other terminal)  →  node scripts/zone-colours.mjs [baseURL]
+ *   npm run build && npm run start -- --port 4173  (other terminal)  →  node scripts/zone-colours.mjs [baseURL]
  * Writes src/lib/body3d/zone-colours.json.
  */
 import fs from 'node:fs';

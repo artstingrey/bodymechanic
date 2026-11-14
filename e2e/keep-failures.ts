@@ -24,7 +24,7 @@ export default class KeepFailures implements Reporter {
     const project = test.parent.project()?.name ?? 'project';
     const into = path.join(this.dir, `${slug(project)}__${slug(test.title)}__try${result.retry}`);
     fs.mkdirSync(into, { recursive: true });
-    const base = process.env.GATE_BASE_URL || 'local out/';
+    const base = process.env.GATE_BASE_URL || 'local Next.js';
     const errors = result.errors.map((e) => e.stack || e.message || String(e.value)).join('\n\n');
     fs.writeFileSync(path.join(into, 'error.txt'), `${test.titlePath().join(' › ')}\nproject: ${project}\nagainst: ${base}\nstatus: ${result.status}, ${result.duration} ms\n\n${errors}\n`);
     for (const a of result.attachments) {

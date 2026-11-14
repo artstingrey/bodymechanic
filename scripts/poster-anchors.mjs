@@ -7,7 +7,7 @@
  * «female@lod1» = LOD1 (measured on the same 1280×800 window with navigator.deviceMemory = 2 — the fractions do not depend on
  * the window, RC-5 probe: 320–1280 within 0.1 % of the poster height).
  * Rerun when the posters, the models or the camera framing change:
- *   npm run build && node scripts/serve-out.mjs 4173  (other terminal)  →  node scripts/poster-anchors.mjs [baseURL]
+ *   npm run build && npm run start -- --port 4173  (other terminal)  →  node scripts/poster-anchors.mjs [baseURL]
  * Writes src/lib/body3d/poster-anchors.json.
  */
 import fs from 'node:fs';

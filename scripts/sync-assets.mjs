@@ -10,7 +10,7 @@
  *   site/3d/posters/*.{webp,avif,png}    → public/posters/
  *   site/3d/zones.js                     → src/lib/body3d/zones-core.js (zone classifier; ids = README zone directory)
  *   site/design/body2d/svg/*.svg         → public/body2d/           (2D fallback, same zoneIds)
- *   site/design/brand-kit/fonts/Manrope-subset.woff2 → src/fonts/Manrope.woff2
+ *   site/design/brand-kit/fonts/Manrope-subset.woff2 → public/fonts/v1/Manrope.woff2
  *   site/design/brand-kit/favicon/*      → public/ (favicons, site.webmanifest, site.ru.webmanifest)
  */
 import fs from 'node:fs';
@@ -133,7 +133,7 @@ for (const f of fs.readdirSync(path.join(SITE, 'design', 'body2d', 'svg')).filte
 // 2D callouts module + its stylesheet (Brand Designer, R-2D-02): markers, leader callouts, crosshair (one copy of the logic)
 copy(path.join(SITE, 'design', 'body2d', 'lib', 'body2d-callouts.mjs'), path.join(APP, 'src', 'lib', 'body2d', 'body2d-callouts.mjs'));
 copy(path.join(SITE, 'design', 'body2d', 'body2d.css'), path.join(APP, 'src', 'styles', 'body2d.css'));
-copy(path.join(SITE, 'design', 'brand-kit', 'fonts', 'Manrope-subset.woff2'), path.join(APP, 'src', 'fonts', 'Manrope.woff2'));
+copy(path.join(SITE, 'design', 'brand-kit', 'fonts', 'Manrope-subset.woff2'), path.join(APP, 'public', 'fonts', 'v1', 'Manrope.woff2'));
 copy(path.join(SITE, 'design', 'brand-kit', 'fonts', 'OFL.txt'), path.join(APP, 'src', 'fonts', 'OFL.txt'));
 // 4) favicons + web manifests (brand kit head-snippet.html: site root paths)
 for (const f of ['favicon.svg', 'favicon-32.png', 'favicon-16.png', 'favicon.ico', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'site.webmanifest', 'site.ru.webmanifest'])

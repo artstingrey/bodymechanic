@@ -3,7 +3,7 @@
  *   1. git archive <ref> (default HEAD) → an empty folder outside site/ (OS temp);
  *   2. its messages/* must equal the copy deck (site/copy, sync check: keys AND texts) — a text update that was synced
  *      only in a working copy fails here, not on Render;
- *   3. npm ci → npm run build (Render: `npm ci && npm run build`, NODE_VERSION 22) → out/ has the key pages;
+ *   3. npm ci → npm run build (Node 22) → next start serves the key routes;
  *   4. the same tree without docs/ and README.md builds the same stylesheets, byte for byte (RC-10: a documents-only
  *      commit must not change the site's CSS).
  * Run before EVERY merge into main: `npm run gate:clean [-- <ref>]`. Exit 1 on any problem; the folder is kept on failure.
@@ -15,6 +15,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { copyDrift } from './copy-drift.mjs';
+import { checkServer, withProductionServer } from './check-server.mjs';
 
 const APP = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const COPY = path.resolve(APP, '..', 'copy');
@@ -28,16 +29,17 @@ const run = (cmd, args, opts = {}) => {
 };
 const out = (cmd, args) => spawnSync(cmd, args, { cwd: APP, encoding: 'utf8' }).stdout.trim();
 
-const sha = out('git', ['rev-parse', '--short', ref]);
-if (!sha) { console.error(`clean build: unknown ref ${ref}`); process.exit(1); }
+const commit = out('git', ['rev-parse', '--verify', '--end-of-options', `${ref}^{commit}`]);
+if (!/^[a-f\d]{40,64}$/.test(commit)) { console.error(`clean build: not a commit: ${ref}`); process.exit(1); }
+const sha = out('git', ['rev-parse', '--short', commit]);
 // one folder per RUN (mkdtemp, random suffix): two worktrees may clean-build the same commit at once (EPERM on a shared folder)
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), `bm-clean-build-${sha}-`));
 console.log(`clean build of ${ref} (${sha}) in ${dir}`);
 
 // 1) the committed tree only
 // piped through stdin: no drive-letter paths for tar (GNU tar from Git for Windows reads «C:…» as a remote host)
-console.log(`\n$ git archive --format=tar ${ref} | tar -xf -   (in ${dir})`);
-if (spawnSync(`git -C "${APP}" archive --format=tar ${ref} | tar -xf -`, { cwd: dir, stdio: 'inherit', shell: true }).status !== 0
+console.log(`\n$ git archive --format=tar ${ref} -- . ":(exclude)bodymechanic-site-main.zip" | tar -xf -   (in ${dir})`);
+if (spawnSync(`git -C "${APP}" archive --format=tar ${commit} -- . ":(exclude)bodymechanic-site-main.zip" | tar -xf -`, { cwd: dir, stdio: 'inherit', shell: true }).status !== 0
   || !fs.existsSync(path.join(dir, 'package.json'))) { console.error('clean build: git archive failed'); process.exit(1); }
 
 // 2) committed messages = the copy deck
@@ -55,10 +57,9 @@ else if (drift.length && process.env.GATE_DECK_DRIFT === 'allow') {
 
 // 3) Render's build
 run('npm', ['ci', '--no-audit', '--no-fund', '--prefer-offline'], { cwd: dir });
-run('npm', ['run', 'build'], { cwd: dir, env: { ...process.env, NODE_ENV: 'production' } });
-const must = ['index.html', '404.html', 'ru/index.html', 'en/index.html', 'ru/booking/index.html', 'en/booking/index.html', 'robots.txt', 'sitemap.xml'];
-const missing = must.filter((f) => !fs.existsSync(path.join(dir, 'out', f)));
-if (missing.length) { console.error(`\nclean build: out/ is missing ${missing.join(', ')}`); process.exit(1); }
+const env = { NODE_ENV: 'production', ALTEGIO_LOCATION_ID: '', ALTEGIO_PARTNER_TOKEN: '', ALTEGIO_CURRENCY: '' };
+run('npm', ['run', 'build'], { cwd: dir, env: { ...process.env, ...env } });
+await withProductionServer(checkServer, { cwd: dir, env });
 
 // 4) Only src/ and messages/ may feed the site's CSS (RC-10). Left to itself Tailwind looks for class names in every file
 //    git does not ignore; in RC-9 a word in docs/KNOWN-ISSUES.md became a utility and the deployed stylesheet was not the
@@ -67,8 +68,9 @@ if (missing.length) { console.error(`\nclean build: out/ is missing ${missing.jo
 //    name for name and byte for byte.
 const stylesheets = () => {
   const found = new Map();
-  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith('.css')) found.set(path.relative(path.join(dir, 'out'), p), crypto.createHash('sha1').update(fs.readFileSync(p)).digest('hex')); } };
-  walk(path.join(dir, 'out', '_next', 'static'));
+  const root = path.join(dir, '.next', 'static');
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith('.css')) found.set(path.relative(root, p), crypto.createHash('sha1').update(fs.readFileSync(p)).digest('hex')); } };
+  walk(root);
   return found;
 };
 const withDocs = stylesheets();
@@ -78,7 +80,7 @@ fs.rmSync(path.join(dir, 'README.md'), { force: true });
 const PROBE = 'class="backdrop-filter line-through animate-bounce col-span-7"'; // real Tailwind utilities the site does not use
 fs.writeFileSync(path.join(dir, 'e2e', 'zz-tailwind-probe.ts'), `// ${PROBE}\nexport {};\n`);
 fs.writeFileSync(path.join(dir, 'ZZ-TAILWIND-PROBE.md'), `${PROBE}\n`);
-run('npm', ['run', 'build'], { cwd: dir, env: { ...process.env, NODE_ENV: 'production' } });
+run('npm', ['run', 'build'], { cwd: dir, env: { ...process.env, ...env } });
 const withoutDocs = stylesheets();
 const differ = [...new Set([...withDocs.keys(), ...withoutDocs.keys()])].filter((f) => withDocs.get(f) !== withoutDocs.get(f));
 if (!withDocs.size || differ.length) {
@@ -88,5 +90,5 @@ if (!withDocs.size || differ.length) {
   process.exit(1);
 }
 console.log(`\ndocuments ↔ CSS: ${withDocs.size} stylesheet(s) identical — without docs/ and README.md${hadDocs ? '' : ' (the commit has neither)'}, with a class-like word in e2e/ and in a new root file`);
-console.log(`\nclean build of ${sha}: OK (${must.length} key files in out/)`);
+console.log(`\nclean build of ${sha}: OK (production HTTP routes and CSS)`);
 fs.rmSync(dir, { recursive: true, force: true });

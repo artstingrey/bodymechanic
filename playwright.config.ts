@@ -1,10 +1,9 @@
 /**
  * Playwright gate (README §14, checklist DEL-02/03/04/05/08/09/10/12/13).
- * Runs against the static export served the way Render will serve it (scripts/serve-out.mjs).
- *   npm run build && npm run gate            → all checks
- *   GATE_SHOTS=0 npm run gate                → skip DEL-09 screenshots (faster)
- *   GATE_BASE_URL=https://… npx playwright test → run against a deployed site (no local server; out/ is still read
- *                                               for the page inventory, so build the same commit first)
+ * Runs against a production Next.js server. Build the same commit first for local and remote runs.
+ *   npm run build && npm run gate
+ *   GATE_SHOTS=0 npm run gate
+ *   GATE_BASE_URL=https://… npx playwright test
  * Browser: the system Google Chrome (channel 'chrome'); on Windows it renders WebGL on the real GPU (ANGLE D3D11).
  */
 import { defineConfig } from '@playwright/test';
@@ -33,18 +32,17 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   // keep-failures: trace / screenshot / error of every failure copied to e2e/.failures/<run>/ (no run wipes it)
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'e2e/report' }], ['./e2e/keep-failures.ts']],
-  // logs which out/ is served and fails if the server on the port serves another worktree's out/
   globalSetup: './e2e/global-setup.ts',
   use: {
-    baseURL: REMOTE || `http://localhost:${PORT}`,
+    baseURL: REMOTE || `http://127.0.0.1:${PORT}`,
     locale: 'en-US',
     timezoneId: 'Asia/Dubai',
     screenshot: 'only-on-failure',
   },
   webServer: REMOTE ? undefined : {
-    command: `node scripts/serve-out.mjs ${PORT}`,
-    url: `http://localhost:${PORT}/robots.txt`,
-    reuseExistingServer: true,
+    command: `npm run start -- --hostname 127.0.0.1 --port ${PORT}`,
+    url: `http://127.0.0.1:${PORT}/robots.txt`,
+    reuseExistingServer: false,
   },
   projects: [
     ...WIDTHS.map((w) => ({ name: w.name, testMatch: /pages\.spec\.ts/, use: { ...CHROME, viewport: { width: w.width, height: w.height } } })),

@@ -149,13 +149,13 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
     // T-12: while requests go to the mock, «Демо» + one line next to the form
     await expect(page.locator('#lp-f1 .demo-note, .lp-hero-cta ~ dialog .demo-note').first()).toBeAttached();
     if (await page.locator('#lp-f1').isVisible()) await expect(page.locator('#lp-f1 .demo-note')).toBeVisible();
-    // §6: only the landing's static Manrope instances, never the site's variable font (scripts/lp-postexport.mjs)
+    // §6: only the landing's static Manrope instances, never the site's variable font (LP root layout)
     expect(fonts.length).toBeGreaterThan(0);
-    expect(fonts.filter((f) => !/^Manrope_[4-8]00[.-]/.test(f)), 'fonts other than the static LP instances').toEqual([]); // «Manrope_400.<hash>», «.p.» when preloaded, «-s» with next/font's fallback
-    // RC-7 (A): the 4 static faces are preloaded with fetchpriority="low" (scripts/lp-postexport.mjs) — in the HTML as served
+    expect(fonts.filter((f) => !/^Manrope-[4678]00\.woff2$/.test(f)), 'fonts other than the static LP instances').toEqual([]);
+    // RC-7 (A): the 4 static faces are preloaded with fetchpriority="low" (LP root layout) — in the HTML as served
     const served = await (await page.request.get(url)).text();
-    const pre = [...served.matchAll(/<link rel="preload" href="\/_next\/static\/media\/([^"]+\.woff2)"[^>]*>/g)];
-    expect(pre.map((m) => m[1].slice(0, 11)).sort(), 'the landing font preloads').toEqual(['Manrope_400', 'Manrope_600', 'Manrope_700', 'Manrope_800']);
+    const pre = [...served.matchAll(/<link(?=[^>]*\brel="preload")(?=[^>]*\bhref="\/fonts\/v1\/([^"]+\.woff2)")[^>]*>/g)];
+    expect(pre.map((m) => m[1]).sort(), 'the landing font preloads').toEqual(['Manrope-400.woff2', 'Manrope-600.woff2', 'Manrope-700.woff2', 'Manrope-800.woff2']);
     expect(pre.filter((m) => !m[0].includes('fetchPriority="low"')).map((m) => m[1]), 'landing font preloads without fetchpriority="low"').toEqual([]);
     expect(await page.locator('h1').count()).toBe(1);
     expect(await page.locator('meta[name="robots"]').first().getAttribute('content')).toMatch(/noindex/);
@@ -203,7 +203,7 @@ for (const url of PAGES) {
 /**
  * RC-7 (A), AD + HR: a repeat visit draws the landing in Manrope. With font-display: optional and no preload the cached faces
  * still missed the first frame and the visit stayed on the fallback (Chromium 390 Android: visits 2–3 on Manrope 0–1 of 3,
- * 86e41f6). The low-priority preloads (scripts/lp-postexport.mjs) are ready from the HTTP cache before the first frame.
+ * 86e41f6). The low-priority preloads (LP root layout) are ready from the HTTP cache before the first frame.
  * Chromium (the drawing font comes from CDP CSS.getPlatformFontsForNode): 3 rounds × visits 2 and 3, 390 Android and 1280.
  */
 test('a repeat visit draws the landing H1 in Manrope (fetchpriority="low" preloads, cache)', async ({ browser }, ti) => {

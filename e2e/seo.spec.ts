@@ -10,7 +10,7 @@
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import en from '../messages/en.json';
 import ru from '../messages/ru.json';
-import { LOCALES, exportedPages, templateOf, guard, expectClean, seedConsent, toReview, plainSpaces, testHook, entryProbe, withChoice, CHOICE_IN_URL, type EntrySeen } from './helpers';
+import { LOCALES, builtPages, templateOf, guard, expectClean, seedConsent, toReview, plainSpaces, testHook, entryProbe, withChoice, CHOICE_IN_URL, type EntrySeen } from './helpers';
 import { personJsonLd } from '../src/lib/jsonld';
 import { SERVICES } from '../src/lib/api/mock-data';
 import { calendarDays } from '../src/lib/api';
@@ -58,7 +58,7 @@ const faqOf = (locale: 'en' | 'ru') => Object.values(DECK[locale].home.faq as Re
 
 test('JSON-LD on every page: valid JSON, expected @types, no medical types, no forbidden words (ТЗ §14)', async ({ request }) => {
   for (const locale of LOCALES) {
-    for (const p of exportedPages(locale)) {
+    for (const p of builtPages(locale)) {
       const label = `/${locale}/${p}`;
       const doc = await html(request, label);
       const blocks = ld(doc); // throws on invalid JSON
@@ -118,7 +118,7 @@ test('meta: one canonical, hreflang ru / en / x-default, unique title and descri
   const origins = new Set<string>();
   for (const locale of LOCALES) {
     const titles = new Map<string, string>(), descriptions = new Map<string, string>();
-    for (const p of exportedPages(locale)) {
+    for (const p of builtPages(locale)) {
       const label = `/${locale}/${p}`;
       const doc = await html(request, label);
       const links = tags(doc, 'link');
@@ -126,9 +126,10 @@ test('meta: one canonical, hreflang ru / en / x-default, unique title and descri
       expect(canon, label).toHaveLength(1);
       const url = new URL(canon[0]);
       origins.add(url.origin);
-      expect(url.pathname, label).toBe(`/${locale}/${p}`);
+      const canonicalPath = templateOf(p) === 'account/record/[id]/[hash]/' ? 'account/record/' : p;
+      expect(url.pathname, label).toBe(`/${locale}/${canonicalPath}`);
       const alt = Object.fromEntries(links.filter((l) => attr(l, 'rel') === 'alternate' && attr(l, 'hreflang')).map((l) => [attr(l, 'hreflang'), attr(l, 'href')]));
-      expect(alt, label).toEqual({ ru: `${url.origin}/ru/${p}`, en: `${url.origin}/en/${p}`, 'x-default': `${url.origin}/en/${p}` });
+      expect(alt, label).toEqual({ ru: `${url.origin}/ru/${canonicalPath}`, en: `${url.origin}/en/${canonicalPath}`, 'x-default': `${url.origin}/en/${canonicalPath}` });
       const title = decode(doc.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? '');
       const description = attr(tags(doc, 'meta').find((m) => attr(m, 'name') === 'description') ?? '', 'content') ?? '';
       expect(title, label).not.toBe('');
@@ -156,7 +157,7 @@ test('sitemap.xml: every public page in both languages with ru / en / x-default;
     alt: Object.fromEntries([...m[1].matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((a) => [a[1], a[2]])),
   }));
   const origin = new URL(urls[0].loc).origin;
-  const expected = LOCALES.flatMap((l) => exportedPages(l).filter((p) => !p.startsWith('account/') && !p.startsWith('lp/')).map((p) => `${origin}/${l}/${p}`));
+  const expected = LOCALES.flatMap((l) => builtPages(l).filter((p) => !p.startsWith('account/') && !p.startsWith('lp/')).map((p) => `${origin}/${l}/${p}`));
   expect(urls.map((u) => u.loc).sort()).toEqual(expected.sort());
   for (const u of urls) {
     const p = u.loc.slice(origin.length).replace(/^\/(en|ru)\//, '');
@@ -692,7 +693,7 @@ test('an account address behind an escaped slash and a parent segment is recogni
     expect(() => isPrivatePath(p), JSON.stringify(p.slice(0, 20))).not.toThrow();
   // every page of the build: private exactly when it is an account page, as before the rule learned «.» and «..»
   for (const locale of LOCALES) {
-    const pages = exportedPages(locale).map((p) => `/${locale}/${p}`);
+    const pages = builtPages(locale).map((p) => `/${locale}/${p}`);
     expect(pages.length, `pages of ${locale}`).toBeGreaterThan(20);
     for (const p of pages) expect(isPrivatePath(p), p).toBe(p.startsWith(`/${locale}/account/`));
     expect(pages.filter((p) => isPrivatePath(p)).length, `account pages of ${locale}`).toBe(3);

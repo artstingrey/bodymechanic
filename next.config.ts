@@ -13,23 +13,54 @@ if (!process.env.NEXT_PUBLIC_SITE_URL && process.env.NODE_ENV === 'production') 
 }
 
 const nextConfig: NextConfig = {
-  // Static prototype on Render (README §14): one HTML file per route and locale.
-  output: 'export',
-  // `/en/services` → `/en/services/index.html`: deep links and F5 work on a plain static host (DEL-12).
   trailingSlash: true,
-  // next/image has no optimizer in a static export; images are pre-generated (AVIF/WebP) at build time.
+  // Keep page links with a trailing slash while serving the API URL directly.
+  skipTrailingSlashRedirect: true,
+  poweredByHeader: false,
+  // Images are pre-generated (AVIF/WebP) at build time.
   images: { unoptimized: true },
-  // Root layout lives under app/[locale] (dynamic segment) → unmatched URLs need a global 404 → out/404.html.
+  // A global 404 handles unmatched paths across the separate root layouts.
   experimental: { globalNotFound: true },
-  // DECISION: Cache Components / Partial Prefetching stay off for the static export prototype:
-  // nothing here is dynamic, and it keeps next-intl + export on the well-trodden path. Revisit at stage 2 (BFF).
   cacheComponents: false,
   turbopack: {
     rules: {
       '*.css': { loaders: ['@tailwindcss/turbopack'], as: '*.css' },
     },
   },
-  // Static export ignores headers/redirects/rewrites: they live in the Render service config (README, «Render»).
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'accelerometer=(), gyroscope=(), magnetometer=(), camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), hid=(), midi=(), display-capture=(), xr-spatial-tracking=(), browsing-topics=()' },
+        ],
+      },
+      {
+        source: '/:locale(ru|en)/account/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+      {
+        source: '/models/:file*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/fonts/v1/:file*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/:file(site|site.ru).webmanifest',
+        headers: [{ key: 'Content-Type', value: 'application/manifest+json' }],
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

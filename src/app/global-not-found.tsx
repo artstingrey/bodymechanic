@@ -1,5 +1,5 @@
 /**
- * 404 for every unmatched URL → out/404.html (Render serves it for missing paths, DEL-12).
+ * 404 for unmatched URLs across all root layouts (DEL-12).
  * The locale is unknown at build time. Exactly ONE language variant lives in the DOM (lead / Market Analyst, R-FINAL):
  *  - English is rendered in #nf-root; Russian waits in an inert <template> (its h1 is not part of the document);
  *  - an inline script right after them swaps in the Russian markup for /ru/… paths and sets <html lang> before the first
@@ -9,18 +9,13 @@
  * Strings: messages nav.*, notFound.* (both locales).
  */
 import type { Metadata, Viewport } from 'next';
-import localFont from 'next/font/local';
 import ru from '../../messages/ru.json';
 import en from '../../messages/en.json';
 import assets from '../lib/body3d/assets.json';
 import './globals.css';
 import '@/styles/font-fallback.css';
+import '@/styles/site-font.css';
 import '@/styles/nf.css';
-
-// preload: false — Next puts the global not-found fonts into every page's preload list (the ad landing must not load the
-// site's variable font: task 01a1b325 §6); the 404 is rare and the site pages preload the same file from their layout
-const manrope = localFont({ src: '../fonts/Manrope.woff2', weight: '200 800', display: 'optional', variable: '--font-manrope', preload: false,
-  adjustFontFallback: false, fallback: ['Manrope Fallback A', 'Manrope Fallback R'] }); // RC-6: as the site (styles/font-fallback.css)
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', colorScheme: 'only light' };
 export const metadata: Metadata = { title: `${en.notFound.code} · ${en.common.brand}`, robots: { index: false, follow: false } };
@@ -81,7 +76,7 @@ var root=document.getElementById('nf-root'),t=document.getElementById('nf-ru');i
 
 export default function GlobalNotFound() {
   return (
-    <html lang="en" className={manrope.variable}>
+    <html lang="en">
       <body>
         <div id="nf-root" dangerouslySetInnerHTML={{ __html: variant('en', en) }} />
         <template id="nf-ru" dangerouslySetInnerHTML={{ __html: variant('ru', ru) }} />

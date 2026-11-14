@@ -10,10 +10,7 @@ export async function generateMetadata() {
   return privateMetadata(await pageLocale(), 'account', '/account/record');
 }
 
-/**
- * Generic «record by link» page (PG-13). Render rewrite /{locale}/account/record/* → /{locale}/account/record/index.html
- * serves it for any id/hash; the component reads them from the URL (the rewrite: docs/CONFIG-DEPLOY.md; locally scripts/serve-out.mjs).
- */
+/** Demo record-by-link screen (PG-13). The browser reads the record ID and hash from the address. */
 export default async function RecordGenericPage() {
   const t = await getTranslations();
   return (
