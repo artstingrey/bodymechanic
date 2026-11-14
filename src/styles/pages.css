@@ -112,6 +112,7 @@
 .doc-sections { margin-top: 48px; display: grid; gap: 0 32px; }
 .doc-sections > section { display: grid; gap: 10px; align-content: start; padding: 20px 0; border-top: 1px solid var(--line); }
 .doc-sections > section .h3, .doc-sections > section p { margin: 0; }
+.doc-sections .staff :is(b, .cap) { overflow-wrap: anywhere; }
 @media (min-width: 768px) { .doc-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); } .doc-sections__wide { grid-column: 1 / -1; } }
 
 /* ---------- prices ---------- */

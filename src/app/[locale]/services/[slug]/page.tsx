@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StaffCard } from '@/components/ui/Cards';
 import { Photo, hasPhoto } from '@/components/ui/Photo';
 import { serviceFacts } from '@/components/services/ServiceFacts';
+import { ServiceStaff } from '@/components/services/ServiceStaff';
 import { Todo } from '@/components/ui/Todo';
 
 const demoSlugs = new Set(serviceSlugs());
@@ -75,6 +76,7 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/services
 }
 
 const SECTIONS = ['forWhom', 'indications', 'session', 'options', 'contra', 'specialists', 'faq', 'related'] as const;
+const SPECIALISTS_HEADING = 'service-specialists-title';
 
 export default async function ServicePage({ params }: PageProps<'/[locale]/services/[slug]'>) {
   const { slug } = await params;
@@ -144,9 +146,15 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
       </div>
       <div className="doc-sections">
         {SECTIONS.map((k) => (
-          <section key={k} className={k === 'specialists' || k === 'related' ? 'doc-sections__wide' : undefined}>
-            <h2 className="h3">{t(`service.section.${k}`)}{k === 'specialists' && staffList ? demoBadge : null}</h2>
-            {k === 'specialists' ? staffList ?? placeholder
+          <section key={k} className={k === 'specialists' || k === 'related' ? 'doc-sections__wide' : undefined}
+            aria-labelledby={k === 'specialists' ? SPECIALISTS_HEADING : undefined}>
+            <h2 className="h3" id={k === 'specialists' ? SPECIALISTS_HEADING : undefined} tabIndex={k === 'specialists' ? -1 : undefined}>
+              {t(`service.section.${k}`)}{k === 'specialists' && staffList ? demoBadge : null}
+            </h2>
+            {k === 'specialists' ? (
+              detail.source === 'altegio' ? <ServiceStaff key={s.id} locale={locale} serviceId={s.id} headingId={SPECIALISTS_HEADING} t={t} />
+                : staffList ?? placeholder
+            )
               : k === 'related' && articles.length ? <ul className="link-list">{articles.map((a) => <li key={a.slug}><Link href={`/journal/${a.slug}`}>{a.title}</Link></li>)}</ul>
               : placeholder}
           </section>

@@ -113,7 +113,8 @@ async function browserChecks(origin) {
       await expect(sectionHeadings).toHaveCount(8);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
       await expect(wideSections).toHaveCount(2);
-      await expect(wideSections.first().locator('.todo')).toBeVisible();
+      await expect(wideSections.first().getByRole('status')).toHaveText(locale === 'ru'
+        ? 'Для этой услуги пока нет специалистов.' : 'No specialists are currently listed for this service.');
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
       await expect(page.locator('.demo-notice')).toBeVisible();
       const cta = hero.getByRole('button', { name: locale === 'ru' ? 'Записаться' : 'Book' });
@@ -137,9 +138,9 @@ async function browserChecks(origin) {
       await expect(heading).toHaveText(/длинным названием|very long service title/);
       await expect(hero.locator('.eyebrow, .hero-lead, .badge')).toHaveCount(0);
       await expect(sectionHeadings).toHaveText(sectionHeadingsByLocale.get(locale));
-      await expect(page.locator('.doc-sections > section > .todo')).toHaveCount(7);
+      await expect(page.locator('.doc-sections > section > .todo')).toHaveCount(6);
       await expect(wideSections).toHaveCount(2);
-      await expect(wideSections.first().locator('.todo')).toBeVisible();
+      await expect(wideSections.first().getByRole('status')).toBeVisible();
       await expect(wideSections.last().locator(`a[href^="/${locale}/journal/"]`)).toHaveCount(2);
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
       assert.equal(await page.locator('.doc-sections').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length),

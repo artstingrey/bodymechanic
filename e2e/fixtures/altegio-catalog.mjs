@@ -15,13 +15,45 @@ fs.writeFile = async (file, ...args) => {
 };
 
 const fetchOriginal = globalThis.fetch;
+
+async function serviceStaffFixture(serviceId, language, signal) {
+  const scenarioFile = process.env.SERVICE_STAFF_TEST_SCENARIO;
+  if (!scenarioFile) return Response.json({ success: true, data: [] });
+  const scenario = readFileSync(scenarioFile, 'utf8');
+  console.info('[service-staff-fixture]', scenario, language, serviceId);
+  if (scenario === '500') return new Response('fixture raw upstream detail', { status: 500 });
+  if (scenario === '429') return new Response(null, { status: 429, headers: { 'Retry-After': '2' } });
+  if (scenario === 'slow') {
+    while (!(await fs.stat(`${scenarioFile}.release`).catch(() => null))) await delay(30, undefined, { signal });
+  } else assert.equal(scenario, 'success');
+
+  const ru = language === 'ru-RU';
+  const sports = [
+    { id: 91601, name: 'Alex Example', bookable: false, position: { title: ru ? 'Должность RU' : 'Position EN' },
+      avatar_big: 'https://images.example.test/portrait.webp', user: { detail: 'fixture raw upstream detail' } },
+    { id: 91602, name: 'Sam Example', specialization: ru ? 'Специализация RU' : 'Specialization EN',
+      avatar: 'https://images.example.test/broken.webp' },
+    { id: 91603, name: 'Hidden Example', hidden: 1 },
+    { id: 91604, name: 'Former Example', fired: 1 },
+  ];
+  const lists = {
+    13982355: sports,
+    91201: [{ id: 91605, name: 'Taylor Example' }],
+    91204: [],
+  };
+  assert.ok(Object.hasOwn(lists, serviceId));
+  return Response.json({ success: true, data: lists[serviceId] });
+}
+
 globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
   if (url.hostname !== 'api.alteg.io') return fetchOriginal(input, init);
 
   const staff = url.pathname.startsWith('/api/v1/book_staff/');
   const resource = staff ? 'book_staff' : 'book_services';
-  const query = staff ? '' : '?without_seances=1';
+  const serviceId = staff ? url.searchParams.get('service_ids[]') : null;
+  if (serviceId !== null) assert.match(serviceId, /^[1-9]\d*$/);
+  const query = staff ? (serviceId === null ? '' : `?service_ids%5B%5D=${serviceId}`) : '?without_seances=1';
   assert.equal(url.href, `https://api.alteg.io/api/v1/${resource}/${process.env.ALTEGIO_LOCATION_ID}${query}`);
   assert.equal(init?.method ?? (input instanceof Request ? input.method : 'GET'), 'GET');
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
@@ -31,6 +63,7 @@ globalThis.fetch = async (input, init) => {
   const language = headers.get('accept-language');
   assert.ok(language === 'ru-RU' || language === 'en-US');
   assert.equal(init?.redirect ?? input.redirect, 'error');
+  if (serviceId !== null) return serviceStaffFixture(serviceId, language, init?.signal ?? input.signal);
   const scenarioFile = staff ? process.env.STAFF_TEST_SCENARIO : process.env.CATALOG_TEST_SCENARIO;
   if (staff && !scenarioFile) return new Response(null, { status: 503 });
   const scenario = readFileSync(scenarioFile, 'utf8');

@@ -815,6 +815,11 @@
     "cta": "Book",
     "unavailableTitle": "Service temporarily unavailable",
     "unavailable": "We couldn’t load the service details. Please try again.",
+    "specialists": {
+      "loading": "Loading specialists…",
+      "empty": "No specialists are currently listed for this service.",
+      "error": "We couldn’t load the specialists for this service."
+    },
     "todo": {
       "body": "TODO(content): service page content: who it’s for, what a session involves, duration and options, contraindications, questions about the service"
     }

@@ -50,8 +50,8 @@ function normalizeStaff(data: unknown): CatalogStaffMember[] {
   return staff;
 }
 
-const getCachedStaff = cachePublicCatalog('book-staff-v1', async (locationId: number, locale: CatalogLocale) => {
-  const data = await fetchBookStaff(locationId, locale);
+const getCachedStaff = cachePublicCatalog('book-staff-v1', async (locationId: number, locale: CatalogLocale, serviceId?: number) => {
+  const data = await fetchBookStaff(locationId, locale, serviceId);
   try {
     return { staff: normalizeStaff(data) };
   } catch (error) {
@@ -64,4 +64,11 @@ export async function getCatalogStaff(locale: CatalogLocale): Promise<CatalogSta
   const { locationId } = getAltegioConfig();
   const data = await getCachedStaff(locationId, locale);
   return { data, meta: { source: 'altegio', locale } };
+}
+
+/** The caller resolves the service against the public catalog before asking for its staff. */
+export async function getCatalogServiceStaff(locale: CatalogLocale, serviceId: number): Promise<CatalogStaffMember[]> {
+  const { locationId } = getAltegioConfig();
+  const { staff } = await getCachedStaff(locationId, locale, serviceId);
+  return staff;
 }
