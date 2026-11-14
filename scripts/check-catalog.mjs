@@ -33,9 +33,40 @@ async function checkError(origin, status, code, query = '') {
 
 const setScenario = (value) => fs.writeFile(scenarioFile, value);
 const countCalls = (logs) => (logs().match(/\[catalog-fixture\]/g) ?? []).length;
-async function waitForCalls(logs, expected) {
-  for (let attempt = 0; attempt < 100 && countCalls(logs) < expected; attempt++) await delay(50);
-  assert.equal(countCalls(logs), expected);
+
+async function burst(logs, label, [calls, writes, errors], run) {
+  const offset = logs().length;
+  await Promise.all(Array.from({ length: 12 }, (_, i) => run(i % 2 === 0 ? 'ru' : 'en')));
+  // A stale hit returns before the fixture finishes its background request.
+  await delay(550);
+  const log = logs().slice(offset);
+  const keys = [...log.matchAll(/\[catalog-cache-write\] (\S+)/g)].map((match) => match[1]);
+  const actual = {
+    calls: countCalls(() => log),
+    writes: keys.length,
+    errors: (log.match(/\[altegio\]|\[catalog\] Unexpected error/g) ?? []).length,
+    nextRevalidationErrors: (log.match(/revalidating cache with key/g) ?? []).length,
+  };
+  console.log(`${label} (12 parallel): ${JSON.stringify(actual)}`);
+  assert.deepEqual(actual, { calls, writes, errors, nextRevalidationErrors: 0 }, label);
+  return keys;
+}
+
+function checkData(origin, data) {
+  return async (locale) => {
+    const { json } = await request(origin, `?locale=${locale}`, 200);
+    assert.deepEqual(json, { data, meta: { source: 'altegio', locale } });
+  };
+}
+
+function checkRateLimited(origin, min, max) {
+  return async (locale) => {
+    const headers = await checkError(origin, 503, 'UPSTREAM_RATE_LIMITED', `?locale=${locale}`);
+    const retryAfter = headers.get('retry-after');
+    assert.match(retryAfter ?? '', /^\d+$/);
+    const seconds = Number(retryAfter);
+    assert.ok(seconds >= min && seconds <= max, `Retry-After ${seconds}, expected ${min}–${max}`);
+  };
 }
 
 const cacheDir = path.resolve('.next/cache/fetch-cache');
@@ -47,6 +78,7 @@ async function cacheEntries() {
 }
 const initialEntries = await cacheEntries();
 const newEntries = async () => [...await cacheEntries()].filter((file) => !initialEntries.has(file));
+const createdEntries = new Set();
 const fixtureEnv = () => ({
   ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
   ALTEGIO_PARTNER_TOKEN: token,
@@ -55,7 +87,30 @@ const fixtureEnv = () => ({
 });
 const env = fixtureEnv();
 let entryPath;
-let first;
+const firstData = {
+  services: [
+    { id: 42, title: 'Massage', description: null, categoryId: 20, priceMin: 0, priceMax: 55,
+      currency: 'AED', durationMin: 90, imageUrl: 'https://images.example.test/service.webp' },
+    { id: 43, title: 'Other', description: null, categoryId: null, priceMin: null, priceMax: null,
+      currency: 'AED', durationMin: null, imageUrl: null },
+  ],
+  categories: [{ id: 20, title: 'Massage' }],
+};
+const emptyData = { services: [], categories: [] };
+
+async function readCreatedEntry() {
+  const files = (await newEntries()).map((file) => path.join(cacheDir, file)).filter((file) => !createdEntries.has(file));
+  assert.equal(files.length, 1);
+  const [file] = files;
+  createdEntries.add(file);
+  return file;
+}
+
+// Restart to discard Next's in-memory cache and read the aged on-disk entry.
+async function ageEntry() {
+  const stale = new Date(Date.now() - 14_401_000);
+  await fs.utimes(entryPath, stale, stale);
+}
 
 try {
   await withProductionServer(async (origin) => {
@@ -69,7 +124,7 @@ try {
     assert.equal(countCalls(logs), 0);
     const errors = [
       ['401', 503, 'CATALOG_UNAVAILABLE'], ['403', 503, 'CATALOG_UNAVAILABLE'],
-      ['429', 503, 'UPSTREAM_RATE_LIMITED'], ['500', 503, 'CATALOG_UNAVAILABLE'],
+      ['500', 503, 'CATALOG_UNAVAILABLE'],
       ['network', 503, 'CATALOG_UNAVAILABLE'], ['rejected', 502, 'UPSTREAM_INVALID_RESPONSE'],
       ['empty-body', 502, 'UPSTREAM_INVALID_RESPONSE'], ['invalid-json', 502, 'UPSTREAM_INVALID_RESPONSE'],
       ['invalid-schema', 502, 'UPSTREAM_INVALID_RESPONSE'], ['invalid-service', 502, 'UPSTREAM_INVALID_RESPONSE'],
@@ -77,59 +132,61 @@ try {
     ];
     for (const [scenario, status, code] of errors) {
       await setScenario(scenario);
-      const headers = await checkError(origin, status, code);
-      if (scenario === '429') assert.equal(headers.get('retry-after'), '120');
+      await checkError(origin, status, code);
     }
-    await waitForCalls(logs, errors.length);
+    assert.equal(countCalls(logs), errors.length);
     assert.deepEqual(await newEntries(), [], 'failed responses must not enter the cache');
 
     await setScenario('success');
-    ({ json: first } = await request(origin, '', 200));
-    assert.deepEqual(first, {
-      data: {
-        services: [
-          { id: 42, title: 'Massage', description: null, categoryId: 20, priceMin: 0, priceMax: 55,
-            currency: 'AED', durationMin: 90, imageUrl: 'https://images.example.test/service.webp' },
-          { id: 43, title: 'Other', description: null, categoryId: null, priceMin: null, priceMax: null,
-            currency: 'AED', durationMin: null, imageUrl: null },
-        ],
-        categories: [{ id: 20, title: 'Massage' }],
-      },
-      meta: { source: 'altegio', locale: 'en' },
-    });
+    const keys = await burst(logs, 'Cold cache', [1, 1, 0], checkData(origin, firstData));
     await setScenario('500');
-    const { json: russian } = await request(origin, '?locale=ru', 200);
-    assert.deepEqual(russian, { ...first, meta: { source: 'altegio', locale: 'ru' } });
-    await waitForCalls(logs, errors.length + 1);
-    const entries = await newEntries();
-    assert.equal(entries.length, 1);
-    entryPath = path.join(cacheDir, entries[0]);
+    await burst(logs, 'Fresh cache', [0, 0, 0], checkData(origin, firstData));
+    assert.deepEqual((await request(origin, '', 200)).json, { data: firstData, meta: { source: 'altegio', locale: 'en' } });
+    entryPath = await readCreatedEntry();
+    assert.deepEqual(keys, [path.basename(entryPath)]);
     const entry = JSON.parse(await fs.readFile(entryPath, 'utf8'));
     assert.equal(entry.revalidate, 14_400);
-    assert.deepEqual(JSON.parse(entry.data.body), first.data);
-
-  }, { env, preload });
-
-  // Restart to discard Next's in-memory cache and read the aged on-disk entry.
-  const stale = new Date(Date.now() - 14_401_000);
-  await fs.utimes(entryPath, stale, stale);
-  await withProductionServer(async (origin, logs) => {
-    const { json: staleResponse } = await request(origin, '', 200);
-    assert.deepEqual(staleResponse, first);
-    await waitForCalls(logs, 1);
-    await setScenario('empty');
-    await request(origin, '', 200);
-    await waitForCalls(logs, 2);
-    const refreshed = { data: { services: [], categories: [] }, meta: first.meta };
-    for (let attempt = 0; ; attempt++) {
-      const cached = JSON.parse(await fs.readFile(entryPath, 'utf8').catch(() => '{}'));
-      if (cached.data?.body === JSON.stringify(refreshed.data)) break;
-      assert.ok(attempt < 100, 'catalog cache did not refresh');
-      await delay(50);
-    }
-    assert.deepEqual((await request(origin, '', 200)).json, refreshed);
+    assert.deepEqual(JSON.parse(entry.data.body), firstData);
     assert.ok(privateValues.every((value) => !logs().includes(value)), 'logs contain private data');
   }, { env, preload });
+
+  await ageEntry();
+  await withProductionServer(async (origin, logs) => {
+    await burst(logs, 'Stale cache, upstream 500', [1, 0, 1], checkData(origin, firstData));
+    await setScenario('empty');
+    const keys = await burst(logs, 'Stale cache, successful refresh', [1, 1, 0], checkData(origin, firstData));
+    assert.deepEqual(keys, [path.basename(entryPath)]);
+    await checkData(origin, emptyData)('en');
+    assert.equal(countCalls(logs), 2);
+    assert.ok(privateValues.every((value) => !logs().includes(value)), 'logs contain private data');
+  }, { env, preload });
+
+  await ageEntry();
+  const lastSuccess = (await fs.stat(entryPath)).mtimeMs;
+  await setScenario('429');
+  await withProductionServer(async (origin, logs) => {
+    await burst(logs, 'Stale cache, upstream 429', [1, 0, 1], checkData(origin, emptyData));
+    await setScenario('success');
+    await burst(logs, 'Stale cache, during Retry-After', [0, 0, 0], checkData(origin, emptyData));
+    assert.equal((await fs.stat(entryPath)).mtimeMs, lastSuccess);
+    await delay(5000);
+    const keys = await burst(logs, 'Stale cache, after Retry-After', [1, 1, 0], checkData(origin, emptyData));
+    assert.deepEqual(keys, [path.basename(entryPath)]);
+    await checkData(origin, firstData)('ru');
+    assert.equal(countCalls(logs), 2);
+  }, { env, preload });
+
+  await setScenario('429');
+  await withProductionServer(async (origin, logs) => {
+    await burst(logs, 'Cold cache, upstream 429', [1, 0, 1], checkRateLimited(origin, 5, 5));
+    assert.ok((await newEntries()).every((file) => createdEntries.has(path.join(cacheDir, file))));
+    await setScenario('empty');
+    await delay(1100);
+    await burst(logs, 'Cold cache, during Retry-After', [0, 0, 0], checkRateLimited(origin, 1, 4));
+    await delay(5000);
+    const keys = await burst(logs, 'Cold cache, after Retry-After', [1, 1, 0], checkData(origin, emptyData));
+    assert.deepEqual(keys, [path.basename(await readCreatedEntry())]);
+  }, { env: fixtureEnv(), preload });
 
   const chunks = path.resolve('.next/static');
   for (const file of await fs.readdir(chunks, { recursive: true })) {
@@ -140,7 +197,7 @@ try {
   }
   console.log('Catalog DTO, HTTP failures, public output and four-hour production cache: OK');
 } finally {
-  if (entryPath) await fs.unlink(entryPath);
+  for (const file of createdEntries) await fs.unlink(file);
   await fs.unlink(scenarioFile).catch((error) => { if (error.code !== 'ENOENT') throw error; });
   await fs.rmdir(scenarioDir);
 }

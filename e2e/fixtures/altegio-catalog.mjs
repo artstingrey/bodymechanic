@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 // Loaded only by the catalog test child process, before Next installs its fetch wrapper.
+const cacheDir = path.resolve('.next/cache/fetch-cache');
+const writeFile = fs.writeFile;
+fs.writeFile = async (file, ...args) => {
+  await writeFile(file, ...args);
+  if (typeof file === 'string' && path.dirname(path.resolve(file)) === cacheDir) {
+    console.info('[catalog-cache-write]', path.basename(file));
+  }
+};
+
 const fetchOriginal = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
@@ -15,6 +26,9 @@ globalThis.fetch = async (input, init) => {
   const scenario = readFileSync(process.env.CATALOG_TEST_SCENARIO, 'utf8');
   console.info('[catalog-fixture]', scenario);
 
+  // Let the 12 concurrent requests reach the cache before the upstream responds.
+  if (['success', 'empty', '429', '500'].includes(scenario)) await delay(400);
+
   if (scenario === 'timeout') {
     const signal = init?.signal ?? input.signal;
     assert.ok(signal);
@@ -27,7 +41,7 @@ globalThis.fetch = async (input, init) => {
   if (scenario === 'invalid-schema') return Response.json({ success: true, data: { services: null } });
   if (scenario === 'invalid-service') return Response.json({ success: true, data: { services: [{ id: 0, title: ' ' }] } });
   if (/^\d{3}$/.test(scenario)) {
-    return new Response('fixture raw upstream detail', { status: Number(scenario), headers: { 'Retry-After': '120' } });
+    return new Response('fixture raw upstream detail', { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
   if (scenario === 'empty') return Response.json({ success: true, data: { services: [], categories: [] } });
   assert.equal(scenario, 'success');
