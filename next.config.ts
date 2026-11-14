@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
       '*.css': { loaders: ['@tailwindcss/turbopack'], as: '*.css' },
     },
   },
+  async rewrites() {
+    // Keep the branded global 404 for unsupported single-segment locales now that the home route renders on demand.
+    const unsupportedLocale = '/:locale((?!ru(?:/|$)|en(?:/|$))[^/]+)';
+    return {
+      afterFiles: ['', '/'].map((slash) => ({
+        source: unsupportedLocale + slash,
+        destination: '/unsupported-locale/:locale/',
+      })),
+    };
+  },
   async headers() {
     return [
       {

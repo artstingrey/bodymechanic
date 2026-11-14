@@ -41,6 +41,7 @@ export default defineConfig({
   },
   webServer: REMOTE ? undefined : {
     command: `npm run start -- --hostname 127.0.0.1 --port ${PORT}`,
+    env: { ALTEGIO_LOCATION_ID: '', ALTEGIO_PARTNER_TOKEN: '', ALTEGIO_CURRENCY: '' },
     url: `http://127.0.0.1:${PORT}/robots.txt`,
     reuseExistingServer: false,
   },

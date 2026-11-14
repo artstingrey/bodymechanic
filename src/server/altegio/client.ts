@@ -38,6 +38,7 @@ export async function altegioGet(operation: string, path: string): Promise<unkno
       redirect: 'error',
       signal,
     });
+
     status = response.status;
     if (!response.ok) {
       // Release the response stream without letting a cleanup failure mask the HTTP error.
@@ -50,6 +51,9 @@ export async function altegioGet(operation: string, path: string): Promise<unkno
     if (!isRecord(payload) || payload.success !== true || !('data' in payload)) {
       throw new AltegioError('invalidResponse');
     }
+    
+    
+
     return payload.data;
   } catch (cause) {
     const error = cause instanceof AltegioError ? cause : new AltegioError(

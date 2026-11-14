@@ -13,12 +13,12 @@ export type CardTone = 'lav' | 'sand' | 'sky';
  * the photo never moves inside its mask (no parallax, README п.15).
  */
 export function ServiceCard({ href, index, title, description, price, duration, priceLabel, durationLabel, tone = 'sand', photo, photoCaption, linkLabel, badge, titleAs: H = 'h3' }: {
-  href: Href; index?: number; title: string; description?: string; price: ReactNode; duration?: ReactNode; priceLabel: string; durationLabel: string;
-  tone?: CardTone; photo?: ReactNode; photoCaption?: string; linkLabel: string; badge?: ReactNode; titleAs?: 'h2' | 'h3';
-}) {
+  index?: number; title: string; description?: string; price: ReactNode; duration?: ReactNode; priceLabel: string; durationLabel: string;
+  tone?: CardTone; photo?: ReactNode; photoCaption?: string; badge?: ReactNode; titleAs?: 'h2' | 'h3';
+} & ({ href: Href; linkLabel: string } | { href?: undefined; linkLabel?: never })) {
   // the arrow sits in the photo's top-right corner, so the title takes the card's full width (design audit F10: «Спортивный /
   // массаж» wrapped and hung because a 44 px arrow shared the title row); without a photo it stays in the head row
-  const go = <span className="go" aria-hidden="true"><Icon name="arrow-up-right" /></span>;
+  const go = href ? <span className="go" aria-hidden="true"><Icon name="arrow-up-right" /></span> : null;
   // a long last pair («с инфракрасной капсулой», 250 px at 20 px) lowers the title just enough to fit the card column on
   // phones (ui.css .svc .t[data-fit]); only with a photo — without one the arrow shares the title row
   const tail = photo ? tailEm(title, 16) : undefined;
@@ -32,7 +32,9 @@ export function ServiceCard({ href, index, title, description, price, duration, 
         <div className="head">
           <div>
             {index != null ? <span className="idx">{String(index).padStart(2, '0')}</span> : null}
-            <H className="t" data-fit={tail ? '' : undefined} style={tail ? ({ '--tail': tail } as CSSProperties) : undefined}><Link href={href} aria-label={`${title}. ${linkLabel}`}>{noWidow(title, 16)}</Link></H>
+            <H className="t" data-fit={tail ? '' : undefined} style={tail ? ({ '--tail': tail } as CSSProperties) : undefined}>
+              {href ? <Link href={href} aria-label={`${title}. ${linkLabel}`}>{noWidow(title, 16)}</Link> : title}
+            </H>
           </div>
           {photo ? null : go}
         </div>

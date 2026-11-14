@@ -5,13 +5,12 @@ import { pageMetadata } from '@/lib/seo';
 import { PageLd } from '@/components/seo/PageLd';
 import { getServices, getStaff } from '@/lib/api';
 import { HeroAtlas } from '@/components/sections/HeroAtlas';
+import { HomeServices } from '@/components/sections/HomeServices';
 import { QuickForm } from '@/components/booking/QuickForm';
-import { serviceFacts } from '@/components/services/ServiceFacts';
 import { Badge } from '@/components/ui/Badge';
 import { Carousel } from '@/components/ui/Carousel';
-import { ServiceCard, StaffCard, ReviewCard, PhotoPlaceholder } from '@/components/ui/Cards';
+import { StaffCard, ReviewCard, PhotoPlaceholder } from '@/components/ui/Cards';
 import { AccordionItem } from '@/components/ui/Misc';
-import { Photo, hasPhoto } from '@/components/ui/Photo';
 import { Todo } from '@/components/ui/Todo';
 import { ScopeMessages } from '@/components/i18n/ScopeMessages';
 import { pickMessages } from '@/lib/i18n/pickMessages';
@@ -27,20 +26,15 @@ function splitTitle(s: string): [string, string] {
   return i > 0 ? [s.slice(0, i), s.slice(i + 1)] : [s, ''];
 }
 
-/** Card photo sizes: 1.3 / 2.15 / 3.2 cards per row; the 2000 w master only on 2K / retina widths (R-VIS-01). */
-const CARD_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
-const cardTone = (i: number) => (['lav', 'sand', 'sky'] as const)[i % 3];
-
 const FAQ = ['choose', 'duration', 'prepare', 'specialist', 'reschedule', 'contraindications'] as const;
 
 /** Home (ТЗ §05): block order 1–10. Skeleton: structure + strings + mock data; visuals come from the style frame. */
 export default async function HomePage() {
   const locale = await pageLocale();
   const t = await getTranslations();
-  const [services, staff] = await Promise.all([getServices(locale), getStaff(locale)]);
+  const [mockServices, staff] = await Promise.all([getServices(locale), getStaff(locale)]);
   const faq = FAQ.filter((k) => t.has(`home.faq.${k}.q`));
   const title = t('home.hero.title');
-  const facts = serviceFacts(t as never);
   const carT = { label: t('a11y.carousel.label'), prev: t('a11y.carousel.prev'), next: t('a11y.carousel.next'), goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string };
   const [titleA, titleB] = splitTitle(title);
   return (
@@ -65,29 +59,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 2 Services carousel (order: sport & rehab first — ТЗ §05.2); B photo rhythm, prices always with «Демо» */}
-      <section className="section home-sec" aria-labelledby="services-title">
-        <div className="container">
-          <div className="sec-head">
-            <div>
-              <h2 id="services-title" className="h2" data-split="">{t('home.services.title')}</h2>
-              <p className="lead">{t('home.services.lead')}</p>
-            </div>
-            <ButtonLink href="/services" variant="text">{t('home.services.all')}</ButtonLink>
-          </div>
-          <Carousel label={t('home.services.title')} t={carT} hideCount>
-            {services.map((s, i) => (
-              <ServiceCard key={s.id} href={`/services/${s.slug}`} index={i + 1} title={s.title} description={s.description}
-                tone={s.slug === 'thai' ? 'sky' : cardTone(i)}
-                photo={hasPhoto('services', s.slug) ? <Photo set="services" id={s.slug} alt={`${t('placeholder.illustrativePhoto')}: ${s.title}`} sizes={CARD_SIZES} /> : undefined}
-                photoCaption={t('placeholder.illustrativePhoto')}
-                priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
-                price={<><span>{facts.priceShort(s)}</span><Badge>{facts.demo}</Badge></>} duration={facts.durationShort(s) ? <span>{facts.durationShort(s)}</span> : undefined}
-                linkLabel={t('home.services.cardLink')} />
-            ))}
-          </Carousel>
-        </div>
-      </section>
+      <HomeServices locale={locale} />
 
       {/* 3 Approach (dark block, three columns, C hairlines) */}
       <section id="approach" className="section section--dark on-dark home-sec" aria-labelledby="approach-title">
@@ -199,7 +171,7 @@ export default async function HomePage() {
             <p className="lead">{t('home.form.lead')}</p>
           </div>
           <div className="form-card" data-reveal="">
-            <QuickForm services={services.map((s) => ({ id: s.id, title: s.title, price: s.priceOnRequest ? null : s.priceMin }))} />
+            <QuickForm services={mockServices.map((s) => ({ id: s.id, title: s.title, price: s.priceOnRequest ? null : s.priceMin }))} />
           </div>
         </div>
       </section>

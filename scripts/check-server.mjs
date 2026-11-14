@@ -58,7 +58,7 @@ export async function checkServer(origin) {
   await get('/sitemap.xml', 200, /<urlset/);
   const catalog = await get('/api/catalog/services?locale=unknown', 400, /INVALID_QUERY/);
   assert.equal(catalog.headers.get('cache-control'), 'no-store');
-  await get('/de/', 404, /<h1/);
+  for (const path of ['/de', '/de/']) await get(path, 404, /id="nf-root"/);
   await get('/en/no-such-page/', 404, /<h1/);
   await get('/en/services/no-such-service', 404, /<h1/);
   await get('/ru/lp/unknown', 404, /<h1/);
@@ -67,7 +67,9 @@ export async function checkServer(origin) {
     await redirect(`/${locale}`, `/${locale}/`);
     const { body, headers } = await get(`/${locale}/`, 200, new RegExp(`<html lang="${locale}"`));
     assert.equal(headers.get('x-robots-tag'), 'noindex, nofollow');
-    assert.deepEqual(fontLinks(body).map((link) => link[1]), ['Manrope.woff2']);
+    // Streaming puts resource hints in the HTTP Link header; prerendered HTML can carry them in the document.
+    const headerPreloads = [...(headers.get('link') ?? '').matchAll(/<\/fonts\/v1\/([^>]+)>;\s*rel=preload;\s*as="font"/g)];
+    assert.deepEqual([...fontLinks(body), ...headerPreloads].map((link) => link[1]), ['Manrope.woff2']);
     for (const path of ['services', 'services/sports', 'team/specialist-1', 'journal/demo-article-1']) {
       await redirect(`/${locale}/${path}`, `/${locale}/${path}/`);
       await get(`/${locale}/${path}/`, 200, /<h1/);

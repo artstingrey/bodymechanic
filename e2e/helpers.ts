@@ -20,7 +20,7 @@ export const REQUIRED = [
   'lp/[variant]/', // ad landing (task 01a1b325): own root layout, noindex, not in the sitemap; checked in lp.spec.ts
 ];
 
-/** Prerendered URLs plus a representative request-time record URL. */
+/** Prerendered URLs plus representative request-time URLs. */
 const manifest = JSON.parse(fs.readFileSync(path.join(NEXT, 'prerender-manifest.json'), 'utf8')) as {
   routes: Record<string, unknown>;
 };
@@ -30,7 +30,7 @@ export function builtPages(locale: string): string[] {
   const pages = Object.keys(manifest.routes)
     .filter((route) => route === prefix || route.startsWith(`${prefix}/`))
     .map((route) => route === prefix ? '' : `${route.slice(prefix.length + 1)}/`);
-  return [...pages, 'account/record/9001/demo-hash/'].sort();
+  return [...new Set(['', ...pages, 'account/record/9001/demo-hash/'])].sort();
 }
 
 /** Template of a concrete page path: 'services/sports/' → 'services/[slug]/'. */

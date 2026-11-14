@@ -25,6 +25,10 @@ export function registerMotion() {
 import { DUR, EASE, MQ, STAGGER } from './tokens';
 export { gsap };
 
+export function refreshReveals() {
+  if (registered) ScrollTrigger.refresh();
+}
+
 /**
  * Scroll reveals for the current page. Markup contract (art director owns the attributes in page sections):
  *  - data-reveal            block: Y 16 px + opacity, 400 ms, 40 ms stagger per batch (motion-spec «Блоки и карточки»)
@@ -37,8 +41,11 @@ export function mountReveals(root: ParentNode = document): () => void {
   // Automation (Playwright gate, reviewer screenshots) captures full pages without scrolling: never hide content there.
   if (typeof navigator !== 'undefined' && navigator.webdriver) return () => {};
   registerMotion();
+  const scope = root instanceof Element ? root.closest('[data-motion-scope]') : null;
+  const select = (selector: string) => Array.from(root.querySelectorAll<HTMLElement>(selector))
+    .filter((el) => el.closest('[data-motion-scope]') === scope);
   // printing (step 7 «PDF заявки» = print) must show everything that has not been revealed yet
-  const showAll = () => gsap.set(root.querySelectorAll('[data-reveal], [data-split]'), { clearProps: 'opacity,transform,clipPath' });
+  const showAll = () => gsap.set(select('[data-reveal], [data-split]'), { clearProps: 'opacity,transform,clipPath' });
   window.addEventListener('beforeprint', showAll);
   const mm = gsap.matchMedia();
   mm.add({ full: MQ.full, reduce: MQ.reduce }, (ctx) => {
@@ -46,7 +53,7 @@ export function mountReveals(root: ParentNode = document): () => void {
     const fold = window.innerHeight * 0.92;
     const below = (el: Element) => el.getBoundingClientRect().top > fold;
 
-    const blocks = gsap.utils.toArray<HTMLElement>(root.querySelectorAll('[data-reveal]:not([data-reveal="clip"])')).filter(below);
+    const blocks = select('[data-reveal]:not([data-reveal="clip"])').filter(below);
     if (blocks.length) {
       gsap.set(blocks, reduce ? { opacity: 0 } : { opacity: 0, y: 16 });
       ScrollTrigger.batch(blocks, {
@@ -57,7 +64,7 @@ export function mountReveals(root: ParentNode = document): () => void {
       });
     }
 
-    const frames = gsap.utils.toArray<HTMLElement>(root.querySelectorAll('[data-reveal="clip"]')).filter(below);
+    const frames = select('[data-reveal="clip"]').filter(below);
     if (frames.length && !reduce) {
       gsap.set(frames, { clipPath: 'inset(8% 8% 8% 8% round var(--r-photo))' });
       ScrollTrigger.batch(frames, {
@@ -66,7 +73,7 @@ export function mountReveals(root: ParentNode = document): () => void {
       });
     }
 
-    const heads = gsap.utils.toArray<HTMLElement>(root.querySelectorAll('[data-split]')).filter(below);
+    const heads = select('[data-split]').filter(below);
     heads.forEach((el) => {
       if (reduce) {
         gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: DUR.reduced, ease: 'none', scrollTrigger: { trigger: el, start: 'top 90%', once: true } });

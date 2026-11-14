@@ -57,6 +57,24 @@ globalThis.fetch = async (input, init) => {
     return new Response(body, { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
   if (scenario === 'empty') return Response.json({ success: true, data: { services: [], categories: [] } });
+  if (scenario === 'home-slow') {
+    const release = `${process.env.CATALOG_TEST_SCENARIO}.release`;
+    while (!(await fs.stat(release).catch(() => null))) {
+      const signal = init?.signal ?? input.signal;
+      await delay(30, undefined, { signal });
+    }
+  }
+  if (scenario === 'home' || scenario === 'home-slow' || scenario === 'home-single') {
+    const services = [
+      { id: 91201, title: 'Терапевтический массаж с очень длинным названием для проверки переноса строк',
+        price_min: 120, price_max: 120, seance_length: 6000, image: 'https://images.example.test/live.webp' },
+      { id: 91202, title: 'Range massage', price_min: 80, price_max: 160, image: 'https://images.example.test/broken.webp' },
+      { id: 91203, title: 'Minimum massage', price_min: 55.5 },
+      { id: 91204, title: 'Zero price massage', price_min: 0, price_max: 0 },
+      { id: 91205, title: 'Unknown price massage', comment: 'fixture raw upstream detail', image: 'https://api.alteg.io/api/v1/private' },
+    ];
+    return Response.json({ success: true, data: { services: scenario === 'home-single' ? services.slice(0, 1) : services } });
+  }
   assert.equal(scenario, 'success');
   return Response.json({
     success: true,
