@@ -51,6 +51,11 @@ async function home(origin, locale = 'en') {
   return html;
 }
 
+function cardTitles(html) {
+  return [...html.matchAll(/<a\b(?=[^>]*\bhref="#")(?=[^>]*\baria-label="([^"<>]*)\. (?:Подробнее|Learn more)")[^>]*>/g)]
+    .map(([, title]) => title);
+}
+
 async function browserPage(browser, viewport, check) {
   const page = await browser.newPage({ viewport, hasTouch: viewport.width < 768 });
   await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({
@@ -119,11 +124,11 @@ try {
     const en = await home(origin);
     const ru = await home(origin, 'ru');
     for (const html of [en, ru]) {
-      assert.match(html, /<h3[^>]*>Терапевтический массаж/);
-      assert.match(html, /<h3[^>]*>Zero price massage/);
+      assert.ok(cardTitles(html).includes(longTitle));
+      assert.ok(cardTitles(html).includes('Zero price massage'));
     }
-    assert.match(en, /<h3[^>]*>Range massage/);
-    assert.match(ru, /<h3[^>]*>Массаж с диапазоном цен/);
+    assert.ok(cardTitles(en).includes('Range massage'));
+    assert.ok(cardTitles(ru).includes('Массаж с диапазоном цен'));
     const api = await fetch(`${origin}/api/catalog/services?locale=ru`);
     assert.equal(api.status, 200);
     const { data: { services } } = await api.json();
@@ -144,7 +149,12 @@ try {
           longTitle, locale === 'ru' ? 'Массаж с диапазоном цен' : 'Range massage',
           'Minimum massage', 'Zero price massage', 'Unknown price massage',
         ]);
-        await expect(block.locator('a, .go, .badge')).toHaveCount(0);
+        await expect(block.getByRole('link', { name: locale === 'ru' ? 'Все услуги' : 'All services', exact: true })).toHaveAttribute('href', '#');
+        const cardLinks = cards.locator('h3 a[href="#"]');
+        await expect(cardLinks).toHaveCount(5);
+        await expect(cardLinks.first()).toHaveAttribute('aria-label', `${longTitle}. ${locale === 'ru' ? 'Подробнее' : 'Learn more'}`);
+        await expect(cards.locator('.go')).toHaveCount(5);
+        await expect(block.locator('a:not([href="#"]), .badge')).toHaveCount(0);
         await expect(block.locator('article .d')).toHaveCount(1);
         await expect(cards.first().locator('.head + .d')).toHaveText(locale === 'ru'
           ? 'Массаж для восстановления после нагрузки.' : 'Massage for post-exercise recovery.');
@@ -200,14 +210,14 @@ try {
   await fs.utimes(englishEntry, stale, stale);
   await setScenario('empty');
   await run(async (origin, logs) => {
-    assert.ok((await home(origin)).includes(longTitle));
+    assert.ok(cardTitles(await home(origin)).includes(longTitle));
     for (let i = 0; i < 30 && !logs().includes('[catalog-cache-write]'); i++) await delay(100);
     await browserPage(browser, { width: 390, height: 850 }, async (page, block) => {
       await page.goto(`${origin}/en/`);
       await expect(block.getByText('No services are currently listed.')).toBeVisible();
       await expect(block.locator('.car, button')).toHaveCount(0);
     });
-    assert.match(await home(origin, 'ru'), /<h3[^>]*>Массаж с диапазоном цен/);
+    assert.ok(cardTitles(await home(origin, 'ru')).includes('Массаж с диапазоном цен'));
     assert.equal((logs().match(/\[catalog-fixture\]/g) ?? []).length, 1);
   }, env);
 
@@ -225,14 +235,14 @@ try {
   await run(async (origin) => {
     const ru = await home(origin, 'ru');
     const en = await home(origin, 'en');
-    assert.match(ru, /<h3[^>]*>Классический массаж студии</);
+    assert.ok(cardTitles(ru).includes('Классический массаж студии'));
     assert.match(ru, /<p class="d">Актуальное описание из каталога\.<\/p>/);
     assert.match(ru, /<p class="d">Массаж для тех, кто тренируется:/);
-    assert.match(en, /<h3[^>]*>Classic massage</);
+    assert.ok(cardTitles(en).includes('Classic massage'));
     assert.match(en, /<p class="d">A calm, classic massage in a private room\.<\/p>/);
     assert.doesNotMatch(en, /Актуальное описание из каталога/);
     for (const html of [ru, en]) {
-      assert.match(html, /<h3[^>]*>Новая услуга</);
+      assert.ok(cardTitles(html).includes('Новая услуга'));
       assert.match(html, /<p class="d">Описание новой услуги из каталога\.<\/p>/);
     }
     const response = await fetch(`${origin}/api/catalog/services?locale=en`);

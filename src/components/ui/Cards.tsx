@@ -33,7 +33,7 @@ export function ServiceCard({ href, index, title, description, price, duration, 
           <div>
             {index != null ? <span className="idx">{String(index).padStart(2, '0')}</span> : null}
             <H className="t" data-fit={tail ? '' : undefined} style={tail ? ({ '--tail': tail } as CSSProperties) : undefined}>
-              {href ? <Link href={href} aria-label={`${title}. ${linkLabel}`}>{noWidow(title, 16)}</Link> : title}
+              {href ? <Link href={href} prefetch={href === '#' ? false : undefined} scroll={href !== '#'} aria-label={`${title}. ${linkLabel}`}>{noWidow(title, 16)}</Link> : title}
             </H>
           </div>
           {photo ? null : go}
