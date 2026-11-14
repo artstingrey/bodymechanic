@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
-import type { CatalogLocale, CatalogService } from '@/lib/contracts/catalog';
+import type { CatalogLocale } from '@/lib/contracts/catalog';
+import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
 import { getCatalogServices } from '@/server/catalog/services';
 import { ButtonLink } from '@/components/ui/Button';
 import { Carousel } from '@/components/ui/Carousel';
@@ -13,13 +14,6 @@ import { homeServiceIllustrations } from '@/content/home-services';
 
 const CARD_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
 const TONES = ['lav', 'sand', 'sky'] as const;
-
-function servicePrice({ priceMin, priceMax, currency }: CatalogService, locale: CatalogLocale, t: Awaited<ReturnType<typeof getTranslations>>) {
-  if (priceMin === null || currency === null) return t('home.services.priceUnknown');
-  const format = new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'code', minimumFractionDigits: 0 });
-  if (priceMax === null) return t('home.services.priceFrom', { price: format.format(priceMin) });
-  return priceMin === priceMax ? format.format(priceMin) : format.formatRange(priceMin, priceMax);
-}
 
 async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awaited<ReturnType<typeof getTranslations>> }) {
   // Runtime configuration and CRM availability must not decide the build output.
@@ -60,7 +54,9 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
                 photo={<HomeServicePhoto key={`${src}:${illustration}`} src={src} alt={title}
                   illustration={localPhoto} caption={caption} unavailable={t('home.services.photoUnavailable')} />}
                 priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
-                price={servicePrice(service, locale, t)}
+                price={formatCatalogServicePrice(service, locale, {
+                  unknown: () => t('home.services.priceUnknown'), from: (price) => t('home.services.priceFrom', { price }),
+                })}
                 duration={service.durationMin === null ? undefined : t('home.services.duration', { minutes: service.durationMin })} />
             );
           })}

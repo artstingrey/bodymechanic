@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isLocale } from '@/i18n/routing';
 import { articleSlugs, serviceSlugs, staffSlugs } from '@/lib/api';
+import { catalogServiceId } from '@/lib/catalog-service-slugs';
 
 const pages = new Set([
   '', 'booking', 'contacts', 'journal', 'prices', 'privacy', 'services', 'team', 'terms',
@@ -17,7 +18,8 @@ export function proxy(request: NextRequest) {
   const [, locale, ...segments] = pathname.split('/');
   if (!isLocale(locale)) return NextResponse.next();
   const page = segments.join('/');
-  if (!pages.has(page) && !/^account\/record\/[^/]+\/[^/]+$/.test(page)) {
+  const catalogService = segments.length === 2 && segments[0] === 'services' && catalogServiceId(segments[1]) !== undefined;
+  if (!pages.has(page) && !catalogService && !/^account\/record\/[^/]+\/[^/]+$/.test(page)) {
     return NextResponse.next();
   }
 

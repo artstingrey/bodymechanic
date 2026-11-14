@@ -63,8 +63,9 @@ test.describe('404 (DEL-12)', () => {
       const res = await page.goto(u, { waitUntil: 'networkidle' });
       expect(res?.status()).toBe(404);
       const lang = u.startsWith('/ru/') ? 'ru' : 'en';
-      await expect(page.locator(`main a[href="/${lang}/"]`).filter({ visible: true })).toHaveCount(1); // the site's 404, in the path's language (main: the header logo also links home)
-      await expect(page.locator(`header.site-header[data-nf="${lang}"]`)).toBeVisible(); // R-CODE-03 F-02: the 404 has the site header
+      await expect(page.locator(`main a[href="/${lang}/"], main a[href="/${lang}"]`).filter({ visible: true })).toHaveCount(1);
+      if (u.includes('/services/')) await expect(page.locator('main .nf')).toBeVisible();
+      else await expect(page.locator(`header.site-header[data-nf="${lang}"]`)).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
       // R-FINAL (Market Analyst): one language variant in the DOM — exactly one h1, one site header
       await expect(page.locator('h1')).toHaveCount(1);

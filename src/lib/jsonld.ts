@@ -43,18 +43,9 @@ export function businessJsonLd(locale: Locale, p: { name: string; description: s
 }
 
 export function serviceJsonLd(locale: Locale, s: Service, brand: string): Node {
-  const url = pageUrl(locale, `/services/${s.slug}`);
   const priced = s.priceMin != null && !s.priceOnRequest;
   return {
-    '@context': CTX,
-    '@type': 'Service',
-    '@id': `${url}#service`,
-    name: s.title,
-    description: s.description,
-    serviceType: s.categoryTitle,
-    url,
-    provider: businessRef(locale, brand),
-    areaServed: dubai,
+    ...catalogServiceJsonLd(locale, s, brand),
     // «price on request» services get no Offer (no invented price); the prototype prices are the client's plan («Демо»)
     ...(priced ? {
       offers: {
@@ -65,6 +56,28 @@ export function serviceJsonLd(locale: Locale, s: Service, brand: string): Node {
         ...(s.priceMax != null ? { priceSpecification: { '@type': 'PriceSpecification', minPrice: s.priceMin, maxPrice: s.priceMax, priceCurrency: STUDIO.currency } } : {}),
       },
     } : {}),
+  };
+}
+
+export interface PublicServiceLd {
+  slug: string;
+  title: string;
+  description?: string | null;
+  categoryTitle?: string | null;
+}
+
+export function catalogServiceJsonLd(locale: Locale, s: PublicServiceLd, brand: string): Node {
+  const url = pageUrl(locale, `/services/${s.slug}`);
+  return {
+    '@context': CTX,
+    '@type': 'Service',
+    '@id': `${url}#service`,
+    name: s.title,
+    ...(s.description ? { description: s.description } : {}),
+    ...(s.categoryTitle ? { serviceType: s.categoryTitle } : {}),
+    url,
+    provider: businessRef(locale, brand),
+    areaServed: dubai,
   };
 }
 

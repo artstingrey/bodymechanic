@@ -66,6 +66,26 @@ globalThis.fetch = async (input, init) => {
     return new Response(body, { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
   if (scenario === 'empty') return Response.json({ success: true, data: staff ? [] : { services: [], categories: [] } });
+  if (scenario === 'service-detail' || scenario === 'service-detail-renamed') {
+    assert.equal(staff, false);
+    const ru = language === 'ru-RU';
+    const newTitle = ru ? 'Массаж с очень длинным названием для проверки переноса строк на узких экранах'
+      : 'Massage with a very long service title for checking line breaks on narrow screens';
+    return Response.json({ success: true, data: {
+      category: [{ id: 20, title: ru ? 'Массаж из каталога' : 'Catalog massage' }],
+      services: [
+        { id: 13982355, title: ru ? 'Спортивный массаж из каталога' : 'Sports massage from CRM',
+          category_id: 20, comment: ru ? 'Описание из каталога.' : 'Description from CRM.',
+          price_min: 80, price_max: 160, image: 'https://images.example.test/broken.webp',
+          discount: 'fixture raw upstream detail' },
+        { id: 91201, title: scenario === 'service-detail-renamed' ? 'Renamed in CRM' : newTitle,
+          category_id: 99, price_min: 0, price_max: 0, seance_length: 5400, image: 'https://images.example.test/live.webp' },
+        { id: 91202, title: 'Lower bound massage', price_min: 55.5 },
+        { id: 91203, title: 'Exact price massage', price_min: 125, price_max: 125 },
+        { id: 91204, title: 'Unknown price massage', comment: '<p>fixture raw upstream detail</p>' },
+      ],
+    } });
+  }
   if (scenario === 'home-translations') return Response.json({ success: true, data: { services: [
     { id: 13982356, title: 'Классический массаж студии', comment: 'Актуальное описание из каталога.' },
     { id: 13982355, title: 'Спортивный массаж' },

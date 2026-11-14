@@ -813,6 +813,8 @@
       "related": "Related articles"
     },
     "cta": "Book",
+    "unavailableTitle": "Service temporarily unavailable",
+    "unavailable": "We couldn’t load the service details. Please try again.",
     "todo": {
       "body": "TODO(content): service page content: who it’s for, what a session involves, duration and options, contraindications, questions about the service"
     }
@@ -1242,6 +1244,11 @@
       "description": "{service} at The Body Mechanic, Dubai: price, duration, specialists and online booking.",
       "ogTitle": "{service} · The Body Mechanic",
       "ogDescription": "From {priceMin} AED, {durationMin} min. Book online."
+    },
+    "catalogService": {
+      "title": "{service} · The Body Mechanic",
+      "description": "{service} at The Body Mechanic.",
+      "ogTitle": "{service} · The Body Mechanic"
     },
     "booking": {
       "title": "Book a massage online in Dubai · The Body Mechanic",

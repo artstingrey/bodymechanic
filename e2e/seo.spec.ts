@@ -157,7 +157,8 @@ test('sitemap.xml: every public page in both languages with ru / en / x-default;
     alt: Object.fromEntries([...m[1].matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((a) => [a[1], a[2]])),
   }));
   const origin = new URL(urls[0].loc).origin;
-  const expected = LOCALES.flatMap((l) => builtPages(l).filter((p) => !p.startsWith('account/') && !p.startsWith('lp/')).map((p) => `${origin}/${l}/${p}`));
+  const expected = LOCALES.flatMap((l) => [...builtPages(l), 'services/sports/']
+    .filter((p) => !p.startsWith('account/') && !p.startsWith('lp/')).map((p) => `${origin}/${l}/${p}`));
   expect(urls.map((u) => u.loc).sort()).toEqual(expected.sort());
   for (const u of urls) {
     const p = u.loc.slice(origin.length).replace(/^\/(en|ru)\//, '');
@@ -704,7 +705,7 @@ test('an account address behind an escaped slash and a parent segment is recogni
 // &date=…&time=…) — and an ad tag reads the href of a clicked link and the address it leads to. Now they carry nothing.
 test('the links that bring a choice into the booking carry nothing of it in their address (Ж-9)', async ({ page }) => {
   await seedConsent(page);
-  await page.goto('/en/services/sports/', { waitUntil: 'networkidle' });
+  await page.goto('/en/services/lfk-kinesio/', { waitUntil: 'networkidle' });
   await expect(page.locator('main a.btn-book').first()).toHaveAttribute('href', '/en/booking/');
   await page.goto('/en/team/specialist-1/', { waitUntil: 'networkidle' });
   await expect(page.locator('main a.btn-book').first()).toHaveAttribute('href', '/en/booking/');

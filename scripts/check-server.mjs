@@ -60,7 +60,7 @@ export async function checkServer(origin) {
   assert.equal(catalog.headers.get('cache-control'), 'no-store');
   for (const path of ['/de', '/de/']) await get(path, 404, /id="nf-root"/);
   await get('/en/no-such-page/', 404, /<h1/);
-  await get('/en/services/no-such-service', 404, /<h1/);
+  await get('/en/services/no-such-service', 404, /container page nf/);
   await get('/ru/lp/unknown', 404, /<h1/);
   const fontLinks = (html) => [...html.matchAll(/<link(?=[^>]*rel="preload")(?=[^>]*href="\/fonts\/v1\/([^"]+)")[^>]*>/g)];
   for (const locale of ['en', 'ru']) {
@@ -70,7 +70,7 @@ export async function checkServer(origin) {
     // Streaming puts resource hints in the HTTP Link header; prerendered HTML can carry them in the document.
     const headerPreloads = [...(headers.get('link') ?? '').matchAll(/<\/fonts\/v1\/([^>]+)>;\s*rel=preload;\s*as="font"/g)];
     assert.deepEqual([...fontLinks(body), ...headerPreloads].map((link) => link[1]), ['Manrope.woff2']);
-    for (const path of ['services', 'services/sports', 'team/specialist-1', 'journal/demo-article-1']) {
+    for (const path of ['services', 'services/sports', 'services/lfk-kinesio', 'team/specialist-1', 'journal/demo-article-1']) {
       await redirect(`/${locale}/${path}`, `/${locale}/${path}/`);
       await get(`/${locale}/${path}/`, 200, /<h1/);
     }
@@ -106,6 +106,6 @@ export async function checkServer(origin) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  await withProductionServer(checkServer);
+  await withProductionServer(checkServer, { env: { ALTEGIO_LOCATION_ID: '', ALTEGIO_PARTNER_TOKEN: '', ALTEGIO_CURRENCY: '' } });
   console.log('Production routes, canonical redirects, private headers and font preloads: OK');
 }

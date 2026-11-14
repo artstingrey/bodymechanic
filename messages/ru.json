@@ -813,6 +813,8 @@
       "related": "Связанные статьи"
     },
     "cta": "Записаться",
+    "unavailableTitle": "Услуга временно недоступна",
+    "unavailable": "Не удалось загрузить данные услуги. Попробуйте ещё раз.",
     "todo": {
       "body": "TODO(content): тексты страницы услуги: для кого, как проходит сеанс, длительность и варианты, противопоказания, вопросы по услуге"
     }
@@ -1242,6 +1244,11 @@
       "description": "{service} в студии The Body Mechanic, Дубай: цена, длительность, специалисты и онлайн-запись.",
       "ogTitle": "{service} · The Body Mechanic",
       "ogDescription": "От {priceMin} AED, {durationMin} мин. Запишитесь онлайн."
+    },
+    "catalogService": {
+      "title": "{service} · The Body Mechanic",
+      "description": "{service} в студии The Body Mechanic.",
+      "ogTitle": "{service} · The Body Mechanic"
     },
     "booking": {
       "title": "Онлайн-запись на массаж в Дубае · The Body Mechanic",

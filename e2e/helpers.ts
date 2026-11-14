@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, type Page, type Request } from '@playwright/test';
 import en from '../messages/en.json';
+import { SERVICES } from '../src/lib/api/mock-data';
+import { catalogServiceId } from '../src/lib/catalog-service-slugs';
 
 export const LOCALES = ['en', 'ru'] as const;
 /** The deck glues one-letter words and some numbers to the next word with U+00A0 (808 / 833): compare text as plain spaces. */
@@ -30,7 +32,8 @@ export function builtPages(locale: string): string[] {
   const pages = Object.keys(manifest.routes)
     .filter((route) => route === prefix || route.startsWith(`${prefix}/`))
     .map((route) => route === prefix ? '' : `${route.slice(prefix.length + 1)}/`);
-  return [...new Set(['', ...pages, 'account/record/9001/demo-hash/'])].sort();
+  const demoDetails = SERVICES.filter(({ slug }) => catalogServiceId(slug) === undefined).map(({ slug }) => `services/${slug}/`);
+  return [...new Set(['', ...pages, ...demoDetails, 'account/record/9001/demo-hash/'])].sort();
 }
 
 /** Template of a concrete page path: 'services/sports/' → 'services/[slug]/'. */
@@ -50,7 +53,7 @@ export function matrixPages(locale: string): string[] {
 }
 
 /** One representative per template for DEL-09 screenshots (other slugs share the template). */
-const SHOT_DETAILS = ['services/sports/', 'services/lfk-kinesio/', 'team/specialist-1/', 'journal/demo-article-1/']; // CMS service, Altegio-only service, profile, article
+const SHOT_DETAILS = ['services/lfk-kinesio/', 'team/specialist-1/', 'journal/demo-article-1/'];
 export function isShotPage(p: string): boolean {
   if (/^(services|team|journal)\/[^/?]+\/$/.test(p)) return SHOT_DETAILS.includes(p);
   return !p.startsWith('account/record/1234');

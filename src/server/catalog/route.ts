@@ -25,7 +25,9 @@ export async function respondWithCatalog(
   }
 
   try {
-    return Response.json(await load(locale), { headers: CACHE_CONTROL });
+    const catalog = await load(locale);
+    if (catalog === null) return errorResponse(404, 'SERVICE_NOT_FOUND', 'The public service was not found.');
+    return Response.json(catalog, { headers: CACHE_CONTROL });
   } catch (error) {
     if (error instanceof AltegioError) {
       const { status, code, message } = error.response;

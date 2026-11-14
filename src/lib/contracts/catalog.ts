@@ -20,6 +20,11 @@ export interface CatalogServicesResponse {
   meta: { source: 'altegio'; locale: CatalogLocale };
 }
 
+export interface CatalogServiceDetailResponse {
+  data: { service: CatalogService & { slug: string }; category: CatalogCategory | null };
+  meta: CatalogServicesResponse['meta'];
+}
+
 export interface CatalogStaffMember {
   id: number;
   name: string;
@@ -35,6 +40,7 @@ export interface CatalogStaffResponse {
 
 export type CatalogErrorCode =
   | 'INVALID_QUERY'
+  | 'SERVICE_NOT_FOUND'
   | 'CATALOG_UNAVAILABLE'
   | 'UPSTREAM_RATE_LIMITED'
   | 'UPSTREAM_TIMEOUT'
