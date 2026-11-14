@@ -25,6 +25,7 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
   await connection();
   const catalog = await getCatalogServices(locale).catch(() => null);
   const services = catalog?.data.services;
+  const translations = t.raw('home.services.cards') as Record<string, { title: string; description: string } | undefined>;
   return (
     <HomeServicesResult
       failed={!catalog}
@@ -38,17 +39,22 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
           goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string,
         }}>
           {services.map((service, i) => {
+            const translation = translations[service.id];
+            const title = (locale === 'ru' && service.title) || translation?.title || service.title;
+            const description = locale === 'en'
+              ? translation?.description ?? service.description
+              : service.description ?? translation?.description;
             const illustration = homeServiceIllustrations.get(service.id);
             const caption = t('placeholder.illustrativePhoto');
             const localPhoto = illustration && hasPhoto('services', illustration)
-              ? <Photo set="services" id={illustration} sizes={CARD_SIZES} alt={service.title} />
+              ? <Photo set="services" id={illustration} sizes={CARD_SIZES} alt={title} />
               : undefined;
             const src = service.imageUrl && new URL(service.imageUrl).hostname.replace(/\.$/, '') !== 'api.alteg.io'
               ? service.imageUrl : null;
             return (
-              <ServiceCard key={service.id} index={i + 1} title={service.title}
-                description={service.description ?? undefined} tone={TONES[i % TONES.length]}
-                photo={<HomeServicePhoto key={`${src}:${illustration}`} src={src} alt={service.title}
+              <ServiceCard key={service.id} index={i + 1} title={title}
+                description={description ?? undefined} tone={TONES[i % TONES.length]}
+                photo={<HomeServicePhoto key={`${src}:${illustration}`} src={src} alt={title}
                   illustration={localPhoto} caption={caption} unavailable={t('home.services.photoUnavailable')} />}
                 priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
                 price={servicePrice(service, locale, t)}

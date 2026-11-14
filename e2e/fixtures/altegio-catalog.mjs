@@ -59,6 +59,11 @@ globalThis.fetch = async (input, init) => {
     return new Response(body, { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
   if (scenario === 'empty') return Response.json({ success: true, data: { services: [], categories: [] } });
+  if (scenario === 'home-translations') return Response.json({ success: true, data: { services: [
+    { id: 13982356, title: 'Классический массаж студии', comment: 'Актуальное описание из каталога.' },
+    { id: 13982355, title: 'Спортивный массаж' },
+    { id: 91206, title: 'Новая услуга', comment: 'Описание новой услуги из каталога.' },
+  ] } });
   if (scenario === 'home-slow') {
     const release = `${process.env.CATALOG_TEST_SCENARIO}.release`;
     while (!(await fs.stat(release).catch(() => null))) {

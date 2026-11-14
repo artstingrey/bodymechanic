@@ -288,18 +288,71 @@
       "priceFrom": "From {price}",
       "duration": "{minutes, number} min",
       "photoUnavailable": "No service photo available",
-      "cardDescription": {
-        "todo": "TODO(content): service description, 1–2 lines",
-        "sports": "Massage for people who train: before a session, after a race and between workouts.",
-        "classic": "A calm, classic massage in a private room.",
-        "thai": "Thai massage with gentle stretching and attention to mobility.",
-        "sportsInfrared": "Sports massage combined with an infrared capsule session.",
-        "classicInfrared": "Classic massage combined with an infrared capsule session.",
-        "fullComplex": "Massage, infrared capsule and ice bath in a single visit.",
-        "lfkKinesio": "Exercises and movement work guided by a specialist, with a plan for practising at home.",
-        "manual": "Hands-on techniques, chosen to fit your request and plan.",
-        "orthoRehab": "Gentle work on limited mobility after an injury, once your doctor has cleared you.",
-        "mfrPir": "Myofascial release and work on muscle tension; the technique is chosen at the assessment stage."
+      "cards": {
+        "13688504": {
+          "title": "Mobile massage",
+          "description": "A massage therapist comes to your address for the session."
+        },
+        "13706788": {
+          "title": "Massage at the therapist’s location",
+          "description": "A massage session at your therapist’s location."
+        },
+        "13982351": {
+          "title": "Ice bath after massage",
+          "description": "A refreshing ice bath after your massage can help you feel alert and energised."
+        },
+        "13982353": {
+          "title": "Ice bath",
+          "description": "A standalone cold-water immersion session."
+        },
+        "13982355": {
+          "title": "Sports massage",
+          "description": "Massage for people who train: before a session, after a race and between workouts."
+        },
+        "13982356": {
+          "title": "Classic massage",
+          "description": "A calm, classic massage in a private room."
+        },
+        "13982358": {
+          "title": "Thai massage",
+          "description": "Thai massage with gentle stretching and attention to mobility."
+        },
+        "13982363": {
+          "title": "Infrared capsule",
+          "description": "An infrared capsule session where you can relax in the warmth."
+        },
+        "13982369": {
+          "title": "Infrared capsule — 45 min",
+          "description": "A 45-minute session in the infrared capsule."
+        },
+        "13982379": {
+          "title": "Sports massage with infrared capsule",
+          "description": "Sports massage combined with an infrared capsule session."
+        },
+        "13982380": {
+          "title": "Classic massage with infrared capsule",
+          "description": "Classic massage combined with an infrared capsule session."
+        },
+        "13982382": {
+          "title": "Thai massage with infrared capsule",
+          "description": "Thai massage combined with an infrared capsule session."
+        },
+        "13983057": {
+          "title": "Functional training and mobility",
+          "description": "Functional exercises combined with mobility work."
+        },
+        "13983060": {
+          "title": "Deep bodywork",
+          "description": "A session focused on working the deeper muscles."
+        },
+        "13983065": {
+          "title": "Muscle tone and mobility for sport",
+          "description": "A session focused on muscle tone and mobility for people who train."
+        },
+        "13983067": {
+          "title": "Muscle and fascia work with stretching",
+          "description": "Muscle and fascia work combined with stretching."
+        }
       }
     },
     "approach": {

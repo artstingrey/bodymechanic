@@ -221,6 +221,26 @@ try {
     });
   }, fixtureEnv(''));
 
+  await setScenario('home-translations');
+  await run(async (origin) => {
+    const ru = await home(origin, 'ru');
+    const en = await home(origin, 'en');
+    assert.match(ru, /<h3[^>]*>Классический массаж студии</);
+    assert.match(ru, /<p class="d">Актуальное описание из каталога\.<\/p>/);
+    assert.match(ru, /<p class="d">Массаж для тех, кто тренируется:/);
+    assert.match(en, /<h3[^>]*>Classic massage</);
+    assert.match(en, /<p class="d">A calm, classic massage in a private room\.<\/p>/);
+    assert.doesNotMatch(en, /Актуальное описание из каталога/);
+    for (const html of [ru, en]) {
+      assert.match(html, /<h3[^>]*>Новая услуга</);
+      assert.match(html, /<p class="d">Описание новой услуги из каталога\.<\/p>/);
+    }
+    const response = await fetch(`${origin}/api/catalog/services?locale=en`);
+    assert.equal(response.status, 200);
+    const [service] = (await response.json()).data.services;
+    assert.equal(service.title, 'Классический массаж студии');
+  });
+
   await fs.unlink(release);
   await setScenario('home-slow');
   await run(async (origin) => {
