@@ -23,9 +23,11 @@ globalThis.fetch = async (input, init) => {
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
   assert.equal(headers.get('authorization'), 'Bearer fixture-partner-token');
   assert.equal(headers.get('accept'), 'application/vnd.api.v2+json');
+  const language = headers.get('accept-language');
+  assert.ok(language === 'ru-RU' || language === 'en-US');
   assert.equal(init?.redirect ?? input.redirect, 'error');
   const scenario = readFileSync(process.env.CATALOG_TEST_SCENARIO, 'utf8');
-  console.info('[catalog-fixture]', scenario);
+  console.info('[catalog-fixture]', scenario, language);
 
   // Let the 12 concurrent requests reach the cache before the upstream responds.
   if (['success', 'empty', '429', '500'].includes(scenario)) await delay(400);
@@ -67,11 +69,13 @@ globalThis.fetch = async (input, init) => {
   if (scenario === 'home' || scenario === 'home-slow' || scenario === 'home-single') {
     const services = [
       { id: 91201, title: 'Терапевтический массаж с очень длинным названием для проверки переноса строк',
-        price_min: 120, price_max: 120, seance_length: 6000, image: 'https://images.example.test/live.webp' },
-      { id: 91202, title: 'Range massage', price_min: 80, price_max: 160, image: 'https://images.example.test/broken.webp' },
-      { id: 91203, title: 'Minimum massage', price_min: 55.5 },
+        price_min: 120, price_max: 120, seance_length: 6000, image: 'https://images.example.test/live.webp',
+        comment: language === 'ru-RU' ? ' Массаж для восстановления после нагрузки. ' : ' Massage for post-exercise recovery. ' },
+      { id: 91202, title: language === 'ru-RU' ? 'Массаж с диапазоном цен' : 'Range massage',
+        price_min: 80, price_max: 160, image: 'https://images.example.test/broken.webp', seance_length: null },
+      { id: 91203, title: 'Minimum massage', price_min: 55.5, comment: '  ' },
       { id: 91204, title: 'Zero price massage', price_min: 0, price_max: 0 },
-      { id: 91205, title: 'Unknown price massage', comment: 'fixture raw upstream detail', image: 'https://api.alteg.io/api/v1/private' },
+      { id: 91205, title: 'Unknown price massage', comment: '<p>fixture raw upstream detail</p>', image: 'https://api.alteg.io/api/v1/private' },
     ];
     return Response.json({ success: true, data: { services: scenario === 'home-single' ? services.slice(0, 1) : services } });
   }
@@ -82,8 +86,8 @@ globalThis.fetch = async (input, init) => {
       category: [{ id: 20, title: ' Massage ' }],
       services: [
         { id: 42, title: ' Massage ', category_id: 20, price_min: 0, price_max: 55, discount: 20,
-          seance_length: 5400, active: 0, image: 'https://images.example.test/service.webp', comment: 'fixture raw upstream detail' },
-        { id: 43, title: 'Other', image: 'javascript:alert(1)' },
+          seance_length: 5400, active: 0, image: 'https://images.example.test/service.webp', comment: ' Public service description. ' },
+        { id: 43, title: 'Other', image: 'javascript:alert(1)', comment: '<p>fixture raw upstream detail</p>', seance_length: null },
       ],
     },
   });

@@ -15,6 +15,13 @@ function price(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+function publicDescription(comment: unknown): string | null {
+  if (typeof comment !== 'string') return null;
+  const description = comment.trim();
+  // Publish plain-text booking comments; omit values containing HTML markup.
+  return description && !/<[a-z!/?]/i.test(description) ? description : null;
+}
+
 function imageUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   try {
@@ -46,7 +53,7 @@ function normalizeCatalog(data: unknown, currency: string | null): CatalogServic
     const seconds = value.seance_length;
     return {
       ...identity(value),
-      description: null,
+      description: publicDescription(value.comment),
       categoryId: positiveId(value.category_id),
       priceMin: price(value.price_min),
       priceMax: price(value.price_max),
@@ -58,8 +65,8 @@ function normalizeCatalog(data: unknown, currency: string | null): CatalogServic
   return { services, categories };
 }
 
-const getCachedServices = cachePublicCatalog('book-services-v1', async (locationId: number, currency: string | null) => {
-  const data = await fetchBookServices(locationId);
+const getCachedServices = cachePublicCatalog('book-services-v2', async (locationId: number, currency: string | null, locale: CatalogLocale) => {
+  const data = await fetchBookServices(locationId, locale);
   try {
     return normalizeCatalog(data, currency);
   } catch (error) {
@@ -70,6 +77,6 @@ const getCachedServices = cachePublicCatalog('book-services-v1', async (location
 
 export async function getCatalogServices(locale: CatalogLocale): Promise<CatalogServicesResponse> {
   const { locationId, currency } = getAltegioConfig();
-  const data = await getCachedServices(locationId, currency);
+  const data = await getCachedServices(locationId, currency, locale);
   return { data, meta: { source: 'altegio', locale } };
 }

@@ -122,10 +122,16 @@ try {
       assert.match(html, /<h3[^>]*>Терапевтический массаж/);
       assert.match(html, /<h3[^>]*>Zero price massage/);
     }
+    assert.match(en, /<h3[^>]*>Range massage/);
+    assert.match(ru, /<h3[^>]*>Массаж с диапазоном цен/);
     const api = await fetch(`${origin}/api/catalog/services?locale=ru`);
     assert.equal(api.status, 200);
-    assert.deepEqual((await api.json()).data.services.map(({ id }) => id), [91201, 91202, 91203, 91204, 91205]);
-    assert.equal((logs().match(/\[catalog-fixture\]/g) ?? []).length, 2, 'RU, EN and API share the successful cache entry');
+    const { data: { services } } = await api.json();
+    assert.deepEqual(services.map(({ id }) => id), [91201, 91202, 91203, 91204, 91205]);
+    assert.equal(services[1].title, 'Массаж с диапазоном цен');
+    assert.deepEqual(logs().match(/\[catalog-fixture\] [^\r\n]+/g), [
+      '[catalog-fixture] 500 en-US', '[catalog-fixture] home-slow en-US', '[catalog-fixture] home-slow ru-RU',
+    ], 'home and API share a cache entry for each locale');
 
     for (const width of [320, 390, 768, 1280]) {
       await browserPage(browser, { width, height: 850 }, async (page, block) => {
@@ -134,8 +140,14 @@ try {
         await expect(block.locator('h2')).toHaveText(locale === 'ru'
           ? 'Массаж и восстановление для вашего ритма' : 'Massage and recovery that keep up with you');
         const cards = block.locator('article');
-        await expect(cards.locator('h3')).toHaveText([longTitle, 'Range massage', 'Minimum massage', 'Zero price massage', 'Unknown price massage']);
-        await expect(block.locator('a, .go, .badge, article .d')).toHaveCount(0);
+        await expect(cards.locator('h3')).toHaveText([
+          longTitle, locale === 'ru' ? 'Массаж с диапазоном цен' : 'Range massage',
+          'Minimum massage', 'Zero price massage', 'Unknown price massage',
+        ]);
+        await expect(block.locator('a, .go, .badge')).toHaveCount(0);
+        await expect(block.locator('article .d')).toHaveCount(1);
+        await expect(cards.first().locator('.head + .d')).toHaveText(locale === 'ru'
+          ? 'Массаж для восстановления после нагрузки.' : 'Massage for post-exercise recovery.');
         const prices = cards.locator('dd:first-of-type');
         const priceAt = (i) => cards.nth(i).locator('dd').first();
         await expect(priceAt(0)).toHaveText(/120/);
@@ -181,11 +193,11 @@ try {
     }
   }, env);
 
-  const [entry] = written;
-  assert.equal(written.size, 1);
-  assert.equal(JSON.parse(await fs.readFile(entry, 'utf8')).revalidate, 14_400);
+  const [englishEntry] = written;
+  assert.equal(written.size, 2);
+  for (const entry of written) assert.equal(JSON.parse(await fs.readFile(entry, 'utf8')).revalidate, 14_400);
   const stale = new Date(Date.now() - 14_401_000);
-  await fs.utimes(entry, stale, stale);
+  await fs.utimes(englishEntry, stale, stale);
   await setScenario('empty');
   await run(async (origin, logs) => {
     assert.ok((await home(origin)).includes(longTitle));
@@ -195,6 +207,7 @@ try {
       await expect(block.getByText('No services are currently listed.')).toBeVisible();
       await expect(block.locator('.car, button')).toHaveCount(0);
     });
+    assert.match(await home(origin, 'ru'), /<h3[^>]*>Массаж с диапазоном цен/);
     assert.equal((logs().match(/\[catalog-fixture\]/g) ?? []).length, 1);
   }, env);
 
@@ -220,7 +233,7 @@ try {
       await expect(block.locator('article')).toHaveCount(5);
     });
   });
-  console.log('Home services: streaming, retry, shared cache, localized cards and carousel at 320/390/768/1280: OK');
+  console.log('Home services: streaming, retry, per-locale shared cache, localized cards and carousel at 320/390/768/1280: OK');
 } finally {
   await browser?.close();
   await Promise.all([...written, scenario, release].map((file) => fs.unlink(file).catch((error) => {

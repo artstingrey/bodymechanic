@@ -21,7 +21,7 @@ function retryAfter(value: string | null) {
 }
 
 /** path and operation are supplied by server code only. */
-export async function altegioGet(operation: string, path: string): Promise<unknown> {
+export async function altegioGet(operation: string, path: string, language: string): Promise<unknown> {
   const started = Date.now();
   let status: number | undefined;
   const signal = AbortSignal.timeout(TIMEOUT_MS);
@@ -31,6 +31,7 @@ export async function altegioGet(operation: string, path: string): Promise<unkno
     const response = await fetch(`${API_BASE}${path}`, {
       headers: {
         Accept: 'application/vnd.api.v2+json',
+        'Accept-Language': language,
         Authorization: `Bearer ${partnerToken}`,
         'Content-Type': 'application/json',
       },
@@ -51,8 +52,6 @@ export async function altegioGet(operation: string, path: string): Promise<unkno
     if (!isRecord(payload) || payload.success !== true || !('data' in payload)) {
       throw new AltegioError('invalidResponse');
     }
-    
-    
 
     return payload.data;
   } catch (cause) {

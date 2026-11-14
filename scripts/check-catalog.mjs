@@ -44,7 +44,7 @@ function checkBodyCancellation(logs, expected) {
 
 async function burst(logs, label, [calls, writes, errors], run) {
   const offset = logs().length;
-  await Promise.all(Array.from({ length: 12 }, (_, i) => run(i % 2 === 0 ? 'ru' : 'en')));
+  await Promise.all(Array.from({ length: 12 }, () => run('en')));
   // A stale hit returns before the fixture finishes its background request.
   await delay(550);
   const log = logs().slice(offset);
@@ -97,7 +97,7 @@ const env = fixtureEnv();
 let entryPath;
 const firstData = {
   services: [
-    { id: 42, title: 'Massage', description: null, categoryId: 20, priceMin: 0, priceMax: 55,
+    { id: 42, title: 'Massage', description: 'Public service description.', categoryId: 20, priceMin: 0, priceMax: 55,
       currency: 'AED', durationMin: 90, imageUrl: 'https://images.example.test/service.webp' },
     { id: 43, title: 'Other', description: null, categoryId: null, priceMin: null, priceMax: null,
       currency: 'AED', durationMin: null, imageUrl: null },
@@ -182,7 +182,7 @@ try {
     await delay(5000);
     const keys = await burst(logs, 'Stale cache, after Retry-After', [1, 1, 0], checkData(origin, emptyData));
     assert.deepEqual(keys, [path.basename(entryPath)]);
-    await checkData(origin, firstData)('ru');
+    await checkData(origin, firstData)('en');
     assert.equal(countCalls(logs), 2);
   }, { env, preload });
 
