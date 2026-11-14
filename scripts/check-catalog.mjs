@@ -34,6 +34,13 @@ async function checkError(origin, status, code, query = '') {
 const setScenario = (value) => fs.writeFile(scenarioFile, value);
 const countCalls = (logs) => (logs().match(/\[catalog-fixture\]/g) ?? []).length;
 
+function checkBodyCancellation(logs, expected) {
+  const cancelled = [...logs().matchAll(/\[catalog-body-cancel\] (\d{3})/g)].map((match) => match[1]);
+  assert.deepEqual(cancelled, expected);
+  assert.doesNotMatch(logs(), /\[catalog-unhandled-rejection\]/);
+  assert.ok(privateValues.every((value) => !logs().includes(value)), 'logs contain private data');
+}
+
 async function burst(logs, label, [calls, writes, errors], run) {
   const offset = logs().length;
   await Promise.all(Array.from({ length: 12 }, (_, i) => run(i % 2 === 0 ? 'ru' : 'en')));
@@ -135,6 +142,8 @@ try {
       await checkError(origin, status, code);
     }
     assert.equal(countCalls(logs), errors.length);
+    // 403 has no body. The 500 stream rejects cancellation, but still maps to CATALOG_UNAVAILABLE.
+    checkBodyCancellation(logs, ['401', '500']);
     assert.deepEqual(await newEntries(), [], 'failed responses must not enter the cache');
 
     await setScenario('success');
@@ -179,6 +188,7 @@ try {
   await setScenario('429');
   await withProductionServer(async (origin, logs) => {
     await burst(logs, 'Cold cache, upstream 429', [1, 0, 1], checkRateLimited(origin, 5, 5));
+    checkBodyCancellation(logs, ['429']);
     assert.ok((await newEntries()).every((file) => createdEntries.has(path.join(cacheDir, file))));
     await setScenario('empty');
     await delay(1100);
@@ -195,7 +205,7 @@ try {
     assert.ok([...privateValues, 'ALTEGIO_PARTNER_TOKEN', 'api.alteg.io'].every((value) => !js.includes(value)),
       `client bundle contains server integration data: ${file}`);
   }
-  console.log('Catalog DTO, HTTP failures, public output and four-hour production cache: OK');
+  console.log('Catalog DTO, HTTP failures, response body cancellation, public output and four-hour production cache: OK');
 } finally {
   for (const file of createdEntries) await fs.unlink(file);
   await fs.unlink(scenarioFile).catch((error) => { if (error.code !== 'ENOENT') throw error; });

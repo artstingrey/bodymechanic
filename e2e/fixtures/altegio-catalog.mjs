@@ -4,6 +4,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 // Loaded only by the catalog test child process, before Next installs its fetch wrapper.
+process.on('unhandledRejection', () => console.error('[catalog-unhandled-rejection]'));
 const cacheDir = path.resolve('.next/cache/fetch-cache');
 const writeFile = fs.writeFile;
 fs.writeFile = async (file, ...args) => {
@@ -41,7 +42,19 @@ globalThis.fetch = async (input, init) => {
   if (scenario === 'invalid-schema') return Response.json({ success: true, data: { services: null } });
   if (scenario === 'invalid-service') return Response.json({ success: true, data: { services: [{ id: 0, title: ' ' }] } });
   if (/^\d{3}$/.test(scenario)) {
-    return new Response('fixture raw upstream detail', { status: Number(scenario), headers: { 'Retry-After': '5' } });
+    const body = scenario === '403' ? null : new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('fixture raw upstream detail'));
+      },
+      pull(controller) {
+        controller.close();
+      },
+      cancel() {
+        console.info('[catalog-body-cancel]', scenario);
+        if (scenario === '500') throw new SyntaxError('fixture raw upstream detail');
+      },
+    });
+    return new Response(body, { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
   if (scenario === 'empty') return Response.json({ success: true, data: { services: [], categories: [] } });
   assert.equal(scenario, 'success');

@@ -40,6 +40,8 @@ export async function altegioGet(operation: string, path: string): Promise<unkno
     });
     status = response.status;
     if (!response.ok) {
+      // Release the response stream without letting a cleanup failure mask the HTTP error.
+      void response.body?.cancel().catch(() => {});
       if (status === 429) throw new AltegioError('rateLimited', retryAfter(response.headers.get('Retry-After')));
       throw new AltegioError('unavailable');
     }
