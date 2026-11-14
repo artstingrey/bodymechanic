@@ -147,7 +147,7 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
       <div className="doc-sections">
         {SECTIONS.map((k) => (
           <section key={k} className={k === 'specialists' || k === 'related' ? 'doc-sections__wide' : undefined}
-            aria-labelledby={k === 'specialists' ? SPECIALISTS_HEADING : undefined}>
+            hidden={k !== 'specialists'} aria-labelledby={k === 'specialists' ? SPECIALISTS_HEADING : undefined}>
             <h2 className="h3" id={k === 'specialists' ? SPECIALISTS_HEADING : undefined} tabIndex={k === 'specialists' ? -1 : undefined}>
               {t(`service.section.${k}`)}{k === 'specialists' && staffList ? demoBadge : null}
             </h2>

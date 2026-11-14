@@ -20,9 +20,9 @@ async function ServiceStaffCards({ locale, serviceId, headingId, t }: Props) {
       error={t('service.specialists.error')} retry={t('home.team.retry')} loading={t('service.specialists.loading')}>
       {staff?.length ? (
         <ul className="card-grid card-grid--4">
-          {staff.map(({ id, name, position, specialization, imageUrl }) => (
+          {staff.map(({ id, name, imageUrl }) => (
             <li key={id}>
-              <StaffCard name={name} note={position ?? specialization ?? undefined}
+              <StaffCard name={name} href="#"
                 photo={<HomeTeamPhoto key={imageUrl ?? 'placeholder'} src={imageUrl} alt={name} unavailable={t('home.team.photoUnavailable')} />} />
             </li>
           ))}

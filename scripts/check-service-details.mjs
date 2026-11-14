@@ -91,9 +91,21 @@ async function browserChecks(origin) {
     const hero = page.locator('.svc-hero');
     const heading = hero.locator('h1');
     const facts = hero.locator('dd');
+    const sections = page.locator('.doc-sections');
     const sectionHeadings = page.locator('.doc-sections > section > h2');
     const sectionHeadingsByLocale = new Map();
     const wideSections = page.locator('.doc-sections > .doc-sections__wide');
+    async function checkSectionVisibility(locale) {
+      await expect(sections.locator(':scope > section[hidden]')).toHaveCount(7);
+      const visibleSections = sections.locator(':scope > section:visible');
+      await expect(visibleSections).toHaveCount(1);
+      await expect(visibleSections).toHaveAttribute('aria-labelledby', 'service-specialists-title');
+      await expect(sectionHeadings).toHaveCount(8);
+      await expect(wideSections).toHaveCount(2);
+      const faq = sectionHeadings.filter({ hasText: locale === 'ru' ? 'Вопросы по услуге' : 'Questions about this service' });
+      await expect(faq).toHaveCount(1);
+      await expect(faq).toBeHidden();
+    }
     const missingPage = await page.goto(origin + paths.page('ru', 'service-94999'));
     assert.equal(missingPage.status(), 404);
     await expect(page.locator('main .nf')).toBeVisible();
@@ -110,9 +122,8 @@ async function browserChecks(origin) {
       await expect(facts).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/, '']);
       await expect(hero.locator('.badge, img')).toHaveCount(0);
       await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
-      await expect(sectionHeadings).toHaveCount(8);
+      await checkSectionVisibility(locale);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
-      await expect(wideSections).toHaveCount(2);
       await expect(wideSections.first().getByRole('status')).toHaveText(locale === 'ru'
         ? 'Для этой услуги пока нет специалистов.' : 'No specialists are currently listed for this service.');
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
@@ -137,14 +148,12 @@ async function browserChecks(origin) {
       await page.goto(origin + paths.page(locale, 'service-91201'));
       await expect(heading).toHaveText(/длинным названием|very long service title/);
       await expect(hero.locator('.eyebrow, .hero-lead, .badge')).toHaveCount(0);
+      await checkSectionVisibility(locale);
       await expect(sectionHeadings).toHaveText(sectionHeadingsByLocale.get(locale));
       await expect(page.locator('.doc-sections > section > .todo')).toHaveCount(6);
-      await expect(wideSections).toHaveCount(2);
       await expect(wideSections.first().getByRole('status')).toBeVisible();
       await expect(wideSections.last().locator(`a[href^="/${locale}/journal/"]`)).toHaveCount(2);
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
-      assert.equal(await page.locator('.doc-sections').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length),
-        width >= 768 ? 2 : 1);
       await expect(facts).toHaveText([/^(?:AED\s+)?0(?:\s+AED)?$/, /90\s+(мин|min)/]);
       await expect.poll(() => hero.locator('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
@@ -169,7 +178,7 @@ async function browserChecks(origin) {
           const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
           await expect(demoCta).toHaveAttribute('href', '/en/booking/');
           await expect(hero.locator('.facts .badge')).toBeVisible();
-          await expect(sectionHeadings).toHaveCount(8);
+          await checkSectionVisibility('en');
           await expect(wideSections.first().locator('.staff a[href^="/en/team/"]').first()).toBeVisible();
         }
       }
