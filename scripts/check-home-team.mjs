@@ -203,9 +203,10 @@ try {
     });
     for (const locale of ['en', 'ru']) {
       const html = await home(origin, locale);
-      for (const name of names) assert.ok(html.includes(`<b>${name}</b>`), 'missing server-rendered name');
+      const nameLinks = [...html.matchAll(/<a\s[^>]*href="#"[^>]*>([^<]+)<\/a>/g)]
+        .map((match) => match[1]).filter((name) => names.includes(name));
+      assert.deepEqual(nameLinks, names, 'server-rendered name links');
       assert.ok(!html.includes('Hidden Example') && !html.includes('Dismissed Example'));
-      assert.ok(html.includes(locale === 'ru' ? 'Специализация RU' : 'Specialization EN'));
       await api(origin, `?locale=${locale}`, 200, expected(locale));
       const service = await fetch(`${origin}/api/catalog/services?locale=${locale}`);
       assert.equal(service.status, 200);
@@ -222,10 +223,16 @@ try {
         await expect(block.locator('h2')).toHaveText(locale === 'en' ? 'People you can trust' : 'Люди, которым вы доверяете');
         const cards = block.locator('.staff');
         await expect(cards.locator('b')).toHaveText(names);
-        await expect(cards.first().locator('.cap')).toHaveText(dataFor(locale).staff[0].specialization);
-        await expect(cards.nth(1).locator('.cap')).toHaveText('Therapist');
-        await expect(cards.nth(2).locator('.cap')).toHaveCount(0);
-        await expect(block.locator('a, .go, .badge, .staff [tabindex]')).toHaveCount(0);
+        await expect(cards.locator('.cap')).toHaveCount(0);
+        await expect(block.locator('.sec-head a')).toHaveAttribute('href', '#');
+        await expect(block.locator('.team-intro p')).toHaveText(locale === 'en'
+          ? 'Meet our specialists and choose who you’d like to book with.'
+          : 'Познакомьтесь со специалистами студии и выберите того, к кому хотите записаться.');
+        await expect(block.locator('.team-intro a')).toHaveAttribute('href', '#');
+        assert.equal(await block.locator('.team-intro').evaluate((el) => el.scrollWidth <= el.clientWidth
+          && el.getBoundingClientRect().right <= el.parentElement.getBoundingClientRect().right + 1), true);
+        await expect(cards.locator('b a[href="#"]')).toHaveText(names);
+        await expect(block.locator('a:not([href="#"]), .go, .badge')).toHaveCount(0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.equal(await cards.first().locator('b').evaluate((el) => el.scrollWidth <= el.clientWidth), true);
         await cards.first().scrollIntoViewIfNeeded();
@@ -236,7 +243,6 @@ try {
         await cards.nth(1).scrollIntoViewIfNeeded();
         await expect(cards.nth(1).locator('.ph')).toBeVisible();
         await expect(cards.nth(3).locator('.ph')).toBeAttached();
-        assert.equal(await cards.first().evaluate((el) => getComputedStyle(el).cursor), 'auto');
 
         const track = block.locator('.track');
         const scrollLeft = () => track.evaluate((el) => el.scrollLeft);
@@ -313,7 +319,8 @@ try {
       const services = page.locator('[aria-labelledby="services-title"]');
       await expect(services.getByText('Loading services…')).toBeVisible();
       await expect(block.locator('.staff')).toHaveCount(1);
-      await expect(block.locator('.team-intro, .arr')).toHaveCount(0);
+      await expect(block.locator('.team-intro a')).toHaveAttribute('href', '#');
+      await expect(block.locator('.arr button')).toHaveCount(2);
       await release(servicesScenario);
       await expect(services.locator('article')).toHaveCount(5);
     });

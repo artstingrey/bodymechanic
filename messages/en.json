@@ -396,7 +396,6 @@
     },
     "team": {
       "title": "People you can trust",
-      "introPublic": "Meet the specialists at our studio.",
       "loading": "Loading the team…",
       "empty": "No specialist profiles are currently listed.",
       "errorLoad": "We couldn’t load the team.",
