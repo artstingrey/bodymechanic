@@ -2,7 +2,7 @@
  * «В календарь» on the confirmation (ТЗ §07 step 7): an .ics file built in the browser and a Google Calendar template link.
  * Times are absolute (UTC), so the event lands at the right Dubai time in any calendar.
  */
-export interface CalEvent { title: string; start: string; durationMin: number; details: string; location: string }
+export interface CalEvent { title: string; start: string; end?: string; details: string; location: string }
 
 const utc = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); // 20261110T070000Z
 // RFC 5545 TEXT: a carriage return (alone or in CRLF) is a line break too — left raw it would start a new content line, i.e.
@@ -10,10 +10,10 @@ const utc = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/,
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/\r\n?|\n/g, '\\n').replace(/([,;])/g, '\\$1');
 
 export function icsText(e: CalEvent, uid: string): string {
-  const start = new Date(e.start), end = new Date(start.getTime() + e.durationMin * 60_000);
   return [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//The Body Mechanic//Booking//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-    'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${utc(new Date())}`, `DTSTART:${utc(start)}`, `DTEND:${utc(end)}`,
+    'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${utc(new Date())}`, `DTSTART:${utc(new Date(e.start))}`,
+    ...(e.end ? [`DTEND:${utc(new Date(e.end))}`] : []),
     `SUMMARY:${esc(e.title)}`, `DESCRIPTION:${esc(e.details)}`, `LOCATION:${esc(e.location)}`, 'END:VEVENT', 'END:VCALENDAR', '',
   ].join('\r\n');
 }
@@ -28,9 +28,9 @@ export function downloadIcs(e: CalEvent, uid: string, filename = 'bodymechanic-b
 /** Google Calendar's «new event» page without any data: the `href` of the link (components/ui/PrefilledLink, В-4). */
 export const GOOGLE_CALENDAR_BASE = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
 
-/** The complete address — title, record number and zones in it. Built at the click only, never rendered into the page. */
+/** The complete address is built at the click and never rendered into the page. */
 export function googleCalendarUrl(e: CalEvent): string {
-  const start = new Date(e.start), end = new Date(start.getTime() + e.durationMin * 60_000);
+  const start = new Date(e.start), end = e.end ? new Date(e.end) : start;
   const q = new URLSearchParams({ action: 'TEMPLATE', text: e.title, dates: `${utc(start)}/${utc(end)}`, details: e.details, location: e.location, ctz: 'Asia/Dubai' });
   return `https://calendar.google.com/calendar/render?${q}`;
 }

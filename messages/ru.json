@@ -790,6 +790,8 @@
       "whatsapp": "WhatsApp",
       "myBookings": "Мои записи",
       "directions": "Как добраться",
+      "addressUnavailable": "Уточните адрес у студии.",
+      "demoAccount": "В кабинете пока доступны только демонстрационные записи.",
       "addressTodo": "TODO(content): адрес студии и ссылка на карту"
     },
     "queued": {

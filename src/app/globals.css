@@ -160,7 +160,7 @@ main .chips > a[aria-current] { background: var(--text); color: var(--bg); box-s
 
 /* Booking step 7 «PDF заявки» = print / save as PDF (R-APP-01 F-01): only the confirmation is printed. */
 @media print {
-  header, footer, .demo-notice, .book-floating, .cookie, .booking > nav, .booking-done__actions, .booking-done > button { display: none !important; }
+  header, footer, .demo-notice, .book-floating, .cookie, .booking > nav, .booking-done__actions, .booking-done > .bk-actions { display: none !important; }
 }
 /* native modal dialogs (clear all, cancel booking): structure only */
 dialog { max-width: min(92vw, 480px); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 20px; }

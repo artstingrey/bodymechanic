@@ -5,7 +5,6 @@ import { draftExpired } from './draft-ttl';
 export type BookingResult = Extract<BookingRecordData, { status: 'created' }> & {
   serviceTitle: string;
   durationMin: number | null;
-  staffName: string | null; // null = «Любой специалист»
   zones: string[];
   at: string;
 };
@@ -24,7 +23,12 @@ export function loadResult(): StoredBooking | null {
     const savedAt = Date.parse(r.at);
     // Old snapshots belonged to the demo. Pending attempts contain only a state and timestamp.
     if (version !== 2 || !Number.isFinite(savedAt) || draftExpired(savedAt) ||
-      !['created', 'unknown', 'processing'].includes(r.status)) { sessionStorage.removeItem(KEY); return null; }
+      !['created', 'unknown', 'processing'].includes(r.status) ||
+      (r.status === 'created' && (!Number.isSafeInteger(r.recordId) || r.recordId <= 0 ||
+        typeof r.serviceTitle !== 'string' || !Number.isFinite(Date.parse(r.datetime))))) {
+      sessionStorage.removeItem(KEY);
+      return null;
+    }
     return r;
   } catch { return null; }
 }

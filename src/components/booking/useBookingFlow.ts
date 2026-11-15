@@ -43,8 +43,6 @@ const useClientSearchParams: () => Pick<URLSearchParams, 'get'> | null = typeof 
 const NO_PARAMS: Pick<URLSearchParams, 'get'> = new URLSearchParams();
 
 export const STEPS = ['zones', 'service', 'specialist', 'time', 'contacts', 'review', 'done'] as const;
-// During the staged rollout, live services stop at the last connected step.
-const LAST_AVAILABLE_STEP = 6;
 export type BookingError = ApiErrorKind | 'slotTaken';
 
 /** Async data with loading / error / retry, without setState in the effect body (state is keyed by the request). */
@@ -75,14 +73,12 @@ export function useBookingFlow(demoServices: Service[]) {
   const [ready, setReady] = useState(false); // hydrated: the URL and the stored choices are in effect
   const [stored, setStored] = useState<StoredBooking | null>(null);
   const result = stored?.status === 'created' ? stored : null;
-  const lockedStep = stored ? (result ? LAST_AVAILABLE_STEP : 6) : null;
+  const lockedStep = stored ? (result ? 7 : 6) : null;
   const sp = ready && urlParams ? urlParams : NO_PARAMS;
   const requestedStep = Number(sp.get('step'));
-  const step = lockedStep ?? (Number.isInteger(requestedStep) ? Math.min(LAST_AVAILABLE_STEP, Math.max(1, requestedStep)) : 1);
-  const go = useCallback((n: number, replace = false) => {
-    n = Math.min(LAST_AVAILABLE_STEP, n);
-    const href = n === 1 ? '/booking/' : `/booking/?step=${n}`;
-    if (replace) router.replace(href); else router.push(href);
+  const step = lockedStep ?? (Number.isInteger(requestedStep) ? Math.min(STEPS.length, Math.max(1, requestedStep)) : 1);
+  const go = useCallback((n: number) => {
+    router.push(n === 1 ? '/booking/' : `/booking/?step=${n}`);
   }, [router]);
 
   const markers = useBody((s) => s.markers);
@@ -222,20 +218,20 @@ export function useBookingFlow(demoServices: Service[]) {
     ['c-health', rules.filled(c.health === true, 'healthRequired')],
   ]);
   const contactOk = Object.keys(contactCheck(sel.contact)).length === 0;
-  const needsContacts = step === 6 && !contactOk;
+  const needsContacts = step >= 6 && !contactOk;
   // Sync the cleaned address with the router and return deep links to the first required choice.
   useEffect(() => {
     if (!ready) return;
     const url = new URL(window.location.href);
     const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
     const linkedStep = Number(url.searchParams.get('step'));
-    const cappedStep = Number.isInteger(linkedStep) && linkedStep > LAST_AVAILABLE_STEP ? LAST_AVAILABLE_STEP : null;
-    const replacement = lockedStep ?? (needsService ? 2 : needsTime ? 4 : needsContacts ? 5 : cappedStep);
+    const fallback = linkedStep >= 3 ? (needsService ? 2 : needsTime ? 4 : needsContacts ? 5 : step === 7 ? 6 : null) : null;
+    const replacement = lockedStep ?? fallback;
     if (!syncPreset && (replacement === null || replacement === linkedStep)) return;
     if (replacement !== null) url.searchParams.set('step', String(replacement));
     const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
     window.history.replaceState(own, '', url);
-  }, [ready, urlParams, needsService, needsTime, lockedStep, needsContacts]);
+  }, [ready, urlParams, needsService, needsTime, lockedStep, needsContacts, step]);
   const contactMsg = (id: string) => { const c = contactV.errors[id]; return c ? t(`forms.error.${c}`, messageArgs(c)) : undefined; };
   /** blur / change of one field: `code` from the same rules, `filled` = the field has a value */
   const contactField = (id: string, code: ErrorCode | null, filled = true) => contactV.field(id, code, filled);
@@ -251,7 +247,6 @@ export function useBookingFlow(demoServices: Service[]) {
   /** the first step that still needs input (step 1 may be skipped) */
   const firstIncomplete = useCallback(() => (!sel.serviceId ? 2 : !sel.datetime ? 4 : !contactOk ? 5 : 6), [sel.serviceId, sel.datetime, contactOk]);
 
-  useEffect(() => { if (ready && step === 7 && !result) go(firstIncomplete(), true); }, [ready, step, result, go, firstIncomplete]);
   // ТЗ §14 booking_step: once per step change (step 7 only with a result — without it the flow redirects); this flow = source 3d
   const trackedStep = useRef(0);
   useEffect(() => {
@@ -294,7 +289,7 @@ export function useBookingFlow(demoServices: Service[]) {
     if (response.status === 'created') {
       const snapshot = {
         ...response.data, serviceTitle: catalogService.title, durationMin: catalogService.durationMin,
-        staffName: response.data.staff?.name ?? null, zones: markers.map(({ zoneId }) => zoneId), at,
+        zones: markers.map(({ zoneId }) => zoneId), at,
       };
       saveResult(snapshot);
       setStored(snapshot);
@@ -327,9 +322,16 @@ export function useBookingFlow(demoServices: Service[]) {
   }
 
   const startOver = useCallback(() => {
+    // Remove the completed step before clearing the result so the deep-link guard cannot redirect to step 2.
+    window.history.replaceState(null, '', window.location.pathname);
     activeAttempt.current = false;
-    clearResult(); setStored(null); clear(); body.resetDraft(); setError(null); setRestoreDismissed(true); go(1);
-  }, [clear, go]);
+    clearResult();
+    setStored(null);
+    clear();
+    body.resetDraft();
+    setError(null);
+    setRestoreDismissed(true);
+  }, [clear]);
 
   return {
     t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, services: demoServices, ordered, recommended, staffName,

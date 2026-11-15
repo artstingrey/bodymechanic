@@ -45,22 +45,23 @@ function run(check) {
   }) });
 }
 
-async function openReview(origin, locale, staffId, contactIndex) {
+async function openReview(origin, locale, staffId, contactIndex, serviceId = 13982355) {
   const page = await browser.newPage({ viewport: { width: locale === 'ru' ? 390 : 1280, height: 850 }, timezoneId: 'America/Los_Angeles' });
   const messages = JSON.parse(await fs.readFile(new URL(`../messages/${locale}.json`, import.meta.url), 'utf8'));
   const booking = `${origin}/${locale}/booking/`;
   await page.route((url) => url.origin !== origin, (route) => route.abort());
-  await page.addInitScript(({ staffId, contactIndex, date, datetime }) => {
-    if (sessionStorage.getItem('bm.bookingSteps') || sessionStorage.getItem('bm.bookingResult')) return;
+  await page.addInitScript(({ staffId, contactIndex, date, datetime, serviceId }) => {
+    if (sessionStorage.getItem('booking-fixture-seeded')) return;
+    sessionStorage.setItem('booking-fixture-seeded', '1');
     const savedAt = Date.now();
-    sessionStorage.setItem('bm.bookingSteps', JSON.stringify({ version: 2, serviceId: 13982355, staffId, date, datetime, savedAt,
+    sessionStorage.setItem('bm.bookingSteps', JSON.stringify({ version: 2, serviceId, staffId, date, datetime, savedAt,
       contact: { fullname: 'fixture-private-fullname', phone: `+97150${String(contactIndex).padStart(7, '0')}`,
         email: `visitor${contactIndex}@example.test`, age: 36, consent: true, health: true },
     }));
     sessionStorage.setItem('bm.bookingDraft', JSON.stringify({ v: 1, model: 'male', savedAt, generalNote: 'fixture-private-general',
       markers: [{ id: 'marker-1', zoneId: 'knee_l', note: 'fixture-private-marker', intensity: 5, position: [0, 0, 0] }],
     }));
-  }, { staffId, contactIndex, date, datetime });
+  }, { staffId, contactIndex, date, datetime, serviceId });
   const posts = [];
   page.on('request', (request) => {
     if (request.method() === 'POST' && new URL(request.url()).pathname === recordPath) posts.push(request.postDataJSON());
@@ -71,6 +72,60 @@ async function openReview(origin, locale, staffId, contactIndex) {
   await expect(page.getByTestId('captcha')).toHaveAttribute('hidden', '');
   await expect(page.getByTestId('captcha')).toBeHidden();
   return { page, messages, booking, posts, confirm };
+}
+
+async function checkReceipt(page, messages, booking, composite = false) {
+  const copy = messages.booking.done;
+  const done = page.locator('.booking-done');
+  const details = done.locator('.bk-review');
+  await expect(page).toHaveURL(`${booking}?step=7`);
+  await expect(page.locator('#st7')).toHaveText(copy.title);
+  await expect(details).toContainText(composite ? '12345, 12346' : '12345');
+  await expect(details).toContainText('00:20');
+  await expect(details).toContainText('Example specialist');
+  if (composite) {
+    await expect(details).toContainText('Infrared capsule');
+    await expect(details).toContainText('Capsule operator');
+    await expect(details).toContainText('01:50');
+  }
+  const account = done.locator('a[href$="/account/"]');
+  await expect(account).toContainText(copy.myBookings);
+  await expect(account).toBeHidden();
+  const accountNote = done.locator('#booking-demo-account');
+  await expect(accountNote).toHaveText(copy.demoAccount);
+  await expect(accountNote).toBeHidden();
+  const file = page.waitForEvent('download');
+  await done.getByRole('button', { name: copy.calendarIcs }).click();
+  const download = await file;
+  assert.equal(download.suggestedFilename(), 'bodymechanic-booking.ics');
+  const ics = await fs.readFile(await download.path(), 'utf8');
+  const start = new Date(datetime).toISOString().replace(/[-:]|\.\d{3}/g, '');
+  assert.ok(ics.includes(`DTSTART:${start}`));
+  if (composite) assert.match(ics, /DTEND:\d{8}T215000Z/);
+  else assert.doesNotMatch(ics, /DTEND:/);
+  assert.doesNotMatch(ics, secrets);
+  await page.evaluate(() => {
+    window.fixtureActions = [];
+    window.open = (url) => { window.fixtureActions.push(url); return {}; };
+    window.print = () => { window.fixtureActions.push('print'); };
+  });
+  const google = done.getByRole('link', { name: copy.calendarGoogle });
+  await expect(google).toHaveAttribute('href', 'https://calendar.google.com/calendar/render?action=TEMPLATE');
+  await google.click();
+  const whatsapp = done.getByRole('link', { name: copy.whatsapp });
+  await expect(whatsapp).toHaveAttribute('href', /^https:\/\/wa\.me\/\d*$/);
+  await whatsapp.click();
+  await done.getByRole('button', { name: copy.pdf }).click();
+  const [googleUrl, whatsappUrl, print] = await page.evaluate(() => window.fixtureActions);
+  assert.equal(new URL(googleUrl).searchParams.get('dates').split('/')[0], start);
+  assert.match(new URL(whatsappUrl).searchParams.get('text'), /12345/);
+  assert.doesNotMatch(decodeURIComponent(googleUrl + whatsappUrl), secrets);
+  assert.equal(print, 'print');
+  await page.emulateMedia({ media: 'print' });
+  await expect(details).toBeVisible();
+  await expect(google).toBeHidden();
+  await expect(done.getByRole('button', { name: messages.booking.draft.startOver })).toBeHidden();
+  await page.emulateMedia({ media: 'screen' });
 }
 
 try {
@@ -119,13 +174,18 @@ try {
       assert.deepEqual(replay, { status: 202, body: { data: { status: 'processing' } } });
       assert.equal(await creates(), 1);
       await fs.writeFile(release, '');
-      await expect(page.locator('#st6')).toHaveText(messages.booking.done.title);
-      await expect(page.locator('.bk-step [role="status"]').filter({ hasText: '12345' })).toBeVisible();
-      await expect(page.locator('#st7')).toHaveCount(0);
+      await checkReceipt(page, messages, booking);
       assert.match(JSON.parse(await fs.readFile(comments, 'utf8')), /^\[Сайт\/3D\][\s\S]+fixture-private-marker/);
       await page.reload();
-      await expect(page.locator('#st6')).toHaveText(messages.booking.done.title);
+      await expect(page.locator('#st7')).toHaveText(messages.booking.done.title);
       assert.equal(await creates(), 1);
+      await page.getByRole('button', { name: messages.booking.draft.startOver }).click();
+      await expect(page).toHaveURL(booking);
+      await expect(page.locator('#st1')).toBeVisible();
+      assert.equal(await page.evaluate(() => sessionStorage.getItem('bm.bookingResult')), null);
+      await page.goto(`${booking}?step=7`);
+      await expect(page).toHaveURL(`${booking}?step=2`);
+      await expect(page.locator('#st7')).toHaveCount(0);
     } finally {
       await page.close();
     }
@@ -158,7 +218,21 @@ try {
       await page.close();
     }
   });
-  console.log('3D booking review: hidden CAPTCHA, conflict, rejection, one creation, replay, and unknown outcome across reload OK');
+  await scenario('package-confirmed');
+  await run(async (origin) => {
+    const { page, messages, booking, confirm } = await openReview(origin, 'en', 91601, 3, 13982379);
+    try {
+      await confirm.click();
+      await checkReceipt(page, messages, booking, true);
+      await page.reload();
+      await expect(page.locator('#st7')).toHaveText(messages.booking.done.title);
+      await expect(page.locator('.booking-done .bk-review')).toContainText('12345, 12346');
+      assert.equal(await creates(), 1);
+    } finally {
+      await page.close();
+    }
+  });
+  console.log('3D booking: review and confirmed receipt, composite parts, calendar, print, restart and unknown outcome OK');
 } finally {
   await browser?.close();
   for (const file of [fixture, journal, release, comments, marker]) await fs.rm(file, { force: true });

@@ -790,6 +790,8 @@
       "whatsapp": "WhatsApp",
       "myBookings": "My bookings",
       "directions": "Get directions",
+      "addressUnavailable": "Ask the studio for the address.",
+      "demoAccount": "The account currently contains demo bookings only.",
       "addressTodo": "TODO(content): studio address and map link"
     },
     "queued": {

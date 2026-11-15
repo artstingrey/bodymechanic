@@ -11,7 +11,7 @@ import type { Flow } from '../useBookingFlow';
 
 export function StepReview({ flow }: { flow: Flow }) {
   const { t, sel, go, markers, catalogService, staffName, when, busy, confirm, canConfirm,
-    reviewNotice, stored, result, startOver, selectedDatetime } = flow;
+    reviewNotice, stored, selectedDatetime } = flow;
   const datetime = selectedDatetime ?? sel.datetime;
   const uncertain = stored && stored.status !== 'created' && !busy ? stored.status : null;
   const notice = uncertain ?? reviewNotice;
@@ -24,15 +24,8 @@ export function StepReview({ flow }: { flow: Flow }) {
   ];
   return (
     <section aria-labelledby="st6" className="bk-step bk-narrow">
-      <h1 id="st6" tabIndex={-1} className="h2">{t(result ? 'booking.done.title' : 'booking.review.heading')}</h1>
-      {result ? (
-        <div role="status">
-          <p>{t(result.parts ? 'booking.done.references' : 'booking.done.reference')} · {result.parts
-            ? result.parts.map(({ recordId }) => recordId).join(', ')
-            : result.recordId}</p>
-          <Button variant="secondary" onClick={startOver}>{t('booking.draft.startOver')}</Button>
-        </div>
-      ) : canConfirm || stored ? (
+      <h1 id="st6" tabIndex={-1} className="h2">{t('booking.review.heading')}</h1>
+      {canConfirm || stored ? (
         <>
           <dl className="bk-review">
             {rows.map(([label, value, n]) => (
