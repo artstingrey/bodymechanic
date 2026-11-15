@@ -49,7 +49,7 @@ test('stage 11: desktop hero mouse gestures and the shared booking camera', asyn
     await page.mouse.up();
     await drag(92, -65);
     const turned = await readView(page);
-    expect(yawGap(turned.yaw, front.yaw)).toBeGreaterThan(0.4);
+    expect(turned.yaw - front.yaw, 'right drag turns the front of the model right').toBeGreaterThan(0.4);
     expect({ ...turned, yaw: front.yaw }).toEqual(front);
     await page.mouse.up();
     const returning = (await readView(page)).yaw;
@@ -107,9 +107,9 @@ test('stage 11: desktop hero mouse gestures and the shared booking camera', asyn
     ({ x, y } = await liveCanvas(page, 'hero'));
     expect(await page.evaluate(() => window.__bm3d!.contextId)).toBe(contextId);
     const heroAgain = await readView(page);
-    await drag(82, -70);
+    await drag(-82, -70);
     const turnedAgain = await readView(page);
-    expect(yawGap(turnedAgain.yaw, heroAgain.yaw)).toBeGreaterThan(0.4);
+    expect(turnedAgain.yaw - heroAgain.yaw, 'left drag turns the front of the model left').toBeLessThan(-0.4);
     expect({ ...turnedAgain, yaw: heroAgain.yaw }).toEqual(heroAgain);
     await page.mouse.up();
     await book();
@@ -146,7 +146,7 @@ test('stage 11: touch swipes, pinch and cancellation in the hero', async ({ page
   await touch('touchStart', { x, y });
   for (let i = 1; i <= 7; i++) await touch('touchMove', { x: x + i * 10, y: y - i * 2 });
   const turned = await readView(page);
-  expect(yawGap(turned.yaw, front.yaw)).toBeGreaterThan(0.4);
+  expect(turned.yaw - front.yaw, 'right swipe turns the front of the model right').toBeGreaterThan(0.4);
   expect({ ...turned, yaw: front.yaw }).toEqual(front);
   await touch('touchCancel');
   await expect.poll(() => readView(page)).toEqual(front);
@@ -161,8 +161,8 @@ test('stage 11: touch swipes, pinch and cancellation in the hero', async ({ page
   // Scroll back before the next gesture, which must work after both native scroll and explicit touch cancellation.
   await page.evaluate((top) => scrollTo({ top, behavior: 'instant' }), scroll);
   await touch('touchStart', { x, y });
-  for (let i = 1; i <= 5; i++) await touch('touchMove', { x: x + i * 11, y });
-  expect(yawGap((await readView(page)).yaw, front.yaw)).toBeGreaterThan(0.35);
+  for (let i = 1; i <= 5; i++) await touch('touchMove', { x: x - i * 11, y });
+  expect((await readView(page)).yaw - front.yaw, 'left swipe turns the front of the model left').toBeLessThan(-0.35);
   await touch('touchEnd');
   await expect.poll(() => readView(page)).toEqual(front);
 

@@ -228,7 +228,7 @@ export function Scene({ slot }: { slot: Slot }) {
     return bindHeroDrag(gl.domElement, (dx) => {
       dragging.current = true;
       returning.current = null; // continue from the yaw drawn in the most recent frame
-      dragYaw.current -= TURN * dx / Math.max(1, gl.domElement.clientHeight);
+      dragYaw.current += TURN * dx / Math.max(1, gl.domElement.clientHeight);
     }, () => {
       dragging.current = false;
       if (reducedMotion()) dragYaw.current = 0;
