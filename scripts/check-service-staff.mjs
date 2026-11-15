@@ -46,7 +46,7 @@ async function read(origin, url, status, headers) {
   return text;
 }
 
-async function verifyPhotos(page) {
+async function verifyPhotos(page, locale) {
   const block = page.locator(staffBlock);
   const cards = block.locator('.staff');
   await expect(cards.locator('b')).toHaveText(['Alex Example', 'Sam Example']);
@@ -57,7 +57,8 @@ async function verifyPhotos(page) {
   await expect(cards.last().locator('.ph')).toBeVisible();
   const links = cards.locator('b a');
   await expect(links).toHaveText(['Alex Example', 'Sam Example']);
-  assert.deepEqual(await links.evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href'))), ['#', '#']);
+  await expect(links.nth(0)).toHaveAttribute('href', `/${locale}/team/staff-91601/`);
+  await expect(links.nth(1)).toHaveAttribute('href', `/${locale}/team/staff-91602/`);
   await expect(cards.locator('.cap')).toHaveCount(0);
   assert.equal(await block.locator('.home-team-photo').first().evaluate((el) => getComputedStyle(el).aspectRatio), '4 / 4.6');
 }
@@ -113,7 +114,7 @@ try {
       await expect(heading).toBeVisible();
       await fs.writeFile(release, '');
       await expect(block.locator('h2')).toBeFocused();
-      await verifyPhotos(page);
+      await verifyPhotos(page, 'en');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
       await fs.unlink(release);
@@ -127,7 +128,7 @@ try {
       await fs.writeFile(release, '');
       const samePageResponses = await Promise.all(parallel);
       assert.ok(samePageResponses.every((text) => text.includes('Alex Example')));
-      await verifyPhotos(page);
+      await verifyPhotos(page, 'ru');
       assert.equal(await block.evaluate((el) => getComputedStyle(el).gridColumn), '1 / -1');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 

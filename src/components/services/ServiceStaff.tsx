@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import type { getTranslations } from 'next-intl/server';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
+import { catalogStaffSlug } from '@/lib/catalog-staff-slug';
 import { getCatalogServiceStaff } from '@/server/catalog/staff';
 import { StaffCard } from '@/components/ui/Cards';
 import { HomeCatalogResult } from '@/components/sections/HomeCatalogResult';
@@ -22,7 +23,7 @@ async function ServiceStaffCards({ locale, serviceId, headingId, t }: Props) {
         <ul className="card-grid card-grid--4">
           {staff.map(({ id, name, imageUrl }) => (
             <li key={id}>
-              <StaffCard name={name} href="#"
+              <StaffCard name={name} href={`/team/${catalogStaffSlug(id)}`}
                 photo={<HomeTeamPhoto key={imageUrl ?? 'placeholder'} src={imageUrl} alt={name} unavailable={t('home.team.photoUnavailable')} />} />
             </li>
           ))}

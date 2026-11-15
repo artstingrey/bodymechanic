@@ -1,12 +1,13 @@
 import 'server-only';
 
 import type { CatalogLocale } from '@/lib/contracts/catalog';
+import type { StaffTodaySlot } from '@/lib/contracts/staff-today';
 import { AltegioError } from '../altegio/errors';
 import { getCatalogStaffServices } from '../catalog/services';
 import { getAltegioConfig } from '../config';
 import { dubaiBookingDate, getBookingTimes, getNearestStaffTimes } from './availability';
 
-type Slots = Awaited<ReturnType<typeof getNearestStaffTimes>>;
+type Slots = StaffTodaySlot[];
 const inFlight = new Map<string, Promise<Slots>>();
 const retryAt = new Map<number, number>();
 
@@ -32,7 +33,8 @@ async function loadSlots(locationId: number, locale: CatalogLocale, staffId: num
   // Run one request at a time and stop on the first failure, including a rate limit.
   for (const serviceId of new Set(services.map(({ id }) => id))) {
     checkCooldown(locationId);
-    slots.push(...await getBookingTimes(locale, serviceId, staffId, date, { ignoreOtherDates: true }));
+    const times = await getBookingTimes(locale, serviceId, staffId, date, { ignoreOtherDates: true });
+    slots.push(...times.map((time) => ({ ...time, serviceId })));
   }
   return slots;
 }

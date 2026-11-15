@@ -97,8 +97,9 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
           <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: s.name }]} title={s.name} up eyebrow={real ? s.position : undefined}>
             {real ? null : <Badge className="page-head__badge">{t('prototype.demoBadge')}</Badge>}
           </PageHead>
-          {real ? <button type="button" className="btn btn--primary btn-book" disabled>{t('common.actions.bookWithSpecialist')}</button>
-            : <BookingLink preset={{ staff: s.id }} className="btn btn--primary btn-book">{t('common.actions.bookWithSpecialist')}</BookingLink>}
+          <BookingLink preset={{ staff: s.id, staffProfile: real ? true : undefined }} className="btn btn--primary btn-book">
+            {t('common.actions.bookWithSpecialist')}
+          </BookingLink>
           {detail.source === 'altegio' && detail.profile.specialization && detail.profile.specialization !== s.position
             ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${detail.profile.specialization}`}</p> : null}
           {!real && s.position !== t('prototype.demoBadge') ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${s.position}`}</p> : null}
@@ -109,7 +110,7 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
           <Link href="/team" className="btn btn--text">{t('team.profile.back')}</Link>
         </div>
       </div>
-      <div className="doc-sections">
+      <div className="doc-sections" hidden>
         {(['experience', 'education', 'certificates', 'languages'] as const).map((k) => (
           <section key={k}><h2 className="h3">{t(`team.profile.${k}`)}</h2><Todo as="p">{t('team.todo.bio')}</Todo></section>
         ))}

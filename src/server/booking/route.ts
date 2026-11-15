@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { NextRequest } from 'next/server';
 import type { CatalogErrorCode } from '@/lib/contracts/catalog';
+import type { StaffTodayResponse } from '@/lib/contracts/staff-today';
 import { AltegioError } from '../altegio/errors';
 import { getCatalogServices } from '../catalog/services';
 import { getCatalogServiceStaff, getCatalogStaff } from '../catalog/staff';
@@ -50,7 +51,7 @@ export async function respondWithStaffToday(request: NextRequest) {
     const { data: { staff } } = await getCatalogStaff(locale);
     if (!staff.some(({ id }) => id === staffId)) return errorResponse(404, 'STAFF_NOT_FOUND', 'The specialist was not found.');
     const times = await getStaffTodaySlots(locale, staffId);
-    return Response.json({ data: { times } }, { headers: cacheControl });
+    return Response.json({ data: { times } } satisfies StaffTodayResponse, { headers: cacheControl });
   } catch (error) {
     return bookingDataError(error, 'staff-today');
   }

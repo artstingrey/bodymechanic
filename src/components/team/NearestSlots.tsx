@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { getDates, getTimes } from '@/lib/api';
+import { dubaiToday } from '@/lib/api/dubai';
 import type { Slot } from '@/lib/api/types';
+import type { StaffTodayResponse, StaffTodaySlot } from '@/lib/contracts/staff-today';
 import { BookingLink } from '@/components/booking/BookingLink';
 import { Button } from '@/components/ui/Button';
 
-type StaffSlotsState = { status: 'loading' } | { status: 'ready'; times: Slot[] }
+type StaffSlotsState = { status: 'loading' } | { status: 'ready'; times: StaffTodaySlot[] }
   | { status: 'error'; rateLimited: boolean; waiting: boolean };
 
 function retryDelay(header: string | null) {
@@ -38,7 +40,7 @@ export function StaffTodaySlots({ staffId }: { staffId: number }) {
           return;
         }
         if (!response.ok) throw new Error('Staff availability is unavailable');
-        const { data: { times } } = await response.json() as { data: { times: Slot[] } };
+        const { data: { times } } = await response.json() as StaffTodayResponse;
         if (!controller.signal.aborted) setState({ status: 'ready', times });
       } catch {
         if (!controller.signal.aborted) setState({ status: 'error', rateLimited: false, waiting: false });
@@ -62,9 +64,12 @@ export function StaffTodaySlots({ staffId }: { staffId: number }) {
   return (
     <ul>{state.times.map((slot) => (
       <li key={slot.datetime}>
-        <time dateTime={slot.datetime}>
-          {f.dateTime(new Date(slot.datetime), { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' })}, {t('common.timeWithZone', { time: slot.time })}
-        </time>
+        <BookingLink preset={{ staff: staffId, staffProfile: true, service: slot.serviceId, date: dubaiToday(new Date(slot.datetime)), time: slot.time }}
+          step={2} prefetch={false}>
+          <time dateTime={slot.datetime}>
+            {f.dateTime(new Date(slot.datetime), { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' })}, {t('common.timeWithZone', { time: slot.time })}
+          </time>
+        </BookingLink>
       </li>
     ))}</ul>
   );

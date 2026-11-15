@@ -111,7 +111,7 @@
 }
 .doc-sections { margin-top: 48px; display: grid; gap: 0 32px; }
 .doc-sections > section { display: grid; gap: 10px; align-content: start; padding: 20px 0; border-top: 1px solid var(--line); }
-.doc-sections > section[hidden] { display: none; }
+.doc-sections[hidden], .doc-sections > section[hidden] { display: none; }
 .doc-sections > section .h3, .doc-sections > section p { margin: 0; }
 .doc-sections .staff b { overflow-wrap: anywhere; }
 @media (min-width: 768px) { .doc-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); } .doc-sections__wide { grid-column: 1 / -1; } }
@@ -148,7 +148,7 @@
 .profile__slots { display: grid; gap: 10px; }
 .profile__slots .h3 { margin: 0; }
 .profile__slots ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
-.profile__slots li > :is(a, time) { min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border);
+.profile__slots li > a { min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border);
   color: var(--text); text-decoration: none; font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color var(--d-hover) var(--e-out), color var(--d-hover) var(--e-out); }
 @media (hover: hover) { .profile__slots li > a:hover { background: var(--text); color: var(--bg); box-shadow: none; } }
 /* below 1024 the slots sit in the first screen above the photo (D-03): one slot per row, so the list height never depends on
@@ -156,14 +156,14 @@
    does not jump when they arrive after hydration (Lighthouse CLS 0.065 → 0) */
 @media (max-width: 1023px) {
   .profile__slots ul { flex-direction: column; align-items: stretch; } /* full-width windows, not a left column (design audit F18) */
-  .profile__slots li > :is(a, time) { width: 100%; }
+  .profile__slots li > a { width: 100%; }
   .profile__slots .booking-loading { min-height: calc(4 * 44px + 3 * 8px); align-items: flex-start; padding-top: 12px; }
 }
 /* tablets 600–1023 (AD's V2, lead): the windows as pills two by two, not full-width bars; the grid fixes the height
    (2 rows for the 4 windows), and the loading line reserves exactly that — no shift when they arrive (CLS ≤ 0.1) */
 @media (min-width: 600px) and (max-width: 1023px) {
   .profile__slots ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 560px; }
-  .profile__slots li > :is(a, time) { justify-content: center; }
+  .profile__slots li > a { justify-content: center; }
   .profile__slots .booking-loading { min-height: calc(2 * 44px + 8px); }
 }
 @media (min-width: 1024px) { .profile { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: start; } }

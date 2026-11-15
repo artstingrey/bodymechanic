@@ -14,10 +14,129 @@ const settings = (slots = 'mixed', now = defaultNow, catalog = 'ready') => write
 const profile = (locale, slug = 'staff-91601') => `/${locale}/team/${slug}/`;
 const api = (locale, staffId = 91601) => `/api/booking/staff-today?staffId=${staffId}&locale=${locale}`;
 
+async function checkBookingFromProfile(page, origin, locale, name, copy) {
+  const detail = `${origin}/${locale}/services/sports/`;
+  const booking = `${origin}/${locale}/booking/`;
+  const staffProfile = origin + profile(locale);
+  const cta = page.locator('.profile').getByRole('link', { name: copy.common.actions.bookWithSpecialist, exact: true });
+  const next = page.getByRole('button', { name: copy.common.actions.next, exact: true });
+  const back = page.getByRole('button', { name: copy.common.actions.back, exact: true });
+  const skip = page.getByRole('button', { name: copy.body3d.panel.skip, exact: true });
+  const service = (id) => page.locator(`input[name="service"][value="${id}"]`);
+  const staff = (id) => page.locator(`input[name="staff"][value="${id}"]`);
+  const time = (label) => page.locator('.times').getByRole('button', { name: label, exact: true });
+  const checkedService = page.locator('input[name="service"]:checked');
+  const saved = () => page.evaluate(() => JSON.parse(sessionStorage.getItem('bm.bookingSteps')));
+  const sports = 13982355;
+  const classic = 13982356;
+  const other = 91201;
+  const preferred = 91601;
+
+  const open = async (link, step) => {
+    await expect(link).toHaveAttribute('href', `/${locale}/booking/${step === 1 ? '' : '?step=2'}`);
+    await link.click();
+    await expect(page).toHaveURL(booking + (step === 1 ? '' : '?step=2'));
+    await expect(page.locator(`.booking[data-ready="true"] #st${step}`)).toBeVisible();
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('bm.bookingPreset')), null);
+  };
+  const windowLink = (label) => page.locator('.profile__slots a').filter({ hasText: label });
+
+  await settings();
+  await page.clock.setFixedTime(new Date(defaultNow));
+  // A direct visit with no draft follows the usual path with no service or individual specialist chosen.
+  await page.goto(booking);
+  await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
+  await skip.click();
+  await expect(service(sports)).toBeVisible();
+  await expect(checkedService).toHaveCount(0);
+  await service(sports).check();
+  await next.click();
+  await expect(page).toHaveURL(`${booking}?step=3`);
+  await expect(staff(0)).toBeEnabled();
+  await expect(staff(0)).toBeChecked();
+
+  const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true, health: true };
+  await page.evaluate(({ classic, contact }) => {
+    sessionStorage.setItem('bm.bookingSteps', JSON.stringify({
+      version: 2, savedAt: Date.now(), serviceId: classic, staffId: 91602, contact,
+      date: '2026-11-15', datetime: '2026-11-15T18:00:00+04:00',
+    }));
+  }, { classic, contact });
+  await page.goto(detail);
+  const profileLink = page.locator('section[aria-labelledby="service-specialists-title"]').getByRole('link', { name, exact: true });
+  await expect(profileLink).toHaveAttribute('href', profile(locale));
+  await profileLink.click();
+  await expect(page).toHaveURL(staffProfile);
+  await open(cta, 1);
+  assert.equal((await saved()).staffId, preferred);
+  assert.equal((await saved()).datetime, null);
+  assert.deepEqual((await saved()).contact, contact);
+  await skip.click();
+  await expect(service(classic)).toBeChecked();
+  await service(other).check();
+  await next.click();
+  await expect(page.locator('.bk-main').getByRole('alert')).toHaveText(copy.home.form.feedback.staffUnavailable);
+  await expect(staff(91602)).toBeEnabled();
+  await expect(next).toBeDisabled();
+  await back.click();
+  await service(sports).check();
+  await next.click();
+  await expect(page).toHaveURL(`${booking}?step=3`);
+  await expect(staff(preferred)).toBeChecked();
+  await expect(next).toBeEnabled();
+
+  await page.goto(staffProfile);
+  await open(windowLink('16:30'), 2);
+  await expect(service(sports)).toBeVisible();
+  await expect(checkedService).toHaveCount(0);
+  await service(other).check();
+  await next.click();
+  await expect(page).toHaveURL(`${booking}?step=3`);
+  await expect(page.locator('.bk-main').getByRole('alert')).toHaveText(copy.home.form.feedback.staffUnavailable);
+  await back.click();
+  await service(sports).check();
+  let release;
+  const held = new Promise((resolve) => { release = resolve; });
+  const timesRequest = (url) => url.pathname === '/api/booking/times';
+  await page.route(timesRequest, async (route) => { await held; await route.continue(); }, { times: 1 });
+  try {
+    const requested = page.waitForRequest((request) => timesRequest(new URL(request.url())));
+    await next.click();
+    await expect(page).toHaveURL(`${booking}?step=4`);
+    const query = new URL((await requested).url()).searchParams;
+    assert.deepEqual(Object.fromEntries(query), { serviceId: String(sports), staffId: String(preferred), locale, date: '2026-11-15' });
+    await expect(next).toBeDisabled();
+    assert.equal((await saved()).datetime, null);
+  } finally {
+    release();
+  }
+  await expect(time('16:30')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await saved()).datetime).toBe('2026-11-15T12:30:00Z');
+
+  await page.goto(staffProfile);
+  await open(windowLink('16:30'), 2);
+  await settings('gone');
+  await service(sports).check();
+  await next.click();
+  await expect(page).toHaveURL(`${booking}?step=4`);
+  await expect(page.getByTestId('slot-unfit')).toHaveText(copy.booking.time.slotUnfit);
+  await expect(next).toBeDisabled();
+  await time('19:00').click();
+  await expect(next).toBeEnabled();
+
+  await settings('fallback');
+  await page.goto(staffProfile);
+  await open(windowLink('16:15'), 2);
+  await expect(service(classic)).toBeChecked();
+  await next.click();
+  await expect(page).toHaveURL(`${booking}?step=4`);
+  await expect(time('16:15')).toHaveAttribute('aria-pressed', 'true');
+}
+
 let browser;
 try {
   await settings('empty', defaultNow, 'failed');
-  browser = await chromium.launch({ channel: 'chrome' });
+  browser = await chromium.launch({ channel: 'chrome', args: ['--disable-3d-apis'] });
   await withProductionServer(async (origin, logs) => {
     // Exercise a failed cold catalog before the failure can be covered by a cached successful result.
     for (const locale of ['ru', 'en']) {
@@ -162,6 +281,18 @@ try {
     assert.equal((await fetch(origin + api('en', 0))).status, 400);
     assert.equal((await fetch(origin + api('en') + '&locale=ru')).status, 400);
     console.log('Dubai midnight, service fallback, no-store and input validation passed');
+
+    for (const [locale, name] of [['ru', 'Анна Пример'], ['en', 'Anna Example']]) {
+      const copy = JSON.parse(await readFile(new URL(`../messages/${locale}.json`, import.meta.url), 'utf8'));
+      const page = await browser.newPage({ timezoneId: 'America/Los_Angeles' });
+      try {
+        await page.route('https://images.example.test/**', (route) => route.abort());
+        await checkBookingFromProfile(page, origin, locale, name, copy);
+      } finally {
+        await page.close();
+      }
+      console.log(`Sports detail → staff profile → validated booking preferences passed in ${locale.toUpperCase()}`);
+    }
   }, { preload, env: {
     ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)), ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
     ALTEGIO_CURRENCY: 'AED', STAFF_PROFILE_FIXTURE: fixture,

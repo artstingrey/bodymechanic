@@ -8,6 +8,8 @@ import { isLegacyStaffId, restoreServiceId } from './service-catalog';
 export interface Selection {
   serviceId: number | null;
   staffId: number; // 0 = any (ТЗ §08)
+  /** Retain the profile's specialist while the visitor considers services. A window may belong to one service. */
+  staffPreset?: { serviceId?: number } | null;
   date: string | null;
   /** preferred day carried in by a link (specialist's «nearest windows» → ?date=): opens the calendar there once the
    *  service is chosen and the day is free; a day the visitor picks always wins */
@@ -55,6 +57,7 @@ export function useBookingSelection() {
       next = {
         ...stored,
         ...(changedService ? { staffId: 0 } : {}),
+        ...(changedService || preset.staffId !== undefined ? { staffPreset: null } : {}),
         ...(changedService || changedStaff ? { date: null, datetime: null, wantDate: null, wantTime: null } : {}),
         ...preset,
       };

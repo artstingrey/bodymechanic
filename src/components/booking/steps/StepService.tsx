@@ -8,7 +8,7 @@ import { Summary } from './Summary';
 import type { Flow } from '../useBookingFlow';
 
 export function StepService({ flow }: { flow: Flow }) {
-  const { t, ordered, recommended, catalogQ, catalogService, selectService, go } = flow;
+  const { t, ordered, recommended, catalogQ, catalogService, selectService, advanceFromService, go } = flow;
   return (
     <section aria-labelledby="st2" className="bk-step bk-grid">
       <Summary flow={flow} />
@@ -33,7 +33,7 @@ export function StepService({ flow }: { flow: Flow }) {
         </ul> : <p className="hint" role="status">{t('booking.service.empty')}</p>)}
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(1)}>{t('common.actions.back')}</Button>
-          <Button disabled={!catalogService} onClick={() => go(3)}>{t('common.actions.next')}</Button>
+          <Button disabled={!catalogService} onClick={advanceFromService}>{t('common.actions.next')}</Button>
         </div>
       </div>
     </section>

@@ -18,7 +18,7 @@
  * Only service, staff, date and time leave the address: the step, UTM tags, click ids and the hash stay where they are.
  * Numbers, a day and a time: nothing about wellbeing passes here.
  */
-export interface BookingPreset { service?: number; staff?: number; date?: string; time?: string }
+export interface BookingPreset { service?: number; staff?: number; date?: string; time?: string; staffProfile?: true }
 /** what the booking takes: the preset and/or the word that the entry it replaces was opened with a service of its own */
 export type HandOver = BookingPreset & { own?: boolean };
 
@@ -56,6 +56,7 @@ function clean(v: unknown): HandOver | null {
   const time = typeof r.time === 'string' && /^\d{2}:\d{2}$/.test(r.time) ? r.time : undefined;
   const p: HandOver = {
     ...(service ? { service } : {}), ...(staff ? { staff } : {}), ...(date ? { date } : {}), ...(time ? { time } : {}),
+    ...(staff && r.staffProfile === true ? { staffProfile: true as const } : {}),
     ...(r.own === 1 ? { own: true } : {}),
   };
   return Object.keys(p).length ? p : null;

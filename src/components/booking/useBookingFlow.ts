@@ -100,14 +100,17 @@ export function useBookingFlow(demoServices: Service[]) {
     const p = handedOver.current ?? {};
     const presetServiceId = restoreServiceId(p.service ?? null);
     const legacyStaff = p.staff !== undefined && isLegacyStaffId(p.staff);
+    const fromStaffProfile = p.staffProfile === true && !legacyStaff;
+    const profileWindow = fromStaffProfile && !!p.date && !!p.time;
     const s = load({
-      ...(presetServiceId === null ? {} : { serviceId: presetServiceId }),
+      ...(presetServiceId !== null || profileWindow ? { serviceId: presetServiceId } : {}),
       ...(p.staff && !legacyStaff ? { staffId: p.staff } : {}),
+      ...(fromStaffProfile ? { staffPreset: { serviceId: presetServiceId ?? undefined }, wantDate: null, wantTime: null } : {}),
       ...(p.date && !legacyStaff ? { wantDate: p.date, wantTime: p.time ?? null, date: null, datetime: null } : {}),
     });
     // a service this visit brought itself is not «a draft found» — also after F5 on the same history entry and after the
     // language switch (`own`: the flag of the entry in the other language came along)
-    const ownService = entryBroughtService(presetServiceId !== null || !!p.own);
+    const ownService = entryBroughtService(presetServiceId !== null || fromStaffProfile || !!p.own);
     const hasSavedSelection = s.serviceId !== null || !!(s.contact.fullname || s.contact.phone || s.contact.email || s.contact.age);
     setSelRestored(hasSavedSelection && !ownService);
     setStored(loadResult());
@@ -147,28 +150,33 @@ export function useBookingFlow(demoServices: Service[]) {
   const needsService = step >= 3 && (sel.serviceId === null || (catalogQ.status === 'ready' && !catalogService));
   useEffect(() => {
     if (!stored && catalogQ.status === 'ready' && sel.serviceId !== null && !catalogService) {
-      update({ serviceId: null, staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null });
+      update({ serviceId: null, staffId: sel.staffPreset ? sel.staffId : 0, date: null, datetime: null, wantDate: null, wantTime: null });
     }
-  }, [stored, catalogQ.status, sel.serviceId, catalogService, update]);
-  const selectService = (serviceId: number) => update({
-    serviceId,
-    date: null,
-    datetime: null,
-    // A preset without a service can carry a specialist or preferred day for the first choice.
-    ...(sel.serviceId === null ? {} : { staffId: 0, wantDate: null, wantTime: null }),
-  });
+  }, [stored, catalogQ.status, sel.serviceId, sel.staffId, sel.staffPreset, catalogService, update]);
+  const selectService = (serviceId: number) => {
+    const firstChoice = sel.serviceId === null;
+    const retainWindow = firstChoice || (sel.staffPreset && sel.wantTime && sel.staffPreset.serviceId === undefined);
+    update({
+      serviceId, date: null, datetime: null,
+      ...(!firstChoice && !sel.staffPreset ? { staffId: 0 } : {}),
+      ...(!retainWindow ? { wantDate: null, wantTime: null } : {}),
+    });
+  };
+  const advanceFromService = () => go(sel.staffPreset && sel.wantDate && sel.wantTime ? 4 : 3);
 
   const catalogServiceId = catalogService?.id;
   const staffQ = useAsync(step >= 3 && catalogServiceId !== undefined,
-    (signal) => getBookingStaff(locale, catalogServiceId!, signal), ['staff', locale, catalogServiceId]);
+    (signal) => getBookingStaff(locale, catalogServiceId!, signal), ['staff', locale, catalogServiceId], !!sel.staffPreset);
   const staffName = staffQ.status === 'ready' ? staffQ.data?.find(({ id }) => id === sel.staffId)?.name ?? null : null;
   const staffUnavailable = staffQ.status === 'ready' && sel.staffId !== 0 && staffName === null;
+  const profileStaffUnavailable = !!sel.staffPreset && staffUnavailable;
+  const needsStaff = step >= 4 && profileStaffUnavailable;
   const selectStaff = useCallback((staffId: number) => {
-    update({ staffId, date: null, datetime: null, wantDate: null, wantTime: null });
+    update({ staffId, staffPreset: null, date: null, datetime: null, wantDate: null, wantTime: null });
   }, [update]);
   useEffect(() => {
-    if (!stored && staffUnavailable) selectStaff(0);
-  }, [stored, staffUnavailable, selectStaff]);
+    if (!stored && staffUnavailable && !profileStaffUnavailable) selectStaff(0);
+  }, [stored, staffUnavailable, profileStaffUnavailable, selectStaff]);
 
   const availabilityEnabled = step >= 4 && !result && catalogServiceId !== undefined && staffQ.status === 'ready' && !staffUnavailable;
   const availabilitySelection = { serviceId: catalogServiceId!, staffId: sel.staffId, locale };
@@ -225,13 +233,13 @@ export function useBookingFlow(demoServices: Service[]) {
     const url = new URL(window.location.href);
     const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
     const linkedStep = Number(url.searchParams.get('step'));
-    const fallback = linkedStep >= 3 ? (needsService ? 2 : needsTime ? 4 : needsContacts ? 5 : step === 7 ? 6 : null) : null;
+    const fallback = linkedStep >= 3 ? (needsService ? 2 : needsStaff ? 3 : needsTime ? 4 : needsContacts ? 5 : step === 7 ? 6 : null) : null;
     const replacement = lockedStep ?? fallback;
     if (!syncPreset && (replacement === null || replacement === linkedStep)) return;
     if (replacement !== null) url.searchParams.set('step', String(replacement));
     const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
     window.history.replaceState(own, '', url);
-  }, [ready, urlParams, needsService, needsTime, lockedStep, needsContacts, step]);
+  }, [ready, urlParams, needsService, needsStaff, needsTime, lockedStep, needsContacts, step]);
   const contactMsg = (id: string) => { const c = contactV.errors[id]; return c ? t(`forms.error.${c}`, messageArgs(c)) : undefined; };
   /** blur / change of one field: `code` from the same rules, `filled` = the field has a value */
   const contactField = (id: string, code: ErrorCode | null, filled = true) => contactV.field(id, code, filled);
@@ -335,7 +343,7 @@ export function useBookingFlow(demoServices: Service[]) {
 
   return {
     t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, services: demoServices, ordered, recommended, staffName,
-    catalogQ, catalogService, selectService, selectStaff,
+    catalogQ, catalogService, selectService, advanceFromService, selectStaff, profileStaffUnavailable,
     today, availableDates, selectedDate, selectedDatetime,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,
     contactErrors: contactV.errors, contactAttempt: contactV.attempt, contactMsg, contactField, submitContacts,

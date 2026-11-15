@@ -8,13 +8,14 @@ import { Summary } from './Summary';
 import type { Flow } from '../useBookingFlow';
 
 export function StepSpecialist({ flow }: { flow: Flow }) {
-  const { t, sel, selectStaff, go, staffQ, catalogQ, staffName } = flow;
+  const { t, sel, selectStaff, go, staffQ, catalogQ, staffName, profileStaffUnavailable } = flow;
   const staffReady = staffQ.status === 'ready';
   return (
     <section aria-labelledby="st3" className="bk-step bk-grid">
       <Summary flow={flow} />
       <div className="bk-main">
         <h1 id="st3" tabIndex={-1} className="h2">{t('booking.staff.heading')}</h1>
+        {profileStaffUnavailable ? <p className="hint" role="alert">{t('home.form.feedback.staffUnavailable')}</p> : null}
         <ul className="bk-list">
           <li>
             <label className="rcard bk-opt">
