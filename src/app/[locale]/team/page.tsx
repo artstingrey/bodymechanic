@@ -50,7 +50,7 @@ export default async function TeamPage() {
       <Suspense fallback={<div className="home-catalog-state" role="status">{t('home.team.loading')}</div>}>
         <TeamCatalog locale={locale} t={t} />
       </Suspense>
-      <Todo as="p" hidden>{t('team.todo.bio')}</Todo>
+      <Todo as="p">{t('team.todo.bio')}</Todo>
     </div>
   );
 }

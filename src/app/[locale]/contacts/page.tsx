@@ -3,7 +3,7 @@ import { pageLocale } from '@/lib/locale';
 import { pageMetadata } from '@/lib/seo';
 import { PageLd } from '@/components/seo/PageLd';
 import { PageHead } from '@/components/sections/PageHead';
-import { Todo, isTodo } from '@/components/ui/Todo';
+import { isTodo } from '@/components/ui/Todo';
 
 export async function generateMetadata() {
   return pageMetadata(await pageLocale(), 'contacts', '/contacts');
@@ -15,29 +15,25 @@ const FIELDS = ['address', 'directions', 'parking', 'hours', 'whatsapp', 'phone'
  * iframe loads only after a click (README §5, IN-07). */
 export default async function ContactsPage() {
   const t = await getTranslations();
+  const contacts = FIELDS.map((key) => [key, t(`contacts.value.${key}`)] as const).filter(([, value]) => !isTodo(value));
   return (
     <div className="container page">
       <PageLd kind="contacts" />
       <PageHead up title={t('contacts.title')} />
       <div className="contacts">
-        {/* nothing known yet (all seven values TODO): one line + one «Демо» for the block, not a pill on every row (BD recheck S03,
-            lead: one demo mark per block; MA: contacts.pending comes with the RC-3 deck). The notes stay in data-todo for QA. */}
-        {FIELDS.every((k) => isTodo(t(`contacts.value.${k}`)))
-          ? (
+        {contacts.length === 0
+          ? (t.has('contacts.pending') ? (
             <div className="contacts__list">
-              <p className="pending">{t.has('contacts.pending') ? <span>{t('contacts.pending')}</span> : null}<span className="badge">{t('prototype.demoBadge')}</span></p>
-              {FIELDS.map((k) => <Todo key={k} as="span" hidden>{t(`contacts.value.${k}`)}</Todo>)}
+              <p className="pending">{t('contacts.pending')}</p>
             </div>
-          )
-          : <dl className="contacts__list">{FIELDS.map((k) => (<div key={k}><dt>{t(`contacts.label.${k}`)}</dt><Todo as="dd">{t(`contacts.value.${k}`)}</Todo></div>))}</dl>}
+          ) : null)
+          : <dl className="contacts__list">{contacts.map(([key, value]) => <div key={key}><dt>{t(`contacts.label.${key}`)}</dt><dd>{value}</dd></div>)}</dl>}
         {isTodo(t('contacts.value.address'))
           ? (
-            // no address yet (reviewer, RC-2): the brand map placeholder, as the landing's «Как добраться» — Bone plate, the
-            // pin, «Адрес появится перед запуском» (the page's one «Демо» sits with the list above, S03). No grid, no disabled
-            // button, no «loads after the click» hint.
+            // The branded map placeholder uses the same pending-address copy as the landing pages.
             <figure className="map-facade map-facade--pending">
               <span className="map-facade__pin" aria-hidden="true" />
-              <figcaption className="map-facade__cap">{t.has('lp.directions.pending') ? <span>{t('lp.directions.pending')}</span> : <span className="badge">{t('prototype.demoBadge')}</span>}</figcaption>
+              {t.has('lp.directions.pending') ? <figcaption className="map-facade__cap">{t('lp.directions.pending')}</figcaption> : null}
             </figure>
           )
           : (

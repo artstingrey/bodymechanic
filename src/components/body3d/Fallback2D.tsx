@@ -158,7 +158,7 @@ export function Fallback2D() {
   const [side, setSide] = useState<'front' | 'back'>('front');
   return (
     <section className="b2d-mode" aria-label={t('body3d.mode2d.badge')} data-testid="b2d">
-      <p><span className="demo-badge">{t('body3d.mode2d.badge')}</span> {reason === 'noWebgl' ? t('body3d.mode2d.noWebgl') : reason === 'lowFps' ? t('body3d.mode2d.lowFps') : null}</p>
+      <p><span className="badge badge--dark">{t('body3d.mode2d.badge')}</span> {reason === 'noWebgl' ? t('body3d.mode2d.noWebgl') : reason === 'lowFps' ? t('body3d.mode2d.lowFps') : null}</p>
       <p>{t('body3d.mode2d.text')}</p>
       <Segmented className="b2d-side" label={t('body3d.mode2d.badge')} value={side} onChange={setSide}
         options={[{ value: 'front', label: t('body3d.list.groupFront') }, { value: 'back', label: t('body3d.list.groupBack') }]} />

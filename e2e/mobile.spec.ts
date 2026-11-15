@@ -161,13 +161,12 @@ test('R-FINAL-2 F2-01: /booking step 1 — the model ≥ 55 % of the visible hei
     return {
       free: Math.min(slot.bottom, sheet.top, cta.top) - Math.max(slot.top, bar.bottom),
       sameRow: Math.abs((h1.top + h1.bottom) / 2 - (step.top + step.bottom) / 2) < 4 && h1.height < 30,
-      demoBar: !!document.querySelector('.demo-notice') && getComputedStyle(document.querySelector('.demo-notice')!).display !== 'none',
     };
   });
   const need = vp.height < 600 ? 0.5 : 0.55;
   expect(m.free / vp.height, `free model ${Math.round(m.free)} px of ${vp.height}`).toBeGreaterThanOrEqual(need);
   expect(m.sameRow, '«Step 1 of 7» and the H1 share one row').toBe(true);
-  expect(m.demoBar, 'no demo bar over the model on phones').toBe(false);
+  await expect(page.locator('.demo-notice')).toHaveCount(0);
   await expect(page.locator('#st1')).toHaveText(en.booking.zones.heading); // the H1 stays in the DOM
   // a marker from the zone list: the sheet stays in peek and names it («Marker 1 · …»)
   await page.locator('#zone-list input[type="checkbox"]').first().check();

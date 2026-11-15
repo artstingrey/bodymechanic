@@ -35,7 +35,7 @@ export default async function BookingPage() {
     <ScopeMessages messages={await pickMessages([
       'body3d', 'home.hero', 'booking', 'forms', 'contraindications', 'mock',
       'home.services.cards', 'home.services.priceUnknown', 'home.services.priceFrom', 'home.services.duration',
-      'home.form.feedback',
+      'home.form.feedback', 'account.sampleRecords',
     ])}>
     <div className="container bk-page">
       <script dangerouslySetInnerHTML={{ __html: ABSORB_PRESET_INLINE + DEEP_LINK_GUARD }} />

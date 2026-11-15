@@ -96,15 +96,14 @@ async function browserChecks(origin) {
     const sectionHeadingsByLocale = new Map();
     const wideSections = page.locator('.doc-sections > .doc-sections__wide');
     async function checkSectionVisibility(locale) {
-      await expect(sections.locator(':scope > section[hidden]')).toHaveCount(7);
+      await expect(sections.locator(':scope > section[hidden]')).toHaveCount(1);
       const visibleSections = sections.locator(':scope > section:visible');
       await expect(visibleSections).toHaveCount(1);
       await expect(visibleSections).toHaveAttribute('aria-labelledby', 'service-specialists-title');
-      await expect(sectionHeadings).toHaveCount(8);
+      await expect(sectionHeadings).toHaveCount(2);
       await expect(wideSections).toHaveCount(2);
       const faq = sectionHeadings.filter({ hasText: locale === 'ru' ? 'Вопросы по услуге' : 'Questions about this service' });
-      await expect(faq).toHaveCount(1);
-      await expect(faq).toBeHidden();
+      await expect(faq).toHaveCount(0);
     }
     const missingPage = await page.goto(origin + paths.page('ru', 'service-94999'));
     assert.equal(missingPage.status(), 404);
@@ -127,7 +126,7 @@ async function browserChecks(origin) {
       await expect(wideSections.first().getByRole('status')).toHaveText(locale === 'ru'
         ? 'Для этой услуги пока нет специалистов.' : 'No specialists are currently listed for this service.');
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
-      await expect(page.locator('.demo-notice')).toBeVisible();
+      await expect(page.locator('.demo-notice')).toHaveCount(0);
       const cta = hero.getByRole('link', { name: locale === 'ru' ? 'Записаться' : 'Book' });
       await expect(cta).toBeVisible();
       await expect(cta).toHaveAttribute('href', `/${locale}/booking/`);
@@ -144,7 +143,7 @@ async function browserChecks(origin) {
       await expect(hero.locator('.eyebrow, .hero-lead, .badge')).toHaveCount(0);
       await checkSectionVisibility(locale);
       await expect(sectionHeadings).toHaveText(sectionHeadingsByLocale.get(locale));
-      await expect(page.locator('.doc-sections > section > .todo')).toHaveCount(6);
+      await expect(page.locator('.doc-sections > section > .todo')).toHaveCount(0);
       await expect(wideSections.first().getByRole('status')).toBeVisible();
       await expect(wideSections.last().locator(`a[href^="/${locale}/journal/"]`)).toHaveCount(2);
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
@@ -174,7 +173,7 @@ async function browserChecks(origin) {
         } else {
           const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
           await expect(demoCta).toHaveAttribute('href', '/en/booking/');
-          await expect(hero.locator('.facts .badge')).toBeVisible();
+          await expect(hero.locator('.facts .badge')).toHaveCount(0);
           await checkSectionVisibility('en');
           await expect(wideSections.first().locator('.staff a[href^="/en/team/"]').first()).toBeVisible();
         }

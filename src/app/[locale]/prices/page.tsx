@@ -6,13 +6,12 @@ import { PageLd } from '@/components/seo/PageLd';
 import { getCategories, getServices } from '@/lib/api';
 import { serviceFacts } from '@/components/services/ServiceFacts';
 import { PageHead } from '@/components/sections/PageHead';
-import { Badge } from '@/components/ui/Badge';
 
 export async function generateMetadata() {
   return pageMetadata(await pageLocale(), 'prices', '/prices');
 }
 
-/** /prices (ТЗ §10): price list by Altegio categories. Prototype prices = «Демо» (no invented numbers). */
+/** /prices (ТЗ §10): price list by category. */
 export default async function PricesPage() {
   const locale = await pageLocale();
   const t = await getTranslations();
@@ -30,7 +29,7 @@ export default async function PricesPage() {
               {/* price first, then duration — the order of the cards; no «—» stand-in for a missing duration (design audit F16) */}
               <thead><tr><th scope="col">{t('prices.col.service')}</th><th scope="col">{t('prices.col.price')}</th><th scope="col">{t('prices.col.duration')}</th></tr></thead>
               <tbody>{services.filter((s) => s.categoryId === c.id).map((s) => (
-                <tr key={s.id}><th scope="row"><Link href={`/services/${s.slug}`}>{s.title}</Link></th><td className="tn price-table__price">{facts.price(s)} <Badge>{facts.demo}</Badge></td><td className="tn">{facts.durationList(s) ?? ''}</td></tr>
+                <tr key={s.id}><th scope="row"><Link href={`/services/${s.slug}`}>{s.title}</Link></th><td className="tn price-table__price">{facts.price(s)}</td><td className="tn">{facts.durationList(s) ?? ''}</td></tr>
               ))}</tbody>
             </table>
           </div>

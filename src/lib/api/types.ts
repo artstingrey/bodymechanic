@@ -39,7 +39,7 @@ export interface Service {
   title: string;
   categoryId: number;
   categoryTitle: string;
-  /** Prototype: from site/copy/mock-data.json (client's plan), always shown with the «Демо» badge. null = price on request. */
+  /** Prototype: from site/copy/mock-data.json (client's plan). null = price on request. */
   priceMin: number | null;
   priceMax: number | null;
   /** true → «Цена — по запросу» (mock.price.onRequest) instead of a price. */

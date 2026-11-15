@@ -8,7 +8,6 @@
 import { PrivateLink } from '@/components/layout/PrivateLink';
 import { downloadIcs, GOOGLE_CALENDAR_BASE, googleCalendarUrl, type CalEvent } from '@/lib/booking/calendar';
 import { STUDIO, WHATSAPP_BASE, whatsappUrl } from '@/lib/config';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PrefilledLink } from '@/components/ui/PrefilledLink';
 import { Icon } from '@/components/ui/Icon';
@@ -69,10 +68,10 @@ export function StepDone({ flow }: { flow: Flow }) {
           <PrefilledLink className="chip" href={WHATSAPP_BASE} full={() => whatsappUrl(summary)}>{t('booking.done.whatsapp')}</PrefilledLink>
         </div>
         <div hidden>
-          <PrivateLink className="btn btn--text" href="/account" aria-describedby="booking-demo-account">
-            {t('booking.done.myBookings')} <Badge>{t('prototype.demoBadge')}</Badge><Icon name="arrow-right" />
+          <PrivateLink className="btn btn--text" href="/account" aria-describedby="booking-account-note">
+            {t('booking.done.myBookings')} <Icon name="arrow-right" />
           </PrivateLink>
-          <p className="cap" id="booking-demo-account">{t('booking.done.demoAccount')}</p>
+          <p className="cap" id="booking-account-note">{t('account.sampleRecords')}</p>
         </div>
       </div>
       <div className="bk-actions"><Button variant="secondary" onClick={startOver}>{t('booking.draft.startOver')}</Button></div>

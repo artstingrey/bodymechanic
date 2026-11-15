@@ -60,8 +60,6 @@ export default async function LocaleLayout({ children }: LayoutProps<'/[locale]'
         <a href="#main" className="skip-link">{t('nav.skipToContent')}</a>
         <NextIntlClientProvider messages={messages}>
           <Body3DProvider>
-            {/* phones: the deck's short notice on one line (design audit F04: «— пр…» cut by an ellipsis); without it the full text wraps */}
-            <p className="demo-notice" role="note"><span className="demo-badge">{t('prototype.demoBadge')}</span> <span className="demo-notice__full">{t('prototype.demoNotice')}</span>{t.has('prototype.demoNoticeShort') ? <span className="demo-notice__short">{t('prototype.demoNoticeShort')}</span> : null}</p>
             <Header />
             <main id="main" tabIndex={-1}>{children}</main>
             <Footer />

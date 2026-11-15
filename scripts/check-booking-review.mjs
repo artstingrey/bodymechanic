@@ -91,8 +91,9 @@ async function checkReceipt(page, messages, booking, composite = false) {
   const account = done.locator('a[href$="/account/"]');
   await expect(account).toContainText(copy.myBookings);
   await expect(account).toBeHidden();
-  const accountNote = done.locator('#booking-demo-account');
-  await expect(accountNote).toHaveText(copy.demoAccount);
+  const accountNote = done.locator('#booking-account-note');
+  await expect(accountNote).toHaveText(messages.account.sampleRecords);
+  await expect(done.locator('.demo-badge, .badge')).toHaveCount(0);
   await expect(accountNote).toBeHidden();
   const file = page.waitForEvent('download');
   await done.getByRole('button', { name: copy.calendarIcs }).click();

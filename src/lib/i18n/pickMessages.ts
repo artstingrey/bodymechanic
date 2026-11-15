@@ -22,4 +22,4 @@ export async function pickMessages(paths: string[]): Promise<M> {
 }
 
 /** Namespaces every page needs on the client (header, burger, language switch, footer, cookie card, shared UI). */
-export const GLOBAL_CLIENT_MESSAGES = ['nav', 'footer', 'cookie', 'common', 'a11y', 'prototype', 'placeholder'] as const;
+export const GLOBAL_CLIENT_MESSAGES = ['nav', 'footer', 'cookie', 'common', 'a11y', 'placeholder'] as const;

@@ -120,8 +120,7 @@ function RecordCard({ r: initial, past }: { r: AccountRecord; past?: boolean }) 
               (PrivateBoundary), so the hand-over waits in the tab's storage */}
           <BookingLink preset={{ ...(r.serviceId ? { service: r.serviceId } : {}), ...(r.staffId ? { staff: r.staffId } : {}) }}>{t('common.actions.bookAgain')}</BookingLink>{' '}
           {/* review: the studio collects reviews in WhatsApp until the review link exists (TODO content) */}
-          <PrefilledLink href={WHATSAPP_BASE} full={() => whatsappUrl(`${t('account.action.review')}: ${r.serviceTitle}, ${when(r.datetime)}`)}>{t('account.action.review')}</PrefilledLink>{' '}
-          <span className="demo-badge">{t('prototype.demoBadge')}</span>
+          <PrefilledLink href={WHATSAPP_BASE} full={() => whatsappUrl(`${t('account.action.review')}: ${r.serviceTitle}, ${when(r.datetime)}`)}>{t('account.action.review')}</PrefilledLink>
         </p>
       ) : active ? (
         late ? (
@@ -156,7 +155,7 @@ function RecordCard({ r: initial, past }: { r: AccountRecord; past?: boolean }) 
 export function RecordView({ record }: { record: AccountRecord | null }) {
   const t = useTranslations();
   if (!record) return <p role="alert">{t('account.link.invalid')}</p>;
-  return <ul><RecordCard r={record} /></ul>;
+  return <><p>{t('account.sampleRecords')}</p><ul><RecordCard r={record} /></ul></>;
 }
 
 const SENT = 'bm.smsSent';
@@ -209,7 +208,7 @@ export function Account() {
           onBlur={(e) => { const c = rules.phone(e.target.value); v.field('acc-phone', c, c !== 'required'); }} />
         {codeSent ? (
           <>
-            <p role="status">{t('booking.sms.sent', { phone })}</p>
+            <p role="status">{t('account.login.codeNotice')}</p>
             <TextField id="acc-code" label={t('forms.field.code')} required inputMode="numeric" autoComplete="one-time-code" value={code} error={msg('acc-code')}
               onChange={(e) => { const x = e.target.value.replace(/\D/g, ''); setCode(x); if (v.errors['acc-code']) v.field('acc-code', rules.filled(x)); }} />
             <button type="button" className="link-button" disabled={wait > 0} onClick={() => void send()}>
@@ -226,6 +225,7 @@ export function Account() {
   }
   return (
     <>
+      <p>{t('account.sampleRecords')}</p>
       <section><h2>{t('account.upcoming.title')}</h2>{records.upcoming.length ? <ul>{records.upcoming.map((r) => <RecordCard key={r.id} r={r} />)}</ul> : <p>{t('account.upcoming.empty')}</p>}</section>
       <section><h2>{t('account.past.title')}</h2>{records.past.length ? <ul>{records.past.map((r) => <RecordCard key={r.id} r={r} past />)}</ul> : <p>{t('account.past.empty')}</p>}</section>
     </>

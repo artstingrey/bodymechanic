@@ -199,7 +199,7 @@ try {
       await expect(page.locator('#qf-service option[value="101"]')).toHaveCount(0);
       await expect(page.locator('#qf-service option[value^="912"]')).toHaveCount(5);
       await expect(page.locator('[aria-labelledby="form-title"] select[name="staff"] option')).toHaveCount(1);
-      await expect(page.locator('.demo-notice')).toBeVisible();
+      await expect(page.locator('.demo-notice')).toHaveCount(0);
     });
     for (const locale of ['en', 'ru']) {
       const html = await home(origin, locale);

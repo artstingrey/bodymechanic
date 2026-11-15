@@ -230,7 +230,6 @@
 .sec-head .h2 { margin: 0; }
 .sec-note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
 .section > .container > .h2 { margin-bottom: 28px; }
-.section .todo { margin: 16px 0 0; }
 @media (min-width: 1024px) { .section > .container > .h2 { margin-bottom: 40px; } }
 
 /* 2K: one more card in carousels (lead brief) */
@@ -371,7 +370,6 @@
 .home-sec .acc > summary { min-height: 60px; padding: 10px 0; font-size: 17px; }
 .home-sec .acc > summary .i { width: 22px; height: 22px; stroke-width: 1.75; }
 .home-sec .acc .panel { max-width: 62ch; padding: 0 0 20px; font-size: var(--fs-body); }
-.home-sec .acc .panel .todo { margin-top: 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   .home-sec .btn--primary:hover, .home-sec .team-intro .btn--secondary:hover, .home-sec .svc:hover, .home-sec .svc:active { transform: none; }

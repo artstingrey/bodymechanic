@@ -14,7 +14,6 @@ import { NearestSlots, StaffTodaySlots } from '@/components/team/NearestSlots';
 import { HomeTeamPhoto } from '@/components/sections/HomeTeamPhoto';
 import { PageHead } from '@/components/sections/PageHead';
 import { BookingLink } from '@/components/booking/BookingLink';
-import { Badge } from '@/components/ui/Badge';
 import { PhotoPlaceholder, staffNumber } from '@/components/ui/Cards';
 import { Todo } from '@/components/ui/Todo';
 import { ScopeMessages } from '@/components/i18n/ScopeMessages';
@@ -53,8 +52,7 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/team/[sl
     });
   }
   if (detail.source === 'demo') {
-    const { name, position } = detail.profile;
-    return pageMetadata(locale, 'staff', path, { name, position });
+    return pageMetadata(locale, 'staff', path, { name: detail.profile.name });
   }
 
   const { name, position, specialization } = detail.profile;
@@ -94,15 +92,12 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
             : <PhotoPlaceholder caption={t('placeholder.specialistPhoto')} num={staffNumber(s.name)} />}
         </div>
         <div className="profile__text">
-          <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: s.name }]} title={s.name} up eyebrow={real ? s.position : undefined}>
-            {real ? null : <Badge className="page-head__badge">{t('prototype.demoBadge')}</Badge>}
-          </PageHead>
+          <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: s.name }]} title={s.name} up eyebrow={real ? s.position : undefined} />
           <BookingLink preset={{ staff: s.id, staffProfile: real ? true : undefined }} className="btn btn--primary btn-book">
             {t('common.actions.bookWithSpecialist')}
           </BookingLink>
           {detail.source === 'altegio' && detail.profile.specialization && detail.profile.specialization !== s.position
             ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${detail.profile.specialization}`}</p> : null}
-          {!real && s.position !== t('prototype.demoBadge') ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${s.position}`}</p> : null}
           <section className="profile__slots">
             <h2 className="h3">{t('team.profile.nearestSlots')}</h2>
             {real ? <StaffTodaySlots key={`${locale}:${s.id}`} staffId={s.id} /> : <NearestSlots staffId={s.id} />}
@@ -114,7 +109,7 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
         {(['experience', 'education', 'certificates', 'languages'] as const).map((k) => (
           <section key={k}><h2 className="h3">{t(`team.profile.${k}`)}</h2><Todo as="p">{t('team.todo.bio')}</Todo></section>
         ))}
-        <section className="doc-sections__wide"><h2 className="h3">{t('team.profile.reviews')}</h2><p className="cap">{t('home.reviews.comingSoon')}</p><Todo as="p" hidden>{t('home.reviews.items')}</Todo></section>
+        <section className="doc-sections__wide"><h2 className="h3">{t('team.profile.reviews')}</h2><p className="cap">{t('home.reviews.comingSoon')}</p><Todo as="p">{t('home.reviews.items')}</Todo></section>
       </div>
     </article>
     </ScopeMessages>

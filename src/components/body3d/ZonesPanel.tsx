@@ -152,7 +152,7 @@ export function LeftPanel({ prices }: { prices: (Facts & { id: number; title: st
       <details>
         <summary>{t('body3d.prices.title')}</summary>
         <p>{t('body3d.prices.note')}</p>
-        <ul>{prices.map((s) => <li key={s.id}>{s.title} · <ServiceFacts s={s} /></li>)}</ul>
+        <ul>{prices.map((s) => <li key={s.id}><ServiceFacts s={s} label={s.title} /></li>)}</ul>
       </details>
     </aside>
   );

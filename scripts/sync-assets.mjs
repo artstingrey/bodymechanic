@@ -63,10 +63,10 @@ copy(path.join(SITE, 'copy', 'lexicon-denylist.json'), path.join(APP, 'e2e', 'fi
       key: s.id, categoryKey: s.categoryId, title: l10n(s.titleKey), description: l10n(s.descriptionKey),
       priceMin: s.priceMin, durationMin: s.durationMin, priceOnRequest: s.priceOnRequest, // no «confirm with the client» flag: a note, not data (В-5)
     })),
-    specialist: l10n('placeholder.specialist'), // lead: specialists only «Специалист студии» / «Демо», no names
-    articleTitle: l10n('mock.articles.title'), // «Демо-статья {n}»
+    specialist: l10n('placeholder.specialist'),
+    articleTitle: l10n('mock.articles.title'),
     articleTodo: l10n('journal.todo.articles'),
-    demo: l10n(mock.demoBadgeKey),
+    demo: { ru: 'Демо', en: 'Demo' }, // Legacy fixture value for the specialist position and article category.
   };
   fs.writeFileSync(path.join(APP, 'src', 'lib', 'api', 'mock-catalog.json'), JSON.stringify(catalog, null, 1));
   console.log('   mock-catalog.json written:', catalog.services.length, 'services');

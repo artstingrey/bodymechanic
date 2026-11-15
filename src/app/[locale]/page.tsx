@@ -92,16 +92,14 @@ export default async function HomePage() {
 
       <HomeTeam locale={locale} />
 
-      {/* 6 Reviews — the place stays (client decision); until real reviews: ONE sample card with «Демо» and «Отзывы скоро появятся»
-          (lead's empty-state policy, design audit F07: not three identical cards) */}
       <section id="reviews" className="section home-sec" aria-labelledby="reviews-title">
         <div className="container">
           <h2 id="reviews-title" className="h2" data-split="">{t('home.reviews.title')}</h2>
           <div className="reviews reviews--empty">
-            <div data-reveal=""><ReviewCard name={t('placeholder.clientName')} meta={t('home.reviews.sourceVisit')} text={t('placeholder.reviewText')} demoLabel={t('prototype.demoBadge')} /></div>
+            <div data-reveal=""><ReviewCard name={t('placeholder.clientName')} meta={t('home.reviews.sourceVisit')} text={t('placeholder.reviewText')} /></div>
             <p className="lead reviews__soon">{t('home.reviews.comingSoon')}</p>
           </div>
-          <Todo as="p" hidden>{t('home.reviews.items')}</Todo>
+          <Todo as="p">{t('home.reviews.items')}</Todo>
         </div>
       </section>
 
@@ -117,9 +115,9 @@ export default async function HomePage() {
           {/* one compact branded placeholder until the room photos arrive (lead's empty-state policy, design audit F05: three empty
               plaques were ≈ 950 px of nothing on a phone) */}
           <div className="space" data-reveal="">
-            <PhotoPlaceholder className="space__ph" caption={t('placeholder.roomPhoto')} demo={t('prototype.demoBadge')} />
+            <PhotoPlaceholder className="space__ph" caption={t('placeholder.roomPhoto')} />
           </div>
-          <Todo as="p" hidden>{t('home.space.photos')}</Todo>
+          <Todo as="p">{t('home.space.photos')}</Todo>
         </div>
       </section>
 

@@ -23,8 +23,8 @@ header[data-nf] .site-logo { margin-right: auto; }
 .nf-menu[open] > summary line:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .nf-menu[open] > summary line:nth-child(2) { opacity: 0; transform: scaleX(0.4); }
 .nf-menu[open] > summary line:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-/* the header sticks, so a card taller than the screen could not be scrolled into view: it scrolls itself (119 = the demo line + the pill + the gap + 8 px of air) */
-.nf-menu__panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 1; padding: 11px 19px 0; max-height: calc(100svh - 119px); overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--sh-3); } /* a border, not an inset ring: the pinned action would paint over a ring at the bottom edge */
+/* The sticky header's menu scrolls within the available viewport height. */
+.nf-menu__panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 1; padding: 11px 19px 0; max-height: calc(100svh - var(--header-h) - 16px); overflow-y: auto; overscroll-behavior: contain; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-card); box-shadow: var(--sh-3); }
 /* as in the menu: the card has the language row, the pill's switch steps aside (visibility: out of the Tab order too) */
 header[data-nf]:has(.nf-menu[open]) .site-header__row > .lang-switch { visibility: hidden; }
 .nf-menu__panel ul { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; }

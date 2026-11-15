@@ -6,7 +6,7 @@
 import { test, expect, chromium, type Page } from '@playwright/test';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
-import { guard, settle3D, expectClean, seedConsent, toReview, testHook } from './helpers';
+import { guard, settle3D, expectClean, expectNoDemoLabels, seedConsent, toReview, testHook } from './helpers';
 import zoneViews from '../src/lib/body3d/zone-views.json';
 import { BASE_ZONES, PAIRED } from '../src/lib/body3d/zones';
 import { calendarDays } from '../src/lib/api';
@@ -223,11 +223,14 @@ test.describe('account (R-APP-01 F-05)', () => {
     await page.goto('/en/account/', { waitUntil: 'networkidle' });
     await page.locator('#acc-phone').fill('+971501234567');
     await page.getByRole('button', { name: en.account.login.getCode }).click();
+    await expect(page.getByRole('status')).toHaveText(en.account.login.codeNotice);
     await page.locator('input[autocomplete="one-time-code"]').fill('1234');
     await expect(page.getByRole('button', { name: /Send again in \d+ s/ })).toBeDisabled();
     await page.getByRole('button', { name: en.account.login.submit }).click();
     const cards = page.getByTestId('account-record');
     await expect(cards).toHaveCount(3);
+    await expect(page.getByText(en.account.sampleRecords)).toBeVisible();
+    await expectNoDemoLabels(page);
     // the record in ~12 h: too late — actions disabled, WhatsApp offered
     const late = page.locator('[data-testid="account-record"][data-late]');
     await expect(late).toHaveCount(1);
@@ -239,6 +242,7 @@ test.describe('account (R-APP-01 F-05)', () => {
     await cancelBtn.click();
     const dlg = first.locator('dialog.account-cancel');
     await expect(dlg).toBeVisible();
+    await expectNoDemoLabels(page);
     await expect(dlg.getByRole('button', { name: en.account.cancel.keep })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dlg).toBeHidden();
@@ -256,6 +260,7 @@ test.describe('account (R-APP-01 F-05)', () => {
     await dlg.getByRole('button', { name: en.account.cancel.confirm }).click();
     await expect(first).toContainText(en.account.status.cancelled);
     await expect(first.getByRole('status')).toContainText(en.account.cancel.success);
+    await expectNoDemoLabels(page);
     // past: book again — the service and the specialist are handed over at the click, the link itself is bare (RC-10, Ж-9;
     // that they arrive: seo.spec «Book again» from the account)
     await expect(cards.last().getByRole('link', { name: en.common.actions.bookAgain })).toHaveAttribute('href', '/en/booking/');

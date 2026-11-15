@@ -2,7 +2,6 @@
 /** Step 6 «Проверка»: review the selection and submit it once. */
 import { zoneLabel } from '@/lib/body3d/zones';
 import { whatsappUrl } from '@/lib/config';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { Todo } from '@/components/ui/Todo';
@@ -53,7 +52,7 @@ export function StepReview({ flow }: { flow: Flow }) {
       ) : <Loading label={t('common.state.loading')} />}
       <div className="captcha" data-testid="captcha" role="status" hidden>
         <span className="captcha__box" aria-hidden="true"><Icon name="loader" className="spin" /></span>
-        {t('booking.review.captcha')} <Badge>{t('prototype.demoBadge')}</Badge>
+        {t('booking.review.captcha')}
       </div>
     </section>
   );

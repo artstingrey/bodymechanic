@@ -8,7 +8,8 @@ import { articleSlugs, getArticles } from '@/lib/api';
 import { PageHead } from '@/components/sections/PageHead';
 import { Silhouette } from '@/components/ui/Cards';
 import { Photo, coverOf } from '@/components/ui/Photo';
-import { Todo, stripTodo, isTodo } from '@/components/ui/Todo';
+import { stripTodo, isTodo } from '@/components/ui/Todo';
+import { DEMO_LABEL } from '@/lib/api/mock-data';
 
 export const dynamicParams = false;
 export function generateStaticParams() {
@@ -25,19 +26,21 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/journal/
 export default async function ArticlePage({ params }: PageProps<'/[locale]/journal/[slug]'>) {
   const { slug } = await params;
   const t = await getTranslations();
-  const all = getArticles(await pageLocale());
+  const locale = await pageLocale();
+  const all = getArticles(locale);
   const idx = all.findIndex((x) => x.slug === slug);
   const a = all[idx];
   if (!a) notFound();
+  const body = t('journal.todo.articles');
   return (
     <article className="container page">
       <PageLd kind="article" slug={slug} />
-      <PageHead crumbs={[{ href: '/journal', label: t('journal.title') }, { label: a.title }]} eyebrow={a.category === t('prototype.demoBadge') ? undefined : a.category} title={a.title} />
+      <PageHead crumbs={[{ href: '/journal', label: t('journal.title') }, { label: a.title }]} eyebrow={a.category === DEMO_LABEL[locale] ? undefined : a.category} title={a.title} />
       {coverOf(idx) ? <div className="post-cover" data-reveal="clip"><Photo set="journal" id={coverOf(idx)!} alt="" sizes="(min-width: 1440px) 1320px, 96vw" priority /></div> : null}
       <div className="post-body">
         {/* the contents card only with real contents: the placeholder was printed twice in a row (design audit F20) */}
         {isTodo(a.excerpt) ? null : <nav className="post-toc" aria-label={t('journal.article.toc')}><h2 className="lbl-u">{t('journal.article.toc')}</h2><p>{a.excerpt}</p></nav>}
-        <div className="post-text"><Todo as="p">{t('journal.todo.articles')}</Todo></div>
+        {isTodo(body) ? null : <div className="post-text"><p>{body}</p></div>}
         <aside className="post-author">
           <h2 className="lbl-u">{t('journal.article.author')}</h2>
           <div className="post-author__row"><span className="bk-opt__ava" aria-hidden="true"><Silhouette /></span><b>{t('placeholder.specialist')}</b></div>

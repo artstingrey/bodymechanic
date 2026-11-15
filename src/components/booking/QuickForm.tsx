@@ -3,7 +3,6 @@
 import { Fragment, useCallback, useRef, useState, useSyncExternalStore, type ChangeEvent, type FocusEvent, type ReactNode, type SubmitEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
-import { Badge } from '@/components/ui/Badge';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Choice';
 import { PhoneField, TextAreaField, TextField } from '@/components/ui/Field';
@@ -162,7 +161,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
         counterText={(count, max) => t('body3d.panel.noteCounter', { count, max })} />
       <Checkbox required name="consent" id="qf-consent" disabled={locked} error={fieldText('qf-consent')}
         onChange={(event) => { if (event.target.checked) field('qf-consent', null); }}>{t.rich('forms.consent.privacy', { privacy: (c) => <Link href="/privacy">{c}</Link> })}</Checkbox>
-      <p className="captcha cap" data-testid="captcha" role="status" hidden>{t('booking.review.captcha')} <Badge>{t('prototype.demoBadge')}</Badge></p>
+      <p className="captcha cap" data-testid="captcha" role="status" hidden>{t('booking.review.captcha')}</p>
       <div className="acts">
         <Button type="submit" disabled={!enabled || !hydrated || locked} loading={busy}
           loadingLabel={t('home.form.submitting')} aria-describedby={!enabled || notice ? 'qf-submit-notice' : undefined}>{t('home.form.submit')}</Button>

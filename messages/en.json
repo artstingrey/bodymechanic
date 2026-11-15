@@ -178,11 +178,6 @@
     "reviewDate": "Visit date",
     "reviewText": "Review text from Altegio"
   },
-  "prototype": {
-    "demoNotice": "Demo data: prices, availability and specialists are examples",
-    "demoNoticeShort": "Prices and times are examples",
-    "demoBadge": "Demo"
-  },
   "a11y": {
     "carousel": {
       "prev": "Previous slide",
@@ -791,7 +786,6 @@
       "myBookings": "My bookings",
       "directions": "Get directions",
       "addressUnavailable": "Ask the studio for the address.",
-      "demoAccount": "The account currently contains demo bookings only.",
       "addressTodo": "TODO(content): studio address and map link"
     },
     "queued": {
@@ -896,8 +890,10 @@
   },
   "account": {
     "title": "My bookings",
+    "sampleRecords": "These are sample bookings. Changes apply only in this browser tab.",
     "login": {
-      "lead": "Sign in with your phone number. No password needed.",
+      "lead": "Online account access is unavailable. You can view sample bookings below.",
+      "codeNotice": "No SMS was sent. Enter any numeric code to view sample bookings.",
       "getCode": "Get a code",
       "submit": "Sign in",
       "changePhone": "Change number",
@@ -933,13 +929,13 @@
       "unavailable": "It’s too late to reschedule online because your visit is coming up soon. Please message us on WhatsApp.",
       "unavailableShort": "Rescheduling unavailable",
       "confirm": "Confirm new time",
-      "success": "Your booking has been moved to {datetime}."
+      "success": "The sample booking was moved to {datetime} in this tab."
     },
     "cancel": {
       "title": "Cancel this booking?",
       "confirm": "Yes, cancel booking",
       "keep": "Keep my booking",
-      "success": "Your booking has been cancelled.",
+      "success": "The sample booking was cancelled in this tab.",
       "rules": "TODO(content): cancellation rules"
     },
     "link": {
@@ -1067,7 +1063,7 @@
       "onRequestShort": "on request"
     },
     "articles": {
-      "title": "Demo article {n}"
+      "title": "Article {n}"
     },
     "duration": {
       "onRequest": "On request",
@@ -1128,11 +1124,10 @@
     "form": {
       "title": "Leave your number and we’ll suggest a time",
       "phone": "Phone / WhatsApp",
-      "phoneHint": "We’ll reply on WhatsApp or call",
+      "phoneHint": "This form currently can’t send requests to the studio.",
       "submit": "Find a time",
       "submitFirstVisit": "Book my first visit",
       "whatsapp": "Message us on WhatsApp",
-      "demoNotice": "Not sent to the studio: this is a demo",
       "privacyNote": "We use your number only to reply about your booking",
       "details": {
         "toggle": "Add details (optional)",
@@ -1164,9 +1159,9 @@
       },
       "server": "We couldn’t send it. Try again or message us on WhatsApp"
     },
-    "success": {
-      "title": "Request received",
-      "text": "Our admin will confirm a time within 15 minutes during opening hours"
+    "result": {
+      "title": "Request not sent",
+      "text": "To book a visit, message the studio on WhatsApp."
     },
     "studio": {
       "title": "Specialists and studio"
@@ -1315,10 +1310,10 @@
       "ogDescription": "Meet our specialists and book with yours."
     },
     "staff": {
-      "title": "{name}, {position} · The Body Mechanic",
-      "description": "{name}, {position} at The Body Mechanic in Dubai. Next available times and online booking.",
+      "title": "{name} · The Body Mechanic",
+      "description": "{name} at The Body Mechanic in Dubai. Next available times and online booking.",
       "ogTitle": "{name} · The Body Mechanic",
-      "ogDescription": "{position}. Book online for the next available time."
+      "ogDescription": "Book online for the next available time with {name}."
     },
     "staffProfile": {
       "title": "{title} · The Body Mechanic",

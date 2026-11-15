@@ -253,7 +253,7 @@ try {
         assert.equal(limitCalls(), limitedCount);
 
         await page.goto(origin + profile(locale, 'specialist-1'));
-        await expect(page.locator('.page-head__badge')).toHaveText(copy.prototype.demoBadge);
+        await expect(page.locator('.page-head__badge, .profile .badge')).toHaveCount(0);
         await expect(page.locator('.profile__text .btn-book')).toHaveAttribute('href', `/${locale}/booking/`);
         await expect(page.locator('.profile__slots a').first()).toHaveAttribute('href', `/${locale}/booking/?step=2`);
       } finally {

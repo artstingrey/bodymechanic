@@ -173,8 +173,8 @@
   "en": "Studio specialist"
  },
  "articleTitle": {
-  "ru": "Демо-статья {n}",
-  "en": "Demo article {n}"
+  "ru": "Статья {n}",
+  "en": "Article {n}"
  },
  "articleTodo": {
   "ru": "TODO(content): рубрики и статьи журнала; авторы — специалисты студии",

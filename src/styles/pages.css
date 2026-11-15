@@ -16,7 +16,6 @@
 .page-head .lead { max-width: 760px; }
 .page-head .crumbs { margin-left: -4px; }
 .page-head .eyebrow { margin: 4px 0 0; }
-.page-head__badge { justify-self: start; } /* «Демо» under the specialist's name (F18) */
 .page-sec { margin-top: 40px; display: grid; gap: 16px; }
 .page-sec > .h3 { margin: 0; }
 .page-cta { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; justify-content: space-between; padding-top: 24px; border-top: 1px solid var(--line); }
@@ -173,7 +172,7 @@
 .post { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .post__cover { aspect-ratio: 16 / 9; border-radius: var(--r-photo); overflow: hidden; background: var(--card-sand); }
 .post__cover picture, .post__cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.post .eyebrow, .post .h3, .post .todo, .post__badge { margin: 0; }
+.post .eyebrow, .post .h3 { margin: 0; }
 .post .h3 a { text-decoration: none; }
 .post .h3 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--r-photo); }
 .post .btn--text { align-self: flex-start; pointer-events: none; }
@@ -189,7 +188,8 @@
 .post-author .btn { justify-self: start; }
 .post-text { max-width: 720px; font-size: 18px; line-height: 1.65; }
 @media (min-width: 1024px) {
-  .post-body { grid-template-columns: 260px minmax(0, 1fr) 280px; gap: 40px; align-items: start; }
+  .post-body:has(.post-text, .post-toc) { grid-template-columns: 260px minmax(0, 1fr) 280px; gap: 40px; align-items: start; }
+  .post-author { max-width: 280px; }
   .post-toc, .post-author { position: sticky; top: calc(var(--header-h) + 16px); }
 }
 
@@ -200,14 +200,14 @@
 .contacts__list > div:first-child { border-top: 0; padding-top: 0; } /* one rule under the H1, not two 33 px apart (design audit F09) */
 .contacts__list dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
 .contacts__list dd { margin: 0; }
-.contacts__list .pending { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; font-size: 16px; } /* S03: one line + one «Демо» */
+.contacts__list .pending { margin: 0; font-size: 16px; }
 .map-facade { position: relative; margin: 0; min-height: 320px; border-radius: var(--r-card); background: var(--card-sky); display: grid; place-items: center; align-content: center; gap: 12px; padding: 24px; overflow: hidden;
   background-image: linear-gradient(var(--hairline) 1px, transparent 1px), linear-gradient(90deg, var(--hairline) 1px, transparent 1px); background-size: 48px 48px; }
 .map-facade .space__tick { position: absolute; left: 50%; top: 24%; } /* in the upper part, clear of the «Открыть карту» button (F09) */
 .map-facade .btn { position: relative; margin-top: 64px; background: var(--surface); }
 .map-facade figcaption { position: relative; color: var(--muted-card); }
 /* no address yet (reviewer, RC-2): the brand map placeholder, the landing's «Как добраться» in the site's scale — Bone plate (as the
-   photo placeholders), the copper pin, the line «Адрес появится перед запуском» + «Демо» at the bottom like .ph__cap */
+   photo placeholders), the copper pin and a caption at the bottom. */
 .map-facade--pending { background: color-mix(in srgb, var(--text) 5%, var(--bg)); background-image: none; }
 .map-facade__pin { position: absolute; left: 50%; top: 46%; width: 20px; height: 20px; margin: -20px 0 0 -10px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
   background: var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 22%, transparent); }

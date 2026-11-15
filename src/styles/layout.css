@@ -1,19 +1,7 @@
 /* =====================================================================
-   The Body Mechanic · global chrome: demo bar, header, burger, FAB, footer, cookie banner.
+   The Body Mechanic · global chrome: header, burger, FAB, footer, cookie banner.
    Owner: art director (README «РАБОТА В ОДНОМ КОДЕ»). Spec: site/design/hifi/ui-kit.html, motion-spec.html.
    ===================================================================== */
-
-/* ---------- Prototype bar ---------- */
-.demo-notice { margin: 0; padding: 8px var(--edge); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px;
-  font-size: var(--fs-caption); line-height: 1.35; color: var(--muted); background: var(--bg); border-bottom: 1px solid var(--line); text-align: center; }
-:root:has(.demo-notice) { --demo-h: 37px; } /* prototype bar above the header (the full-screen 3D on /booking subtracts it) */
-/* phones: the notice wraps to two lines instead of «— пр…» (design audit F04: a sentence cut by an ellipsis at the very top read as
-   an error). --demo-h is only used by /booking on tablets; on /booking step 1 phones the bar is hidden (booking.css) */
-.demo-notice__short { display: none; }
-@media (max-width: 767px) { .demo-notice { display: block; font-size: var(--fs-caption); line-height: 18px; text-align: left; } .demo-notice .demo-badge { margin-right: 6px; } :root:has(.demo-notice) { --demo-h: 52px; }
-  .demo-notice:has(.demo-notice__short) .demo-notice__full { display: none; } .demo-notice__short { display: inline; } :root:has(.demo-notice__short) { --demo-h: 34px; } }
-.demo-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(38, 34, 31, 0.08);
-  color: var(--text); font-size: var(--fs-micro); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* ---------- Header: a floating pill (RC-8, the client's approved layout: review/skill-bakeoff/variant-final.html). The element keeps the
    in-flow height of the old bar (--header-h): nothing below moves, the sticky / anchor offsets that use --header-h stay right and
@@ -206,9 +194,8 @@ dialog.burger-dialog[open] .meta { transition: opacity 220ms var(--e-out) 190ms,
 .site-footer a { color: var(--bg); text-decoration: none; }
 .site-footer__cols a { min-height: 44px; display: inline-flex; align-items: center; }
 @media (hover: hover) { .site-footer a:hover { text-decoration: underline; text-underline-offset: 4px; } }
-.site-footer .badge { background: rgba(247, 244, 240, 0.12); color: var(--bg); } /* «Демо» on the dark footer */
-.site-footer .ct { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; } /* «label · Демо» */
-.site-footer .ct--pending { flex-wrap: wrap; gap: 4px 10px; padding-block: 8px; color: var(--muted-on-dark); line-height: 1.35; } /* RC-4: one line + one «Демо» while every contact is TODO */
+.site-footer .ct { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; }
+.site-footer .ct--pending { padding-block: 8px; color: var(--muted-on-dark); line-height: 1.35; }
 .site-footer .lang-switch a { color: var(--muted-on-dark); padding-left: 0; }
 .site-footer .lang-switch [aria-current="true"] { color: var(--bg); }
 .site-footer .lang-switch--long a, .site-footer .lang-switch--long [aria-current] { font-size: var(--fs-body); font-weight: 400; }
@@ -223,8 +210,8 @@ dialog.burger-dialog[open] .meta { transition: opacity 220ms var(--e-out) 190ms,
    - the logo is centred, min(100 %, 380 px) wide (343 px on 375, 380 on 440);
    - the groups stand one under another in the DOM order Услуги, О студии, Контакты, Язык: a centred heading, then the group's
      links in a centred wrapped row (≤ 290 px), «О студии» always 3 + 2; every target ≥ 44 × 44 px;
-   - a contact without a value stays one «label · Демо» row (RC-4 empty state), centred; the TODO note stays in [data-todo];
-   - legal: three centred rows — «© … Демо», «Политика», «Условия · Настройки cookie» as a pair.
+   - the contacts notice is centred;
+   - legal: three centred rows — copyright, privacy, and terms with cookie settings.
    The footer is 42–47 px shorter than the two-column layout (BD). ≥ 768 renders as before. */
 @media (max-width: 767px) {
   .site-footer { text-align: center; }

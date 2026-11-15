@@ -4,7 +4,7 @@
  * optional chips are folded after the button in «Уточнить (необязательно)», with the consent for the marks required only
  * when a chip is selected. Validation like the site (rules from lib/forms): aria-invalid + error text per field, a summary
  * role=alert for two or more errors, focus on the first error. One idempotency key per form (a double tap or a retry never
- * makes a second lead). Thank-you replaces the form in place; trackLead gets the event id only.
+ * makes a second lead). The result replaces the form in place; trackLead gets the event id only.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
@@ -23,10 +23,6 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
 }) {
   const t = useTranslations('lp');
   const tf = useTranslations('forms');
-  const tp = useTranslations('prototype');
-  // T-12 (lp-brief §5): while requests go to the mock BFF, the form says so — the site's «Демо» badge + one line.
-  // Remove with the real BFF (stage 2, lib/lp/lead.ts).
-  const demo = <p className="demo-note"><span className="demo">{tp('demoBadge')}</span><span>{t('form.demoNotice')}</span></p>;
   const locale = useLocale();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -82,12 +78,9 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
     return (
       <div className="lp-form" id={id}>
         <div className="lp-thanks" role="status" tabIndex={-1} ref={thanks} data-lp-cta="">
-          <span className="ok" aria-hidden="true"><Icon name="check" /></span>
-          <h3>{t('success.title')}</h3>
-          <p className="sub">{t('success.text')}</p>
-          <ol><li>{t('steps.2.title')}</li><li>{t('steps.3.title')}</li></ol>
+          <h3>{t('result.title')}</h3>
+          <p className="sub">{t('result.text')}</p>
           <a className="btn btn--wa btn--full" href={waHref} target="_blank" rel="noopener noreferrer" data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span>{t('form.whatsapp')}</a>
-          {demo}
         </div>
       </div>
     );
@@ -133,7 +126,6 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
         </div>
       ) : null}
       <p className="resp">{t('form.phoneHint')}</p>{/* no WhatsApp icon here: two mentions on the first screen are enough (design audit 12) */}
-      {demo}
       <details className="chips-d" id={`${id}-details-box`}>
         <summary>{t('form.details.toggle')}</summary>
         <fieldset className="chips">

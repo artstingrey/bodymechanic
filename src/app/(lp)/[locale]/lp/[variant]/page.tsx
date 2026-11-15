@@ -10,7 +10,7 @@ import CFG from '@/lib/lp/config.json';
 import HERO from '@/lib/lp/hero.json';
 import { Photo } from '@/components/ui/Photo';
 import { PhotoPlaceholder } from '@/components/ui/Cards';
-import { Todo, isTodo } from '@/components/ui/Todo';
+import { isTodo } from '@/components/ui/Todo';
 import { Icon } from '@/components/ui/Icon';
 import { LeadForm } from '@/components/lp/LeadForm';
 import { SheetHero } from '@/components/lp/SheetHero';
@@ -83,6 +83,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const offerVals = { percent: off.percent, salePrice: off.demoSalePrice, price: off.demoPrice, service: t(off.keys.service) };
   const offerFull = t(off.keys.full, offerVals);
   const termsSet = !t(off.keys.terms).startsWith('TODO(content)');
+  const legalEntity = t('footer.legalEntity');
   const chips = vc.chips.map((c) => ({ id: c.id, label: t(c.key) }));
   const waHref = whatsappUrl(`${t(vc.waMessageKey)} ${vc.waTag}`);
   const privacyHref = `/${locale}/privacy/`;
@@ -206,7 +207,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
                       <h3>{t(sv.titleKey)}</h3>
                       <p>{t(sv.descriptionKey)}</p>
                       <dl>
-                        <div><dt>{t('services.card.priceLabel')}</dt><dd><span className="price-row"><span className="price">{sale} {off.currency}</span> <s>{sv.priceMin}</s></span> <span className="demo">{t('prototype.demoBadge')}</span></dd></div>
+                        <div><dt>{t('services.card.priceLabel')}</dt><dd><span className="price-row"><span className="price">{sale} {off.currency}</span> <s>{sv.priceMin}</s></span></dd></div>
                         <div><dt>{t('services.card.durationLabel')}</dt><dd>{t('mock.duration.upTo')}</dd></div>
                       </dl>
                     </div>
@@ -222,7 +223,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
             <div className="head"><h2 id="lp-studio">{t(bt.studio)}</h2></div>
             {/* one brand placeholder, as on the site (design audit 9: a bust of three primitives + a crosshair, captions over them) */}
             <div className="lp-studio">
-              <PhotoPlaceholder caption={t('placeholder.specialistPhoto')} demo={t('prototype.demoBadge')} />
+              <PhotoPlaceholder caption={t('placeholder.specialistPhoto')} />
             </div>
           </div>
         </section>
@@ -233,18 +234,12 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
             <div className="fhead"><h2 id="lp-dir">{t(CFG.directions.titleKey)}</h2></div>
             <div className="lp-dirs">
               <div className="map" aria-hidden="true"><span className="pin" /></div>
-              {/* design audit 4 (empty-state policy): until the address is real — one line + «Демо», not three dotted notes */}
-              {isTodo(district) && isTodo(building) && isTodo(mapLink) ? <>
-                <p className="pending">{t.has('lp.directions.pending') ? <span>{t('lp.directions.pending')}</span> : null}<span className="demo">{t('prototype.demoBadge')}</span></p>
-                {[district, building, mapLink].map((s, i) => <Todo key={i} as="span" hidden>{s}</Todo>)}
-              </> : <>
-                <address>
-                  {[district, building].map((s, i) => (isTodo(s) ? <Todo key={i} as="span">{s}</Todo> : <span key={i}>{s}</span>))}
-                </address>
-                {isTodo(mapLink)
-                  ? <Todo as="p">{mapLink}</Todo>
-                  : <a className="btn btn--wa" href={mapLink} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}<Icon name="arrow-up-right" /></a>}
-              </>}
+              {isTodo(district) && isTodo(building) && isTodo(mapLink) && t.has('lp.directions.pending')
+                ? <p className="pending">{t('lp.directions.pending')}</p> : null}
+              {!isTodo(district) || !isTodo(building) ? (
+                <address>{[district, building].map((s, i) => isTodo(s) ? null : <span key={i}>{s}</span>)}</address>
+              ) : null}
+              {isTodo(mapLink) ? null : <a className="btn btn--wa" href={mapLink} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}<Icon name="arrow-up-right" /></a>}
             </div>
           </div>
         </section>
@@ -282,11 +277,9 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
               <p className="lbl">{offerFull}{termsSet ? ` · ${t(off.keys.urgency)}` : ''}{example ? <> <span className="ex">{t(off.exampleBadge.key)}</span></> : null}</p>
               <h2 id="lp-final">{t(bt.final)}</h2>
               {/* design audit 6: no triple «Оставьте номер…» — one lead in its own words (deck, Market Analyst) and no card title;
-                  4: the terms are covered by «Пример оффера — условия уточняются» while the offer is an example, else a line + «Демо» */}
+                  4: the example offer label already covers pending terms. */}
               <p className="sub">{t('lp.final.text')}</p>
-              {!termsSet ? (example
-                ? <Todo as="p" hidden>{t(off.keys.terms)}</Todo>
-                : <p className="pending">{t.has('lp.offer.termsPending') ? <span>{t('lp.offer.termsPending')}</span> : null}<span className="demo">{t('prototype.demoBadge')}</span></p>) : null}
+              {!termsSet && !example && t.has('lp.offer.termsPending') ? <p className="pending">{t('lp.offer.termsPending')}</p> : null}
             </div>
             <LeadForm id="lp-f2" variant={variant} chips={chips} waHref={waHref} privacyHref={privacyHref} />
           </div>
@@ -295,7 +288,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
 
       <footer className="w lp-foot">
         <div className="row">
-          <span>{t('footer.copyright', { year: 2026 })} <Todo>{t('footer.legalEntity')}</Todo></span>
+          <span>{t('footer.copyright', { year: 2026 })}{isTodo(legalEntity) ? null : <> {legalEntity}</>}</span>
           <a href={privacyHref} target="_blank" rel="noopener">{t('footer.docs.privacy')}</a>
           <a href={`/${locale}/terms/`} target="_blank" rel="noopener">{t('footer.docs.terms')}</a>
         </div>

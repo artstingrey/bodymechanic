@@ -2,7 +2,7 @@
  * Prototype mock data. Rules (README «Жёсткие правила» + lead): no invented names, prices, reviews, addresses or phones.
  * Services, categories and prices come from site/copy/mock-data.json (Market Analyst; client's plan: 650 / 750 / 900 AED,
  * exercise therapy and rehab «price on request»), resolved into mock-catalog.json by `npm run sync`.
- * Specialists are «Специалист студии N» + «Демо» (lead), articles «Демо-статья N» (mock.articles.title) — all strings from the deck.
+ * Specialist names and article titles come from the copy deck.
  * Numeric ids emulate Altegio ids of the BFF contract (ТЗ §08); slugs stand in for CMS documents.
  */
 import catalog from './mock-catalog.json';
@@ -45,7 +45,7 @@ export const STAFF = [1, 2, 3, 4].map((i) => ({
 const nth = (tpl: L10n, n: number): L10n => ({ ru: tpl.ru.replace('{n}', String(n)), en: tpl.en.replace('{n}', String(n)) });
 export const ARTICLES = [1, 2, 3].map((i) => ({
   slug: `demo-article-${i}`,
-  title: nth(catalog.articleTitle, i), // mock.articles.title «Демо-статья {n}»
+  title: nth(catalog.articleTitle, i),
   category: DEMO_LABEL,
   excerpt: catalog.articleTodo as L10n, // journal.todo.articles
 }));

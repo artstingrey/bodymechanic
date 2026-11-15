@@ -89,10 +89,6 @@ img, svg { max-width: 100%; }
 .skip-link:focus { top: 8px; }
 .skip-link-inline:focus { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--sh-2); font-weight: 700; }
 .skip-link-inline:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-/* TODO(content) placeholder (Todo.tsx, lead's empty-state policy): no editor note on the page, only the site's «Демо» badge; the
-   note stays in data-todo. Block-level wrappers (p, dd) hold the badge on their own line, inline ones sit next to their label. */
-.todo { margin: 0; }
-.todo[hidden] { display: none !important; }
 button, [role="button"], input, select, textarea { font: inherit; }
 input, select, textarea { max-width: 100%; } /* long option texts (service names) must not widen the page (DEL-05) */
 button { min-height: var(--tap); min-width: var(--tap); } /* ≥44×44 (A11Y-03, R-3D-01 F-05) */
@@ -160,7 +156,7 @@ main .chips > a[aria-current] { background: var(--text); color: var(--bg); box-s
 
 /* Booking step 7 «PDF заявки» = print / save as PDF (R-APP-01 F-01): only the confirmation is printed. */
 @media print {
-  header, footer, .demo-notice, .book-floating, .cookie, .booking > nav, .booking-done__actions, .booking-done > .bk-actions { display: none !important; }
+  header, footer, .book-floating, .cookie, .booking > nav, .booking-done__actions, .booking-done > .bk-actions { display: none !important; }
 }
 /* native modal dialogs (clear all, cancel booking): structure only */
 dialog { max-width: min(92vw, 480px); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 20px; }

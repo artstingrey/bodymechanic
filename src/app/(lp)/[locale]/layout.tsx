@@ -38,7 +38,7 @@ const FORM_FLAG = `(function(){try{var f=new URLSearchParams(location.search).ge
 export default async function LandingLayout({ children }: LayoutProps<'/[locale]'>) {
   const locale = await rootLocale();
   if (!isLocale(locale)) notFound();
-  const messages = await pickMessages(['lp', 'forms.field', 'forms.error', 'common.actions', 'prototype.demoBadge']);
+  const messages = await pickMessages(['lp', 'forms.field', 'forms.error', 'common.actions']);
   return (
     <html lang={locale} data-lp-form="hero" suppressHydrationWarning>
       <head>

@@ -15,12 +15,11 @@ import { PageHead } from '@/components/sections/PageHead';
 import { HomeServicePhoto } from '@/components/sections/HomeServicePhoto';
 import { homeServiceIllustrations } from '@/content/home-services';
 import { BookingLink } from '@/components/booking/BookingLink';
-import { Badge } from '@/components/ui/Badge';
 import { StaffCard } from '@/components/ui/Cards';
 import { Photo, hasPhoto } from '@/components/ui/Photo';
 import { serviceFacts } from '@/components/services/ServiceFacts';
 import { ServiceStaff } from '@/components/services/ServiceStaff';
-import { Todo } from '@/components/ui/Todo';
+import { isTodo } from '@/components/ui/Todo';
 
 const demoSlugs = new Set(serviceSlugs());
 const PHOTO_SIZES = '(min-width: 1024px) 40vw, (min-width: 600px) 92vw, 360px';
@@ -104,7 +103,8 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
       <li key={p.id}><StaffCard name={p.name} href={`/team/${p.slug}`} photoCaption={t('placeholder.specialistPhoto')} /></li>
     ))}</ul>
   ) : null;
-  const placeholder = <Todo as="p">{t('service.todo.body')}</Todo>;
+  const body = t('service.todo.body');
+  const placeholder = isTodo(body) ? null : <p>{body}</p>;
   const illustration = detail.source === 'altegio' ? homeServiceIllustrations.get(s.id) : undefined;
   const imageUrl = detail.source === 'altegio' ? detail.service.imageUrl : null;
   // The API is server-only, including when a catalog image points to its host.
@@ -117,7 +117,6 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
   const duration = detail.source === 'altegio'
     ? s.durationMin === null ? '' : t('home.services.duration', { minutes: s.durationMin })
     : facts.durationShort(detail.service);
-  const demoBadge = detail.source === 'demo' ? <> <Badge>{facts.demo}</Badge></> : null;
   return (
     <article className="container page">
       <PageLd kind="service" detail={detail} />
@@ -135,7 +134,7 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
         <div className="svc-hero__text">
           <PageHead crumbs={[{ href: '/services', label: t('services.title') }, { label: s.title }]} eyebrow={s.categoryTitle} title={s.title} up />
           <dl className="facts">
-            <div><dt>{t('services.card.priceLabel')}</dt><dd className="tn">{price}{demoBadge}</dd></div>
+            <div><dt>{t('services.card.priceLabel')}</dt><dd className="tn">{price}</dd></div>
             {detail.source === 'altegio' || duration ? <div><dt>{t('services.card.durationLabel')}</dt><dd className="tn">{duration}</dd></div> : null}
           </dl>
           <BookingLink preset={{ service: s.id }} className="btn btn--primary btn-book">{t('service.cta')}</BookingLink>
@@ -143,11 +142,11 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
         </div>
       </div>
       <div className="doc-sections">
-        {SECTIONS.map((k) => (
+        {SECTIONS.filter((k) => k === 'specialists' || (k === 'related' && articles.length) || placeholder).map((k) => (
           <section key={k} className={k === 'specialists' || k === 'related' ? 'doc-sections__wide' : undefined}
             hidden={k !== 'specialists'} aria-labelledby={k === 'specialists' ? SPECIALISTS_HEADING : undefined}>
             <h2 className="h3" id={k === 'specialists' ? SPECIALISTS_HEADING : undefined} tabIndex={k === 'specialists' ? -1 : undefined}>
-              {t(`service.section.${k}`)}{k === 'specialists' && staffList ? demoBadge : null}
+              {t(`service.section.${k}`)}
             </h2>
             {k === 'specialists' ? (
               detail.source === 'altegio' ? <ServiceStaff key={s.id} locale={locale} serviceId={s.id} headingId={SPECIALISTS_HEADING} t={t} />

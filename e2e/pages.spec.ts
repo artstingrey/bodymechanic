@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect, type APIRequestContext } from '@playwright/test';
-import { LOCALES, matrixPages, isShotPage, shotName, guard, settle3D, drawOffscreen3D, domChecks, internalLinks, expectClean, seedConsent } from './helpers';
+import { LOCALES, matrixPages, isShotPage, shotName, guard, settle3D, drawOffscreen3D, domChecks, internalLinks, expectClean, expectNoDemoLabels, seedConsent } from './helpers';
 
 const SHOTS = process.env.GATE_SHOTS !== '0';
 const linkCache = new Map<string, string | null>(); // url → problem (null = ok), per worker
@@ -38,6 +38,7 @@ for (const locale of LOCALES) {
       const res = await page.goto(url, { waitUntil: 'networkidle' });
       expect(res?.status(), `document status of ${url}`).toBe(200);
       await settle3D(page);
+      await expectNoDemoLabels(page);
 
       const problems = [...(await domChecks(page, locale))];
       const here = new URL(page.url());

@@ -14,7 +14,7 @@ import { Link } from '@/i18n/navigation';
 import { ButtonLink } from '@/components/ui/Button';
 import { LangSwitch } from './LangSwitch';
 import { PrivateLink } from './PrivateLink';
-import { Todo } from '@/components/ui/Todo';
+import { isTodo } from '@/components/ui/Todo';
 import { useBackCloses } from '@/lib/ui/useBackCloses';
 
 /** put the page back where it was (instant, also one frame later: the browser may scroll after a focus move) */
@@ -39,7 +39,7 @@ export function BurgerRoot({ children }: { children: ReactNode }) {
   const scrollY = useRef(0);
   const leaving = useRef(false);
 
-  /** where the panel starts and which edge it hangs from; on phones the pill rises to its resting place over the demo line */
+  /** Where the panel starts and which edge it hangs from. */
   const place = useCallback(() => {
     const b = btn.current, d = dialog.current, bar = b?.closest<HTMLElement>('.site-header__bar'), header = b?.closest<HTMLElement>('.site-header');
     if (!b || !d || !bar || !header) return;
@@ -174,7 +174,7 @@ export function BurgerDialog() {
           </PrivateLink>
           <div className="meta">
             <LangSwitch variant="long" />
-            <span className="soc">{t('nav.burger.social')}: <Todo>{t('footer.socialLinks')}</Todo></span>
+            {isTodo(t('footer.socialLinks')) ? null : <span className="soc">{t('nav.burger.social')}: {t('footer.socialLinks')}</span>}
           </div>
         </div>
         <div className="burger-dialog__cta"><ButtonLink href="/booking" full replace onClick={follow}>{t('nav.book')}</ButtonLink></div>

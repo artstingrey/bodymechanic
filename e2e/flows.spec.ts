@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import en from '../messages/en.json';
-import { LOCALES, ROOT, NEXT, REQUIRED, builtPages, templateOf, matrixPages, guard, settle3D, domChecks, expectClean, seedConsent, tapMarksRightAway, deepLinksEveryStep } from './helpers';
+import { LOCALES, ROOT, NEXT, REQUIRED, builtPages, templateOf, matrixPages, guard, settle3D, domChecks, expectClean, expectNoDemoLabels, seedConsent, tapMarksRightAway, deepLinksEveryStep } from './helpers';
 
 test.beforeEach(async ({ page }) => { await seedConsent(page); }); // the cookie card would cover the 3D slot
 
@@ -62,6 +62,7 @@ test.describe('404 (DEL-12)', () => {
       const g = guard(page, baseURL!, { allowStatus: (url, st) => st === 404 && new URL(url).pathname === u });
       const res = await page.goto(u, { waitUntil: 'networkidle' });
       expect(res?.status()).toBe(404);
+      await expectNoDemoLabels(page);
       const lang = u.startsWith('/ru/') ? 'ru' : 'en';
       await expect(page.locator(`main a[href="/${lang}/"], main a[href="/${lang}"]`).filter({ visible: true })).toHaveCount(1);
       if (u.includes('/services/')) await expect(page.locator('main .nf')).toBeVisible();

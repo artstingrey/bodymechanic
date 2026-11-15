@@ -436,3 +436,9 @@ export async function entryProbe(page: Page, gtmId = 'GTM-GATE01') {
   await testHook(page, { gtmId });
   return seen;
 }
+export async function expectNoDemoLabels(page: Page) {
+  const label = /(?:^|[^\p{L}\p{N}_])(?:demo|демо)(?=$|[^\p{L}\p{N}_])/iu;
+  await expect(page.locator('body')).not.toContainText(label, { useInnerText: true });
+  await expect(page).not.toHaveTitle(label);
+  await expect(page.locator('.demo, .demo-notice, .demo-badge, .demo-note, [data-todo]')).toHaveCount(0);
+}

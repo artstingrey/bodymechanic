@@ -17,7 +17,7 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
-import { testHook } from './helpers';
+import { expectNoDemoLabels, testHook } from './helpers';
 
 const PAGES = ['/ru/lp/a/', '/ru/lp/b/', '/en/lp/a/', '/en/lp/b/'];
 // RC-9 (T-1): the list lives IN the repository (a copy of the deck's lexicon-denylist.json, kept by `npm run sync` and the
@@ -146,9 +146,10 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
     // R-LP-03 F-02: while lp-config offer.status = example, the offer carries «Пример оффера» in the first screen and the final block
     expect(await page.locator('.lp-hero .ex').evaluateAll((els) => els.some((e) => e.getBoundingClientRect().width > 0)), 'example badge on the hero offer').toBe(true);
     await expect(page.locator('.lp-final .ex')).toHaveCount(1);
-    // T-12: while requests go to the mock, «Демо» + one line next to the form
-    await expect(page.locator('#lp-f1 .demo-note, .lp-hero-cta ~ dialog .demo-note').first()).toBeAttached();
-    if (await page.locator('#lp-f1').isVisible()) await expect(page.locator('#lp-f1 .demo-note')).toBeVisible();
+    await expectNoDemoLabels(page);
+    if (await page.locator('#lp-f1').isVisible()) {
+      await expect(page.locator('#lp-f1 .resp')).toHaveText((url.startsWith('/ru/') ? ru : en).lp.form.phoneHint);
+    }
     // §6: only the landing's static Manrope instances, never the site's variable font (LP root layout)
     expect(fonts.length).toBeGreaterThan(0);
     expect(fonts.filter((f) => !/^Manrope-[4678]00\.woff2$/.test(f)), 'fonts other than the static LP instances').toEqual([]);
@@ -352,7 +353,8 @@ test('form: errors + summary, consent for the marks only with a chip, AA in stat
   await f.locator('button[type="submit"]').dblclick(); // a double tap → still one lead
   await expect(page.locator('#lp-f1 .lp-thanks[role="status"]')).toBeVisible();
   await expect(page.locator('#lp-f1 .lp-thanks')).toBeFocused(); // R-LP-03 M-02 (WebKit: focus after the render)
-  await expect(page.locator('#lp-f1 .lp-thanks .demo-note')).toBeVisible(); // T-12: the demo mark stays after «спасибо»
+  await expect(f.getByRole('heading', { name: ru.lp.result.title })).toBeVisible();
+  await expectNoDemoLabels(page);
   expect(await page.evaluate(() => (window as unknown as { __lpLeads?: number }).__lpLeads)).toBe(1);
   expect(await aaFails(page)).toEqual([]);
   expect(errs).toEqual([]);
@@ -378,6 +380,7 @@ test('?form=sheet: the test button opens the sheet, «Назад» closes it and
   const sheet = page.locator('dialog.lp-sheet');
   await btn.click();
   await expect(sheet).toHaveAttribute('open', '');
+  await expect(sheet.locator('.resp')).toHaveText(ru.lp.form.phoneHint);
   await page.goBack(); // Android hardware «Назад» / iOS edge swipe
   await expect(sheet).not.toHaveAttribute('open', '');
   expect(new URL(page.url()).pathname).toBe('/ru/lp/b/');
@@ -390,6 +393,8 @@ test('?form=sheet: the test button opens the sheet, «Назад» closes it and
   await sheet.locator('input[name="phone"]').fill('+971 50 123 4567');
   await sheet.locator('button[type="submit"]').click();
   await expect(sheet.locator('.lp-thanks')).toBeVisible();
+  await expect(sheet.getByRole('heading', { name: ru.lp.result.title })).toBeVisible();
+  await expectNoDemoLabels(page);
   expect(await aaFails(page)).toEqual([]);
 });
 

@@ -41,11 +41,7 @@ function variant(l: L, m: typeof ru): string {
   const menu = ([['services/', 'nav.burger.services'], ['prices/', 'nav.main.prices'], ['team/', 'nav.main.team'], ['#approach', 'nav.main.approach'],
     ['#reviews', 'nav.main.reviews'], ['#faq', 'nav.main.faq'], ['journal/', 'nav.burger.journal'], ['contacts/', 'nav.burger.contacts']] as const)
     .map(([href, key]) => { const [g, k] = key.split('.').slice(1) as ['burger' | 'main', string]; return `<li><a href="/${l}/${href}">${esc((m.nav[g] as Record<string, string>)[k])}</a></li>`; }).join('');
-  // the same bar as the site layout: the long note from 768 px, prototype.demoNoticeShort on phones (layout.css; reviewer, RC-2:
-  // the 404 kept the long note in two lines)
-  return `<p class="demo-notice" role="note" lang="${l}"><span class="demo-badge">${esc(m.prototype.demoBadge)}</span> `
-    + `<span class="demo-notice__full">${esc(m.prototype.demoNotice)}</span><span class="demo-notice__short">${esc(m.prototype.demoNoticeShort)}</span></p>`
-    + `<header data-nf="${l}" lang="${l}" class="site-header"><div class="site-header__bar"><div class="site-header__bg" aria-hidden="true"></div>`
+  return `<header data-nf="${l}" lang="${l}" class="site-header"><div class="site-header__bar"><div class="site-header__bg" aria-hidden="true"></div>`
     + `<div class="site-header__row"><a href="/${l}/" aria-label="${esc(m.nav.logoAria)}" class="site-logo">`
     + `<img class="logo-full" src="/brand/bm-lockup-horizontal-color-plate.svg" width="323" height="78" alt="">`
     + `<img class="logo-nano" src="/brand/bm-lockup-compact-nano-color-plate.svg" width="242" height="52" alt=""></a>`

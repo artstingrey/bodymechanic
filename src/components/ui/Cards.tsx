@@ -1,7 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from '@/i18n/navigation';
 import { Icon } from './Icon';
-import { Badge } from './Badge';
 import { noWidow, tailEm } from '@/lib/typo';
 
 type Href = Parameters<typeof Link>[0]['href'];
@@ -63,13 +62,13 @@ export function Silhouette() {
  * Photo placeholder, one brand style for the whole site (lead's empty-state policy, design audit F05/F06):
  * - Bone tone with the emblem tone-on-tone;
  * - optional number in the atlas style («01» for «Специалист студии 1»);
- * - the caption («Фото … — скоро») and, where the block has no badge of its own, «Демо».
+ * - the caption («Фото … — скоро»).
  */
-export function PhotoPlaceholder({ caption, num, demo, className }: { caption: string; num?: string; demo?: string; className?: string }) {
+export function PhotoPlaceholder({ caption, num, className }: { caption: string; num?: string; className?: string }) {
   return (
     <div className={['ph', className].filter(Boolean).join(' ')} role="img" aria-label={caption}>
       {num ? <span className="ph__num" aria-hidden="true">{num.padStart(2, '0')}</span> : null}
-      <span className="ph__cap" aria-hidden="true"><span>{caption}</span>{demo ? <span className="badge">{demo}</span> : null}</span>
+      <span className="ph__cap" aria-hidden="true">{caption}</span>
     </div>
   );
 }
@@ -90,15 +89,14 @@ export function StaffCard({ name, note, photo, photoCaption, href, badge }: {
   );
 }
 
-/** Review card — placeholder with «Демо» (client has no reviews yet; block kept with placeholders, client decision). */
-export function ReviewCard({ name, meta, text, demoLabel }: { name: string; meta: string; text: string; demoLabel: string }) {
+/** Review card. */
+export function ReviewCard({ name, meta, text }: { name: string; meta: string; text: string }) {
   const initials = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   return (
     <article className="review">
       <div className="who">
         <span className="av" aria-hidden="true">{initials}</span>
         <div><b>{name}</b><div className="cap">{meta}</div></div>
-        <Badge className="ml-auto">{demoLabel}</Badge>
       </div>
       <p style={{ margin: 0 }}>{text}</p>
     </article>

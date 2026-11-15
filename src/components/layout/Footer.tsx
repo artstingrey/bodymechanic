@@ -7,8 +7,7 @@ import { Todo, isTodo } from '@/components/ui/Todo';
 /**
  * Footer (ТЗ §04, §05.10; ui-kit «Подвал»): giant mark on --dark (wide ≥768, stacked on phones), columns
  * Services / Studio / Contacts / Language (2 → 4 columns), documents, © 2026. Contacts stay TODO(content) until the client sends them.
- * While every contact is TODO the block shows one line (contacts.pending) + one «Демо» (RC-4, as /contacts); a single missing value
- * is a «label · Демо» row; the legal line is «© … Демо» (Todo: lead's empty-state policy, no editor notes on the page). Phones (< 768, after the client's «всё криво» from an iPhone 17 Pro Max): RC-7 one centred axis — logo,
+ * While every contact is TODO the block shows contacts.pending. Phones (< 768): RC-7 one centred axis — logo,
  * group headings, link rows and legal lines (layout.css, Brand Designer's variant B). The stacked lockup's viewBox has 6 units
  * of room under «MECHANIC» (RC-7, BD: its letters ended 2 units below the old box), hence 720 × 549; the wide one (≥ 768) was
  * cut at the top and the bottom (drawing −3.5 … 404.1 in 0 … 400.6) and has 8 units on both now, hence 1680 × 417.
@@ -19,6 +18,8 @@ const CONTACT_ROWS = [['footer.links.whatsapp', 'contacts.value.whatsapp'], ['fo
 
 export async function Footer() {
   const t = await getTranslations();
+  const contacts = CONTACT_ROWS.filter(([, key]) => !isTodo(t(key)));
+  const legalEntity = t('footer.legalEntity');
   return (
     <footer className="site-footer on-dark">
       <div className="container">
@@ -43,23 +44,16 @@ export async function Footer() {
           </ul></div>
           <div><h2>{t('footer.col.contacts')}</h2><ul>
             <li><Link prefetch={false} href="/contacts">{t('footer.links.address')}</Link></li>
-            {/* nothing known yet: one line + one «Демо» for the block, as on /contacts (RC-4, BD: four pills on every page); the TODO
-                notes stay in data-todo for QA; with real values the four rows come back */}
-            {CONTACT_ROWS.every(([, v]) => isTodo(t(v)))
-              ? (
-                <li className="ct ct--pending">
-                  {t.has('contacts.pending') ? <span>{t('contacts.pending')}</span> : null}<span className="badge">{t('prototype.demoBadge')}</span>
-                  {CONTACT_ROWS.map(([, v]) => <Todo key={v} as="span" hidden>{t(v)}</Todo>)}
-                </li>
-              )
-              : CONTACT_ROWS.map(([label, v]) => (
+            {contacts.length === 0
+              ? (t.has('contacts.pending') ? <li className="ct ct--pending">{t('contacts.pending')}</li> : null)
+              : contacts.map(([label, v]) => (
                 <li key={v} className="ct"><span>{label === 'social' ? `${t('footer.social.instagram')} · ${t('footer.social.telegram')}` : t(label)}</span><Todo>{t(v)}</Todo></li>
               ))}
           </ul></div>
           <div><h2>{t('footer.col.language')}</h2><LangSwitch variant="long" /></div>
         </nav>
         <div className="site-footer__legal">
-          <p>{t('footer.copyright', { year: 2026 })} <Todo>{t('footer.legalEntity')}</Todo></p>
+          <p>{t('footer.copyright', { year: 2026 })}{isTodo(legalEntity) ? null : <> {legalEntity}</>}</p>
           <ul className="site-footer__docs">
             <li><Link prefetch={false} href="/privacy">{t('footer.docs.privacy')}</Link></li>
             <li><Link prefetch={false} href="/terms">{t('footer.docs.terms')}</Link></li>

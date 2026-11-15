@@ -29,8 +29,6 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp .i { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .lp :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.lp .demo { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(38, 34, 31, .08); font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text); }
-.lp .todo { color: var(--muted); text-decoration: underline dotted; text-decoration-color: color-mix(in srgb, currentColor 55%, transparent); text-underline-offset: 4px; }
 
 /* ---------- buttons ---------- */
 .lp .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 22px; border-radius: var(--r-pill); border: 0; font: 700 16px/1 var(--font-sans); text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color var(--d-hover) var(--e-out), transform var(--d-fade) var(--e-out), box-shadow var(--d-fade) var(--e-out); }
@@ -140,7 +138,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
    (≈ 20 px shorter), ≤ 325 it leaves the photo for its line in the copy column */
 @media (max-width: 360px) { .lp-media .ex--photo { text-transform: none; letter-spacing: 0; } }
 @media (max-width: 325px) { .lp-media .ex--photo { display: none; } .lp-copy .ex--copy { display: inline-flex; } }
-/* one kind of demo mark (lead, BD's LP audit L07: six looks before): «Пример оффера» takes the «Демо» pill (8 % Carbon on light,
+/* The example offer label uses the same pill across the landing (8 % Carbon on light,
    12 % Bone on the dark final block); on the photo it takes the plate of «Иллюстративное фото», so each surface has one look.
    The long final line «Пример оффера — условия уточняются» in sentence case: one line on 320 (L22, was two inside the pill) */
 .lp .ex { background: rgba(38, 34, 31, .08); box-shadow: none; }
@@ -171,10 +169,6 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-form .acts .btn--p { flex: 1 1 0; }
 .lp :is(.lp-form, .lp-hero-cta) .resp { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; }
 .lp :is(.lp-form, .lp-hero-cta) .resp .i { width: 16px; height: 16px; color: #1f8a4c; }
-/* T-12: «Демо» next to the form while requests go to the mock (the site's demo badge language); under the button line,
-   so the first screen (the form button) never moves */
-.lp .demo-note { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; line-height: 1.35; color: var(--muted); }
-.lp .demo-note .demo { flex: none; }
 .lp-form .fine { max-width: 37.9em; font-size: 13px; line-height: 1.45; color: var(--muted); } /* ≤ ~65 characters a line (was 80 on ≥ 744 — desktop audit L8); 37.9em = 62ch of Manrope (492 px), em so the swap does not move it (RC-6) */
 .lp-form .fine a { text-underline-offset: 2px; }
 .form-errors { display: grid; gap: 4px; padding: 12px 14px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--error) 8%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--error) 30%, transparent); color: var(--error); font-size: 14px; font-weight: 600; }
@@ -201,15 +195,10 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp .check input:checked + .box .i { opacity: 1; }
 .lp .check input:focus-visible + .box { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .lp .check[data-invalid="true"] .box { box-shadow: inset 0 0 0 2px var(--error); }
-/* thank-you in place of the form */
+/* Result in place of the form. */
 .lp-thanks { display: grid; gap: 14px; animation: lp-in 400ms var(--e-out) both; }
 .lp-thanks:focus { outline: none; }
-.lp-thanks .ok { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--success); color: #fff; }
-.lp-thanks .ok .i { width: 26px; height: 26px; stroke-width: 2.4; }
 .lp-thanks h3 { font-size: 22px; line-height: 1.15; letter-spacing: -.02em; }
-.lp-thanks ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; counter-reset: s; }
-.lp-thanks li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 14px; }
-.lp-thanks li::before { counter-increment: s; content: "0" counter(s); font-size: 13px; font-weight: 800; color: var(--accent-ink); padding-top: 2px; font-variant-numeric: tabular-nums; }
 .lp .server-err { display: grid; gap: 10px; padding: 12px 14px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--error) 8%, var(--surface)); color: var(--error); font-size: 14px; font-weight: 600; }
 @keyframes lp-in { from { opacity: 0; transform: translateY(12px); } }
 
@@ -292,7 +281,6 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-dirs address { display: grid; gap: 4px; font-style: normal; font-size: 16px; }
 .lp-dirs p { margin: 0; font-size: 15px; }
 .lp-steps .lnk { display: inline-flex; align-items: center; min-height: 48px; font-size: 14px; font-weight: 600; color: var(--text); margin-top: 0; text-underline-offset: 3px; }
-.lp-sec--tint .todo { color: var(--muted-card); }
 .lp-risk { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
 .lp-risk li { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; }
 .lp-risk .i { color: var(--success); margin-top: 2px; }
@@ -309,9 +297,8 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-final h2 { color: var(--bg); }
 .lp-final .lbl { color: var(--accent-on-dark); }
 .lp-final .sub { color: var(--muted-on-dark); }
-.lp-final .todo { color: var(--muted-on-dark); }
 .lp-final .lp-form { color: var(--text); }
-.lp-final .lp-form :is(.sub, .todo) { color: var(--muted); }
+.lp-final .lp-form .sub { color: var(--muted); }
 .lp-final .grid { display: grid; gap: 20px; }
 /* RC-8: the site's dark footer without its logo and columns (an ad page adds no links). The band is painted by a spread shadow, so
    the markup and .lp-foot > p stay; centred on phones, left from 768 like the reference */
@@ -319,7 +306,6 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-foot .row { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
 .lp-foot a { min-height: 48px; display: inline-flex; align-items: center; color: var(--muted-on-dark); }
 @media (hover: hover) { .lp-foot a:hover { text-decoration: underline; text-underline-offset: 4px; } }
-.lp .lp-foot :is(.demo, .badge) { background: rgba(247, 244, 240, .14); color: var(--bg); } /* the light badge read dark on dark; .lp: the later .lp .badge must not win */
 /* phones (BD's LP audit L20): one layout at every width — the © line, then each document on its own 44 px row; before, the links
    stood in a row on 393–440, one per line with ≈ 50 px gaps on 360–390, and EN left «Terms of use» alone on the second line */
 @media (max-width: 767px) {
@@ -479,17 +465,14 @@ html[data-lp-form="sheet"] .lp-sticky .l-form { display: none; }
 html[data-lp-form="sheet"] .lp-sticky .l-sheet { display: inline; }
 /* 3 · «Что можно выбрать»: the cards snap to the 16 px field, not to the screen edge */
 .lp-cards { scroll-padding-inline: var(--lp-g); }
-/* 4 · empty-state policy (as on the site): no dotted editor notes — the site's «Демо» badge (Todo) and one neutral line */
-.lp .todo { color: inherit; text-decoration: none; }
-.lp .badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(38, 34, 31, .08); color: var(--text); font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.lp .pending { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; font-size: 15px; }
-.lp-final .pending .demo, .lp-final .todo .badge { background: rgba(247, 244, 240, .14); color: var(--bg); }
+/* 4 · Pending address and offer terms. */
+.lp .pending { margin: 0; font-size: 15px; }
 .lp-dirs .map { background-color: color-mix(in srgb, var(--text) 5%, var(--bg)); background-image: none; box-shadow: none; } /* a quiet Bone plaque with the pin, not a grid */
 /* 5 · the sticky bar is opaque: nothing reads through under its buttons */
 .lp-sticky { background: var(--bg); }
 /* 7 · «Вопросы и ответы»: air between the heading and the list */
 .lp-faq-wrap .fhead { margin-bottom: 20px; }
-/* 9 · «Специалисты и студия»: one brand placeholder, as on the site (Bone, the emblem tone-on-tone, caption + «Демо» under it) */
+/* 9 · «Специалисты и студия»: the brand placeholder with a caption. */
 .lp-studio { grid-template-columns: minmax(0, 1fr); }
 .lp-studio .ph { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: var(--r-card); background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
 .lp-studio .ph::before { content: ""; position: absolute; inset: 12% 30% 30%; background: color-mix(in srgb, var(--text) 8%, transparent);
