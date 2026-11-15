@@ -8,6 +8,9 @@ import type { BodyMarker, BookingDraft, Locale } from '@/lib/api/types';
 import { track } from '@/lib/analytics/track';
 import { readUtm } from '@/lib/analytics/utm';
 import { draftExpired } from '@/lib/booking/draft-ttl';
+import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, isMarkerIntensity, limitNote, MARKER_NOTE_LIMIT, MAX_MARKERS } from './booking-details';
+
+export { MAX_MARKERS } from './booking-details';
 
 export type Gender = 'male' | 'female';
 export type Tool = 'rotate' | 'zoom' | 'marker';
@@ -47,7 +50,6 @@ export interface BodyState {
   loadSeq: number;
 }
 
-export const MAX_MARKERS = 10; // ТЗ 6.3
 const KEY = 'bm.bookingDraft';
 
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -70,13 +72,13 @@ function announce(event: LiveEvent) {
   set({ live: { seq, event }, liveLog: [...state.liveLog.filter((e) => at - e.at < 4000), { seq, event, at }].slice(-3) });
 }
 
-function save() {
+function save(savedAt = Date.now()) {
   try {
     const draft: Pick<BookingDraft, 'model' | 'markers' | 'generalNote'> & { v: 1 } = {
       v: 1, model: state.model, generalNote: state.generalNote,
       markers: state.markers.map(({ id, zoneId, position, note, intensity }) => ({ id, zoneId, position, note, intensity })),
     };
-    sessionStorage.setItem(KEY, JSON.stringify({ ...draft, normals: state.markers.map((m) => m.normal ?? null), savedAt: Date.now() }));
+    sessionStorage.setItem(KEY, JSON.stringify({ ...draft, normals: state.markers.map((m) => m.normal ?? null), savedAt }));
   } catch { /* storage disabled: the draft simply does not survive a reload */ }
 }
 
@@ -85,6 +87,7 @@ export function hydrateBody() {
   if (hydrated || typeof window === 'undefined') return;
   hydrated = true;
   const patch: Partial<BodyState> = { autorotate: !reducedMotion() };
+  let migratedAt: number | null = null;
   try {
     const raw = sessionStorage.getItem(KEY);
     const d = raw ? JSON.parse(raw) : null;
@@ -92,13 +95,21 @@ export function hydrateBody() {
     if (d && draftExpired(d.savedAt)) sessionStorage.removeItem(KEY);
     else if (d) {
       patch.model = d.model === 'female' ? 'female' : 'male';
-      patch.generalNote = typeof d.generalNote === 'string' ? d.generalNote : '';
-      patch.restored = (Array.isArray(d.markers) && d.markers.length > 0) || !!(d.generalNote && String(d.generalNote).trim());
-      patch.markers = (Array.isArray(d.markers) ? d.markers : []).slice(0, MAX_MARKERS)
-        .map((m: BodyMarker, i: number) => ({ ...m, n: i + 1, normal: d.normals?.[i] ?? undefined }));
+      patch.generalNote = typeof d.generalNote === 'string' ? limitNote(d.generalNote, GENERAL_NOTE_LIMIT) : '';
+      const markers: BodyMarker[] = Array.isArray(d.markers) ? d.markers : [];
+      patch.markers = markers.slice(0, MAX_MARKERS).map((m, i) => ({
+        ...m,
+        n: i + 1, normal: d.normals?.[i] ?? undefined,
+        note: typeof m.note === 'string' ? limitNote(m.note, MARKER_NOTE_LIMIT) : undefined,
+        intensity: isMarkerIntensity(m.intensity) ? m.intensity : DEFAULT_MARKER_INTENSITY,
+      }));
+      patch.restored = patch.markers.length > 0 || !!patch.generalNote.trim();
+      if (typeof d.savedAt === 'number' && (patch.generalNote !== d.generalNote || patch.markers.length !== markers.length ||
+        patch.markers.some((m, i) => m.note !== markers[i].note || m.intensity !== markers[i].intensity))) migratedAt = d.savedAt;
     }
   } catch { /* ignore broken drafts */ }
   set(patch);
+  if (migratedAt !== null) save(migratedAt);
 }
 
 const nextNumber = () => { const used = new Set(state.markers.map((m) => m.n)); let n = 1; while (used.has(n)) n++; return n; };
@@ -113,20 +124,20 @@ export const body = {
   setProgress(progress: number) { set({ progress }); },
   setMode2d(reason: BodyState['mode2d']) { set({ mode2d: reason }); if (reason) announce({ type: 'mode2d' }); },
   resetView() { set({ resetSeq: state.resetSeq + 1 }); announce({ type: 'viewReset' }); },
-  setGeneralNote(generalNote: string) { set({ generalNote: generalNote.slice(0, 1000) }, true); }, // ТЗ 6.5: ≤ 1000
+  setGeneralNote(generalNote: string) { set({ generalNote: limitNote(generalNote, GENERAL_NOTE_LIMIT) }, true); },
   /** Adds a marker; returns false when the zone is unknown or the limit is reached. */
   addMarker(m: { zoneId: string | null; position: [number, number, number]; normal?: [number, number, number] }): boolean {
     if (!m.zoneId) { set({ hint: { seq: (state.hint?.seq ?? 0) + 1, key: 'outOfZones' } }); announce({ type: 'outOfZones' }); return false; }
     if (state.markers.length >= MAX_MARKERS) { announce({ type: 'maxReached' }); return false; }
     const n = nextNumber();
-    const marker: Marker = { id: `m${Date.now().toString(36)}${n}`, n, zoneId: m.zoneId, position: m.position, normal: m.normal };
+    const marker: Marker = { id: `m${Date.now().toString(36)}${n}`, n, zoneId: m.zoneId, position: m.position, normal: m.normal, intensity: DEFAULT_MARKER_INTENSITY };
     set({ markers: [...state.markers, marker] }, true);
     announce({ type: 'markerAdded', n, zoneId: m.zoneId });
     track('body_marker_add', { marker_count: state.markers.length, step: 1, model: state.model }); // no zone (D-01, M7)
     return true;
   },
   updateMarker(id: string, patch: Partial<Pick<Marker, 'note' | 'intensity' | 'position' | 'normal'>>) {
-    const note = patch.note === undefined ? undefined : patch.note.slice(0, 300); // ТЗ 6.5: ≤ 300
+    const note = patch.note === undefined ? undefined : limitNote(patch.note, MARKER_NOTE_LIMIT);
     set({ markers: state.markers.map((m) => (m.id === id ? { ...m, ...patch, ...(note === undefined ? {} : { note }) } : m)) }, true);
   },
   removeMarker(id: string) {

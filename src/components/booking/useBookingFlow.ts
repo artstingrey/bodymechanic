@@ -18,21 +18,22 @@ import { useSearchParams } from 'next/navigation';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
-import { errorKind, postCheck, postCode, postRecord, recommendServices } from '@/lib/api';
+import { errorKind, recommendServices } from '@/lib/api';
 import { dubaiToday } from '@/lib/api/dubai';
 import type { ApiErrorKind } from '@/lib/api/errors';
 import type { Service } from '@/lib/api/types';
 import { body, useBody } from '@/lib/body3d/store';
 import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
-import { BOOKING_SMS_REQUIRED } from '@/lib/config';
 import { track } from '@/lib/analytics/track';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';
-import { collect, messageArgs, normalizePhone, rules, type ErrorCode } from '@/lib/forms/validate';
-import { clearResult, loadResult, saveResult, type BookingResult } from '@/lib/booking/result';
+import { collect, messageArgs, normalizePhone, requiredEmail, rules, type ErrorCode } from '@/lib/forms/validate';
+import { clearResult, loadResult, saveResult, type StoredBooking } from '@/lib/booking/result';
 import { PRESET_PARAMS, absorbPresetFromUrl, entryBroughtService, takePreset, type HandOver } from '@/lib/booking/preset';
 import type { Locale } from '@/i18n/routing';
+import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
 import { getAvailableDates, getAvailableTimes } from './booking-availability';
 import { getBookingStaff } from './booking-staff';
+import { bookingRejectionNotice, sendBooking } from './booking-submit';
 import { confirmedCatalogId, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
 import { useBookingSelection } from './useBookingSelection';
 
@@ -43,7 +44,7 @@ const NO_PARAMS: Pick<URLSearchParams, 'get'> = new URLSearchParams();
 
 export const STEPS = ['zones', 'service', 'specialist', 'time', 'contacts', 'review', 'done'] as const;
 // During the staged rollout, live services stop at the last connected step.
-const LAST_AVAILABLE_STEP = 4;
+const LAST_AVAILABLE_STEP = 6;
 export type BookingError = ApiErrorKind | 'slotTaken';
 
 /** Async data with loading / error / retry, without setState in the effect body (state is keyed by the request). */
@@ -72,9 +73,12 @@ export function useBookingFlow(demoServices: Service[]) {
   const router = useRouter();
   const urlParams = useClientSearchParams();
   const [ready, setReady] = useState(false); // hydrated: the URL and the stored choices are in effect
+  const [stored, setStored] = useState<StoredBooking | null>(null);
+  const result = stored?.status === 'created' ? stored : null;
+  const lockedStep = stored ? (result ? LAST_AVAILABLE_STEP : 6) : null;
   const sp = ready && urlParams ? urlParams : NO_PARAMS;
   const requestedStep = Number(sp.get('step'));
-  const step = Number.isInteger(requestedStep) ? Math.min(LAST_AVAILABLE_STEP, Math.max(1, requestedStep)) : 1;
+  const step = lockedStep ?? (Number.isInteger(requestedStep) ? Math.min(LAST_AVAILABLE_STEP, Math.max(1, requestedStep)) : 1);
   const go = useCallback((n: number, replace = false) => {
     n = Math.min(LAST_AVAILABLE_STEP, n);
     const href = n === 1 ? '/booking/' : `/booking/?step=${n}`;
@@ -90,8 +94,6 @@ export function useBookingFlow(demoServices: Service[]) {
   const { sel, update, updateContact, clear, load } = useBookingSelection();
   const [selRestored, setSelRestored] = useState(false);
   const handedOver = useRef<HandOver | null | undefined>(undefined); // taken once, also when the effect runs twice (StrictMode)
-  // ---- result (step 7) — survives F5; without it step 7 is not reachable
-  const [result, setResult] = useState<BookingResult | null>(null);
   // Hydration-time read of the URL and sessionStorage (external, client-only): the render before it must equal the static
   // HTML, so this state cannot be initialised lazily; a layout effect re-renders before the first paint.
   useLayoutEffect(() => {
@@ -112,7 +114,7 @@ export function useBookingFlow(demoServices: Service[]) {
     const ownService = entryBroughtService(presetServiceId !== null || !!p.own);
     const hasSavedSelection = s.serviceId !== null || !!(s.contact.fullname || s.contact.phone || s.contact.email || s.contact.age);
     setSelRestored(hasSavedSelection && !ownService);
-    setResult(loadResult());
+    setStored(loadResult());
     setReady(true);
     // once, on mount: a later hand-over on the same page does not override the choice (as ?service= did not)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,6 +130,8 @@ export function useBookingFlow(demoServices: Service[]) {
     return catalog.services.map((item) => ({
       id: item.id,
       title: homeServiceTitle(locale, item, translations),
+      currency: item.currency,
+      durationMin: item.durationMin,
       categoryTitle: item.categoryId === null ? undefined : categories.get(item.categoryId),
       price: formatCatalogServicePrice(item, locale, {
         unknown: () => t('home.services.priceUnknown'),
@@ -145,23 +149,11 @@ export function useBookingFlow(demoServices: Service[]) {
   }), [services, recommended]);
   const catalogService = services.find((s) => s.id === sel.serviceId) ?? null;
   const needsService = step >= 3 && (sel.serviceId === null || (catalogQ.status === 'ready' && !catalogService));
-  // Sync the cleaned address with the router and resolve deep links to steps that are available.
   useEffect(() => {
-    if (!ready) return;
-    const url = new URL(window.location.href);
-    const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
-    const linkedStep = Number(url.searchParams.get('step'));
-    const replacement = needsService ? 2 : Number.isInteger(linkedStep) && linkedStep > LAST_AVAILABLE_STEP ? LAST_AVAILABLE_STEP : null;
-    if (!syncPreset && replacement === null) return;
-    if (replacement !== null) url.searchParams.set('step', String(replacement));
-    const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
-    window.history.replaceState(own, '', url);
-  }, [ready, urlParams, needsService]);
-  useEffect(() => {
-    if (catalogQ.status === 'ready' && sel.serviceId !== null && !catalogService) {
+    if (!stored && catalogQ.status === 'ready' && sel.serviceId !== null && !catalogService) {
       update({ serviceId: null, staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null });
     }
-  }, [catalogQ.status, sel.serviceId, catalogService, update]);
+  }, [stored, catalogQ.status, sel.serviceId, catalogService, update]);
   const selectService = (serviceId: number) => update({
     serviceId,
     date: null,
@@ -179,10 +171,10 @@ export function useBookingFlow(demoServices: Service[]) {
     update({ staffId, date: null, datetime: null, wantDate: null, wantTime: null });
   }, [update]);
   useEffect(() => {
-    if (staffUnavailable) selectStaff(0);
-  }, [staffUnavailable, selectStaff]);
+    if (!stored && staffUnavailable) selectStaff(0);
+  }, [stored, staffUnavailable, selectStaff]);
 
-  const availabilityEnabled = step === 4 && catalogServiceId !== undefined && staffQ.status === 'ready' && !staffUnavailable;
+  const availabilityEnabled = step >= 4 && !result && catalogServiceId !== undefined && staffQ.status === 'ready' && !staffUnavailable;
   const availabilitySelection = { serviceId: catalogServiceId!, staffId: sel.staffId, locale };
   const datesQ = useAsync(availabilityEnabled, (signal) => getAvailableDates(availabilitySelection, signal),
     ['dates', locale, catalogServiceId, sel.staffId], true);
@@ -200,17 +192,18 @@ export function useBookingFlow(demoServices: Service[]) {
     ? slots?.find(({ time }) => time === sel.wantTime) : undefined;
   const selectedDatetime = (savedSlot ?? wantedSlot)?.datetime ?? null;
   useEffect(() => {
+    if (stored) return;
     if (datesQ.status === 'ready' && sel.date && !selectedDate) update({ date: null, datetime: null });
     else if (slots && sel.datetime && !savedSlot) update({ datetime: null });
     else if (wantedSlot && selectedDate) update({ date: selectedDate, datetime: wantedSlot.datetime, wantTime: null });
-  }, [datesQ.status, sel.date, sel.datetime, selectedDate, slots, savedSlot, wantedSlot, update]);
+  }, [stored, datesQ.status, sel.date, sel.datetime, selectedDate, slots, savedSlot, wantedSlot, update]);
   const slotUnfit = !!sel.wantTime && !selectedDatetime && (
     (datesQ.status === 'ready' && !selectedDate)
     || (!!slots && selectedDate === sel.wantDate && !wantedSlot));
 
-  // Later steps still contain the legacy confirmation and never receive a live service.
-  const service = demoServices.find((s) => s.id === sel.serviceId) ?? null;
-
+  const needsTime = step >= 5 && !selectedDatetime && (
+    (!sel.datetime && !(sel.wantDate && sel.wantTime)) || timesQ.status === 'ready' || (datesQ.status === 'ready' && !selectedDate) ||
+    [catalogQ.status, staffQ.status, datesQ.status, timesQ.status].includes('error'));
   // ---- formatting (Dubai time, ТЗ §07)
   const time = useCallback((iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Dubai' }), [f]);
   const day = useCallback((ymd: string) => f.dateTime(new Date(`${ymd}T12:00:00+04:00`), { day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Asia/Dubai' }), [f]);
@@ -223,21 +216,37 @@ export function useBookingFlow(demoServices: Service[]) {
   const contactCheck = (c: typeof sel.contact, ageBad = false) => collect([
     ['c-name', rules.name(c.fullname)],
     ['c-phone', rules.phone(c.phone)],
-    ['c-email', rules.email(c.email)],
+    ['c-email', requiredEmail(c.email)],
     ['c-age', rules.age(c.age, ageBad)],
-    ['c-consent', rules.filled(c.consent, 'consentRequired')],
-    ['c-health', rules.filled(c.health, 'healthRequired')],
+    ['c-consent', rules.filled(c.consent === true, 'consentRequired')],
+    ['c-health', rules.filled(c.health === true, 'healthRequired')],
   ]);
   const contactOk = Object.keys(contactCheck(sel.contact)).length === 0;
+  const needsContacts = step === 6 && !contactOk;
+  // Sync the cleaned address with the router and return deep links to the first required choice.
+  useEffect(() => {
+    if (!ready) return;
+    const url = new URL(window.location.href);
+    const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
+    const linkedStep = Number(url.searchParams.get('step'));
+    const cappedStep = Number.isInteger(linkedStep) && linkedStep > LAST_AVAILABLE_STEP ? LAST_AVAILABLE_STEP : null;
+    const replacement = lockedStep ?? (needsService ? 2 : needsTime ? 4 : needsContacts ? 5 : cappedStep);
+    if (!syncPreset && (replacement === null || replacement === linkedStep)) return;
+    if (replacement !== null) url.searchParams.set('step', String(replacement));
+    const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
+    window.history.replaceState(own, '', url);
+  }, [ready, urlParams, needsService, needsTime, lockedStep, needsContacts]);
   const contactMsg = (id: string) => { const c = contactV.errors[id]; return c ? t(`forms.error.${c}`, messageArgs(c)) : undefined; };
   /** blur / change of one field: `code` from the same rules, `filled` = the field has a value */
   const contactField = (id: string, code: ErrorCode | null, filled = true) => contactV.field(id, code, filled);
   const submitContacts = () => {
+    if (!selectedDatetime) return false;
     const ageBad = (document.getElementById('c-age') as HTMLInputElement | null)?.validity.badInput ?? false;
-    if (!contactV.submit(contactCheck(sel.contact, ageBad))) return;
+    if (!contactV.submit(contactCheck(sel.contact, ageBad))) return false;
     const c = sel.contact;
     updateContact({ fullname: c.fullname.trim(), phone: normalizePhone(c.phone), email: c.email?.trim() || undefined }); // E.164 for the BFF
     go(6);
+    return true;
   };
   /** the first step that still needs input (step 1 may be skipped) */
   const firstIncomplete = useCallback(() => (!sel.serviceId ? 2 : !sel.datetime ? 4 : !contactOk ? 5 : 6), [sel.serviceId, sel.datetime, contactOk]);
@@ -251,56 +260,84 @@ export function useBookingFlow(demoServices: Service[]) {
     track('booking_step', { step, source: '3d' });
   }, [ready, step, result]);
 
-  // ---- step 6: captcha (Turnstile at stage 2; demo token here), optional SMS code
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  useEffect(() => {
-    if (step !== 6 || captchaToken) return;
-    const id = window.setTimeout(() => setCaptchaToken(`demo-${Date.now().toString(36)}`), 600);
-    return () => window.clearTimeout(id);
-  }, [step, captchaToken]);
-  const [code, setCode] = useState('');
-  const [codeSent, setCodeSent] = useState(false);
-
-  // ---- confirm
+  // Lock synchronously before the first await, including before React disables the button.
+  const activeAttempt = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<BookingError | null>(null);
-  const [idempotencyKey] = useState(() => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `k${Date.now()}`));
-  const confirm = useCallback(async () => {
-    if (step !== 6 || !service || !sel.datetime || !captchaToken) return;
+  const [reviewNotice, setReviewNotice] = useState<ReturnType<typeof bookingRejectionNotice>>();
+  const canConfirm = step === 6 && !!catalogService && !!selectedDatetime && contactOk && !stored;
+  async function confirm() {
+    if (activeAttempt.current || !canConfirm || !catalogService || !selectedDatetime) return;
+    const idempotencyKey = globalThis.crypto?.randomUUID?.();
+    if (!idempotencyKey) { setReviewNotice('unavailable'); return; }
+    const { fullname, phone, email, age } = sel.contact;
+    const input: BookingRecordRequest = {
+      source: '3d', serviceId: catalogService.id, staffId: sel.staffId, datetime: selectedDatetime, locale,
+      contact: { fullname: fullname.trim(), phone: normalizePhone(phone), email: email!.trim() }, age,
+      consent: true, idempotencyKey,
+      body3d: {
+        healthConsent: true, model, generalNote: generalNote || undefined,
+        markers: markers.map(({ zoneId, intensity, note }) => ({ zoneId, intensity, note })),
+      },
+    };
+    activeAttempt.current = true;
+    const at = new Date().toISOString();
+    const pending = { status: 'unknown', at } as const;
+    // A reload during the request must never start a second creation.
+    saveResult(pending);
+    setStored(pending);
+    setReviewNotice(undefined);
     setError(null);
-    if (BOOKING_SMS_REQUIRED && !codeSent) { await postCode(sel.contact.phone); setCodeSent(true); return; }
     setBusy(true);
-    const draft = { ...body.draft(locale), serviceIds: [service.id], staffId: sel.staffId, datetime: sel.datetime };
-    try {
-      const check = await postCheck(draft);
-      if ('error' in check) { track('booking_error', { reason: 'slot_taken' }); setBusy(false); setError('slotTaken'); update({ datetime: null }); setTakenSeq((n) => n + 1); go(4); return; }
-      const res = await postRecord({ draft, contact: sel.contact, captchaToken, idempotencyKey, source: '3d', ...(BOOKING_SMS_REQUIRED ? { code } : {}) });
-      if (res.status === 'created') track('booking_success', { service_id: service.id, staff_id: sel.staffId, value: service.priceOnRequest ? undefined : service.priceMin ?? undefined, currency: 'AED', source: '3d' });
-      const snapshot: BookingResult = { ...res, datetime: sel.datetime, serviceTitle: service.title, durationMin: service.durationMin, staffName, zones: markers.map((m) => m.zoneId), at: new Date().toISOString() };
+    const response = await sendBooking(input);
+    setBusy(false);
+    if (response.status === 'created') {
+      const snapshot = {
+        ...response.data, serviceTitle: catalogService.title, durationMin: catalogService.durationMin,
+        staffName: response.data.staff?.name ?? null, zones: markers.map(({ zoneId }) => zoneId), at,
+      };
       saveResult(snapshot);
-      setResult(snapshot);
-      clear(); // ТЗ 6.8 MUST: the draft is cleared after a successful booking (F-02)
+      setStored(snapshot);
+      clear();
       body.resetDraft();
-      setBusy(false);
-      go(7);
-    } catch (e) {
-      setBusy(false);
-      setError(errorKind(e));
-      track('booking_error', { reason: errorKind(e) });
+      if (catalogService.currency === 'AED') track('booking_success', {
+        service_id: response.data.serviceId, staff_id: response.data.staff?.id ?? input.staffId, currency: 'AED', source: '3d',
+      });
+      return;
     }
-  }, [step, service, sel, captchaToken, codeSent, locale, update, go, idempotencyKey, code, staffName, markers, clear]);
+    if (response.status === 'rejected') {
+      const { code } = response.error;
+      clearResult();
+      setStored(null);
+      activeAttempt.current = false;
+      track('booking_error', { reason: code.toLowerCase() });
+      if (code === 'SLOT_TAKEN') {
+        setError('slotTaken');
+        update({ datetime: null, wantTime: null });
+        setTakenSeq((n) => n + 1);
+        go(4);
+      } else {
+        setReviewNotice(bookingRejectionNotice(code));
+      }
+      return;
+    }
+    const uncertain = { status: response.status, at };
+    saveResult(uncertain);
+    setStored(uncertain);
+  }
 
   const startOver = useCallback(() => {
-    clearResult(); setResult(null); clear(); body.resetDraft(); setError(null); setRestoreDismissed(true); go(1);
+    activeAttempt.current = false;
+    clearResult(); setStored(null); clear(); body.resetDraft(); setError(null); setRestoreDismissed(true); go(1);
   }, [clear, go]);
 
   return {
-    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, services: demoServices, ordered, recommended, service, staffName,
-    catalogQ, catalogService, selectService, selectStaff, canAdvanceFromTime: LAST_AVAILABLE_STEP > 4,
+    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, services: demoServices, ordered, recommended, staffName,
+    catalogQ, catalogService, selectService, selectStaff,
     today, availableDates, selectedDate, selectedDatetime,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,
     contactErrors: contactV.errors, contactAttempt: contactV.attempt, contactMsg, contactField, submitContacts,
-    captchaToken, code, setCode, codeSent, busy, error, setError, confirm, result, startOver,
+    busy, error, setError, confirm, result, startOver, canConfirm, reviewNotice, stored,
     offerRestore: step === 1 && !restoreDismissed && (restoredDraft || selRestored),
     continueDraft: () => { setRestoreDismissed(true); body.dismissRestored(); if (selRestored) go(firstIncomplete()); },
     discardDraft: () => { setRestoreDismissed(true); clear(); body.resetDraft(); },

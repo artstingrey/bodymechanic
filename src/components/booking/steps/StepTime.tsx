@@ -4,7 +4,6 @@
  * slots grouped by part of the day; loading / error («Повторить») / «нет дат» states; after slot_taken the alert gets the
  * focus and the taken slot is no longer offered. Visual: ui/Calendar + SlotPicker (art director).
  */
-import { Link } from '@/i18n/navigation';
 import { whatsappUrl } from '@/lib/config';
 import { Button } from '@/components/ui/Button';
 import { Calendar, SlotPicker, TimeSkeleton } from '@/components/ui/Calendar';
@@ -17,7 +16,7 @@ import type { Flow } from '../useBookingFlow';
 
 export function StepTime({ flow }: { flow: Flow }) {
   const { t, update, go, catalogQ, staffQ, datesQ, timesQ, today, availableDates, selectedDate, selectedDatetime,
-    canAdvanceFromTime, day, time, error, setError } = flow;
+    day, time, error, setError } = flow;
   const available = new Set(availableDates);
   const noDates = datesQ.status === 'ready' && available.size === 0;
   const slots = timesQ.data ?? [];
@@ -74,12 +73,8 @@ export function StepTime({ flow }: { flow: Flow }) {
         ) : null}
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(3)}>{t('common.actions.back')}</Button>
-          <Button disabled={!canAdvanceFromTime || !selectedDatetime}
-            aria-describedby={canAdvanceFromTime ? undefined : 'booking-time-next'} onClick={() => go(5)}>{t('common.actions.next')}</Button>
+          <Button disabled={!selectedDatetime} onClick={() => go(5)}>{t('common.actions.next')}</Button>
         </div>
-        {!canAdvanceFromTime && <p className="hint" id="booking-time-next">
-          {t.rich('booking.time.nextUnavailable', { form: (label) => <Link href={{ pathname: '/', hash: 'form-title' }}>{label}</Link> })}
-        </p>}
       </div>
     </section>
   );

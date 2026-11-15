@@ -1,4 +1,4 @@
-import type { BookingRecordData, BookingRecordRequest, BookingRecordResponse } from '@/lib/contracts/booking-record';
+import type { BookingRecordData, BookingRecordErrorCode, BookingRecordRequest, BookingRecordResponse } from '@/lib/contracts/booking-record';
 
 export type CreatedBooking = Extract<BookingRecordData, { status: 'created' }>;
 type BookingError = Extract<BookingRecordResponse, { error: unknown }>['error'];
@@ -13,6 +13,18 @@ const definiteRejections: Readonly<Record<string, number>> = {
   PREPAYMENT_REQUIRED: 422, SMS_REQUIRED: 422, BOOKING_REJECTED: 422,
   RATE_LIMITED: 429, UPSTREAM_RATE_LIMITED: 429, UPSTREAM_TIMEOUT: 504,
 };
+
+const rejectionNotices = {
+  SLOT_TAKEN: 'slotTaken', STAFF_NOT_FOUND: 'staffUnavailable', SERVICE_NOT_FOUND: 'serviceUnavailable',
+  PREPAYMENT_REQUIRED: 'prepayment', SMS_REQUIRED: 'sms', RATE_LIMITED: 'rateLimited', UPSTREAM_RATE_LIMITED: 'rateLimited',
+  INVALID_FIELDS: 'invalidFields',
+} as const satisfies Partial<Record<BookingRecordErrorCode, string>>;
+type RejectionNotice = typeof rejectionNotices[keyof typeof rejectionNotices] | 'unavailable';
+
+export function bookingRejectionNotice(code: BookingRecordErrorCode): RejectionNotice {
+  const notices: Partial<Record<BookingRecordErrorCode, RejectionNotice>> = rejectionNotices;
+  return notices[code] ?? 'unavailable';
+}
 
 function validStaff(staff: CreatedBooking['staff']) {
   return staff === undefined || (staff && Number.isSafeInteger(staff.id) && staff.id > 0 &&
@@ -32,7 +44,7 @@ function validParts(data: CreatedBooking) {
         part.durationSeconds > 0 && Number.isFinite(new Date(Date.parse(part.datetime) + part.durationSeconds * 1000).getTime()))));
 }
 
-export async function sendQuickBooking(input: BookingRecordRequest): Promise<Submission> {
+export async function sendBooking(input: BookingRecordRequest): Promise<Submission> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 70_000);
   try {

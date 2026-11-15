@@ -46,6 +46,10 @@ export const rules = {
   filled: (v: unknown, code: ErrorCode = 'required'): ErrorCode | null => (v === undefined || v === null || v === '' || v === false ? code : null),
 };
 
+export function requiredEmail(value: string | undefined): ErrorCode | null {
+  return value?.trim() ? rules.email(value) : 'required';
+}
+
 /** forms.error.<code> with its values (ageRange needs min / max). */
 export const messageArgs = (code: ErrorCode) => (code === 'ageRange' ? AGE_BOUNDS : undefined);
 

@@ -1,11 +1,12 @@
 'use client';
 /**
- * Booking step 1 «Зоны» (ТЗ 6.2–6.7): tools, marker list (note ≤ 300, intensity 1–10), clear all, general note ≤ 1000,
+ * Booking step 1 «Зоны» (ТЗ 6.2–6.7): tools, marker list (note ≤ 200, intensity 1–10), clear all, general note ≤ 400,
  * left-panel accordions (help / contraindications / prices). Structure only — layout comes from the style frame.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { body, MAX_MARKERS, useBody, type Marker, type Tool } from '@/lib/body3d/store';
+import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, MARKER_NOTE_LIMIT } from '@/lib/body3d/booking-details';
 import { zoneLabel } from '@/lib/body3d/zones';
 import { ModelSwitch } from './HeroControls';
 import { ServiceFacts, type Facts } from '@/components/services/ServiceFacts';
@@ -77,15 +78,15 @@ export function MarkerList({ countSlot }: { countSlot?: ReactNode } = {}) {
             <h3>{t('body3d.panel.markerTitle', { n: m.n, zone: zoneLabel(t, m.zoneId) })}</h3>
             <label>
               <span className="sr-only">{t('body3d.panel.notePlaceholder')}</span>
-              <textarea maxLength={300} placeholder={t('body3d.panel.notePlaceholder')} value={m.note ?? ''} onChange={(e) => body.updateMarker(m.id, { note: e.target.value })} />
+              <textarea maxLength={MARKER_NOTE_LIMIT} placeholder={t('body3d.panel.notePlaceholder')} value={m.note ?? ''} onChange={(e) => body.updateMarker(m.id, { note: e.target.value })} />
             </label>
-            <span className="b3d-count">{t('body3d.panel.noteCounter', { count: (m.note ?? '').length, max: 300 })}</span>
+            <span className="b3d-count">{t('body3d.panel.noteCounter', { count: (m.note ?? '').length, max: MARKER_NOTE_LIMIT })}</span>
             <div className="b3d-intensity">
-              <p className="cap" id={`int-${m.id}`}>{t('body3d.panel.intensity', { value: m.intensity ?? 5 })}</p>
+              <p className="cap" id={`int-${m.id}`}>{t('body3d.panel.intensity', { value: m.intensity ?? DEFAULT_MARKER_INTENSITY })}</p>
               {/* R-HIFI-01 N-05: radiogroup 1–10 (sand → terracotta), ←/→ move the value; same handler as the old range */}
               <div className="scale" role="radiogroup" aria-label={t('body3d.panel.intensityAria')} aria-describedby={`int-${m.id}`}>
                 {Array.from({ length: 10 }, (_, k) => k + 1).map((n) => {
-                  const v = m.intensity ?? 5;
+                  const v = m.intensity ?? DEFAULT_MARKER_INTENSITY;
                   return (
                     <button key={n} type="button" role="radio" aria-checked={v === n} tabIndex={v === n ? 0 : -1}
                       data-fill={n < v ? Math.max(1, Math.min(4, Math.ceil((n / v) * 4))) : undefined}
@@ -124,7 +125,8 @@ export function MarkerList({ countSlot }: { countSlot?: ReactNode } = {}) {
       ) : null}
       <label className="b3d-general">
         {t('body3d.panel.generalNote')}
-        <textarea maxLength={1000} placeholder={t('body3d.panel.generalNotePlaceholder')} value={generalNote} onChange={(e) => body.setGeneralNote(e.target.value)} />
+        <textarea maxLength={GENERAL_NOTE_LIMIT} placeholder={t('body3d.panel.generalNotePlaceholder')} value={generalNote} onChange={(e) => body.setGeneralNote(e.target.value)} />
+        <span className="b3d-count" aria-hidden="true">{t('body3d.panel.noteCounter', { count: generalNote.length, max: GENERAL_NOTE_LIMIT })}</span>
       </label>
     </section>
   );

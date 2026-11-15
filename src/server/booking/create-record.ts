@@ -203,9 +203,11 @@ export async function createBookingRecord(locationId: number, input: BookingReco
       appointment = fallback.appointment;
     }
 
-    const comment = age !== undefined || condition
-      ? formatComment({ source: 'form', age, generalNote: condition }, locale)
-      : undefined;
+    const comment = input.source === '3d'
+      ? formatComment({ source: '3d', age, gender: input.body3d.model, markers: input.body3d.markers, generalNote: input.body3d.generalNote })
+      : age !== undefined || condition
+        ? formatComment({ source: 'form', age, generalNote: condition }, locale)
+        : undefined;
     sending = true;
     const result = await altegioPost('book_record', locationId, language, {
       ...contact, appointments: [appointment], ...(comment ? { comment } : {}),

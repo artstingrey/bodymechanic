@@ -39,7 +39,7 @@ export function BookingFlow({ services }: { services: Service[] }) {
     <div className="booking" data-step={step} data-ready={ready || undefined}>
       <Stepper steps={STEPS.map((s) => t(`booking.step.${s}.title`))} current={step - 1} label={t('booking.stepper.label')}
         mobileLabel={t('booking.stepper.progress', { current: step, total: 7 })}
-        hrefFor={step < 7 ? (i) => (i === 0 ? '/booking' : { pathname: '/booking', query: { step: String(i + 1) } }) : undefined}
+        hrefFor={step < 7 && !flow.stored ? (i) => (i === 0 ? '/booking' : { pathname: '/booking', query: { step: String(i + 1) } }) : undefined}
         done={[flow.canLeaveZones, !!flow.sel.serviceId, !!flow.sel.serviceId && step > 3, !!flow.sel.datetime, flow.contactOk, !!flow.result, false]} />
       {/* polite announcement of the step (its text changes with the step → read once, after navigation only) */}
       <p className="sr-only" aria-live="polite" data-testid="booking-live">

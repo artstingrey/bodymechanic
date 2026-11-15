@@ -746,7 +746,10 @@
       "lead": "We need them to confirm your booking.",
       "genderMale": "Male",
       "genderFemale": "Female",
-      "next": "Review booking"
+      "next": "Review booking",
+      "saveDraft": "Save contact details",
+      "draftSaved": "Your contact details are saved in this tab.",
+      "nextUnavailable": "To complete your booking, use the <form>form on the home page</form>."
     },
     "review": {
       "heading": "Check your booking",
@@ -761,6 +764,7 @@
       "confirm": "Confirm booking",
       "confirming": "Confirming your booking…",
       "captcha": "Verifying that you’re human",
+      "uncertainHint": "Check the booking status with the studio before trying again.",
       "paymentTodo": "TODO(content): payment terms (at the studio or in advance), one line in the summary"
     },
     "sms": {

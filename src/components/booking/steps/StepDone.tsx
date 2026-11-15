@@ -3,7 +3,6 @@
  * Step 7 «Готово» (ТЗ §07, R-APP-01 F-01): rendered only from the persisted result (survives F5; without it the flow
  * redirects). created → reference, date and time (Dubai), specialist, address (TODO content) and working actions:
  * .ics file, Google Calendar, printable summary («PDF заявки» → print / save as PDF), WhatsApp, «Мои записи».
- * queued → «Заявка принята» (never shown as confirmed).
  * RC-9 (security review В-4): the WhatsApp and Google Calendar links carry the service, the record number and the zones in
  * their address — it is built at the click only (PrefilledLink), the `href` in the page is the bare service.
  */
@@ -20,21 +19,7 @@ import { Todo } from '@/components/ui/Todo';
 export function StepDone({ flow }: { flow: Flow }) {
   const { t, result: r, when, startOver } = flow;
   if (!r) return null; // the flow redirects to the first unfinished step
-  const summary = `${t('common.brand')}: ${r.serviceTitle}, ${when(r.datetime)}${r.status === 'created' ? ` · ${t('booking.done.reference')} ${r.recordId}` : ''}`;
-  if (r.status === 'queued') {
-    return (
-      <section aria-labelledby="st7" data-result="queued" className="bk-step bk-narrow bk-done">
-        <span className="bk-done__ic" aria-hidden="true"><Icon name="clock" /></span>
-        <h1 id="st7" tabIndex={-1} className="h2">{t('booking.queued.title')}</h1>
-        <p className="lead">{t('booking.queued.message')}</p>
-        <p className="cap">{t('booking.queued.hint')}</p>
-        <div className="bk-actions">
-          <PrefilledLink className="btn btn--primary" href={WHATSAPP_BASE} full={() => whatsappUrl(summary)}>{t('common.actions.writeWhatsapp')}</PrefilledLink>
-          <Button variant="secondary" onClick={startOver}>{t('booking.draft.startOver')}</Button>
-        </div>
-      </section>
-    );
-  }
+  const summary = `${t('common.brand')}: ${r.serviceTitle}, ${when(r.datetime)} · ${t('booking.done.reference')} ${r.recordId}`;
   const event: CalEvent = {
     title: `${t('common.brand')} · ${r.serviceTitle}`,
     start: r.datetime,

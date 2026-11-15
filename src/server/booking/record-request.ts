@@ -1,14 +1,17 @@
 import 'server-only';
 
 import { isIP } from 'node:net';
-import type { BookingRecordField, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecord3DDetails, BookingRecordField, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, isMarkerIntensity, MARKER_NOTE_LIMIT, MAX_MARKERS } from '@/lib/body3d/booking-details';
+import { ZONE_KEYS } from '@/lib/body3d/zones';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
-import { normalizePhone, rules } from '@/lib/forms/validate';
+import { normalizePhone, requiredEmail, rules } from '@/lib/forms/validate';
 import { isRecord } from '../altegio/client';
 import { parseBookingDatetime } from './availability';
 import type { RecordOutcome } from './record-result';
 
-const MAX_BODY_BYTES = 8192;
+const MAX_FORM_BODY_BYTES = 8 * 1024;
+const MAX_3D_BODY_BYTES = 16 * 1024;
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
 const uuidV4 = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
 
@@ -50,11 +53,11 @@ async function readJson(request: Request): Promise<{ value: unknown } | { error:
     return { error: { status: 415, code: 'UNSUPPORTED_MEDIA_TYPE' } };
   }
   const oversized: RecordOutcome = { status: 413, code: 'PAYLOAD_TOO_LARGE' };
-  if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES) return { error: oversized };
+  if (Number(request.headers.get('content-length')) > MAX_3D_BODY_BYTES) return { error: oversized };
   if (!request.body) return { error: { status: 400, code: 'INVALID_BODY' } };
 
   const reader = request.body.getReader();
-  const bytes = Buffer.alloc(MAX_BODY_BYTES);
+  const bytes = Buffer.alloc(MAX_3D_BODY_BYTES);
   let length = 0;
   try {
     for (;;) {
@@ -67,9 +70,11 @@ async function readJson(request: Request): Promise<{ value: unknown } | { error:
       bytes.set(chunk.value, length);
       length += chunk.value.length;
     }
-    return { value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length))) as unknown };
+    const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length)));
+    if (length > MAX_FORM_BODY_BYTES && (!isRecord(value) || value.source !== '3d')) return { error: oversized };
+    return { value };
   } catch {
-    return { error: { status: 400, code: 'INVALID_BODY' } };
+    return { error: length > MAX_FORM_BODY_BYTES ? oversized : { status: 400, code: 'INVALID_BODY' } };
   } finally {
     reader.releaseLock();
   }
@@ -85,12 +90,41 @@ function boundedText(value: unknown, max: number, multiline = false) {
       !(multiline && '\r\n\t'.includes(character)))) ? value.trim() : null;
 }
 
+function readNote(value: unknown, limit: number) {
+  if (value === undefined) return '';
+  const text = boundedText(value, limit, true);
+  return text?.isWellFormed() ? text.replace(/\r\n?/g, '\n') : null;
+}
+
+function parseBody3D(value: unknown, fields: BookingRecordField[]): BookingRecord3DDetails | null {
+  if (!isRecord(value)) { fields.push('body3d'); return null; }
+  const { healthConsent, model, markers } = value;
+  const generalNote = readNote(value.generalNote, GENERAL_NOTE_LIMIT);
+  const validModel = model === 'male' || model === 'female';
+  if (healthConsent !== true) fields.push('healthConsent');
+  if (!validModel) fields.push('model');
+  if (generalNote === null) fields.push('generalNote');
+  const parsed: BookingRecord3DDetails['markers'] = [];
+  if (Array.isArray(markers) && markers.length <= MAX_MARKERS) {
+    for (const marker of markers) {
+      if (!isRecord(marker)) break;
+      const { zoneId, intensity = DEFAULT_MARKER_INTENSITY } = marker;
+      const note = readNote(marker.note, MARKER_NOTE_LIMIT);
+      if (typeof zoneId !== 'string' || !ZONE_KEYS.includes(zoneId) || !isMarkerIntensity(intensity) || note === null) break;
+      parsed.push({ zoneId, intensity, ...(note ? { note } : {}) });
+    }
+    if (parsed.length !== markers.length) fields.push('markers');
+  } else fields.push('markers');
+  if (fields.length || !validModel) return null;
+  return { healthConsent: true, model, markers: parsed, ...(generalNote ? { generalNote } : {}) };
+}
+
 export async function parseRecordRequest(request: Request): Promise<ParsedRequest> {
   const read = await readJson(request);
   if ('error' in read) return read;
   if (!isRecord(read.value)) return { error: { status: 400, code: 'INVALID_BODY' } };
 
-  const { serviceId, staffId, datetime, locale, contact, consent, idempotencyKey, age } = read.value;
+  const { serviceId, staffId, datetime, locale, contact, consent, idempotencyKey, age, source } = read.value;
   const fields: BookingRecordField[] = [];
   const invalid = (): ParsedRequest => ({
     error: { status: 400, code: 'INVALID_FIELDS', fields }, locale: locale === 'ru' ? 'ru' : 'en',
@@ -112,20 +146,24 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
   const condition = read.value.condition === undefined ? '' : boundedText(read.value.condition, 1000, true);
   if (rules.name(fullname)) fields.push('fullname');
   if (rules.phone(phone)) fields.push('phone');
-  if (!email || rules.email(email)) fields.push('email');
+  if (requiredEmail(email)) fields.push('email');
   if (age !== undefined && (typeof age !== 'number' || rules.age(age))) fields.push('age');
-  if (condition === null) fields.push('condition');
+  if (condition === null || (source === '3d' && read.value.condition !== undefined)) fields.push('condition');
+  if ((source !== undefined && source !== '3d') || (source === undefined && read.value.body3d !== undefined)) fields.push('source');
+  const body3d = source === '3d' ? parseBody3D(read.value.body3d, fields) : null;
   if (fields.length || !instant) return invalid();
 
-  return { instant, data: {
+  const base = {
     serviceId: serviceId as number,
     staffId: staffId as number,
     datetime: datetime as string,
     locale: locale as CatalogLocale,
     contact: { fullname, phone: normalizePhone(phone), email },
     ...(typeof age === 'number' ? { age } : {}),
-    ...(condition ? { condition: condition.replace(/\r\n?/g, '\n') } : {}),
-    consent: true,
+    consent: true as const,
     idempotencyKey: (idempotencyKey as string).toLowerCase(),
-  } };
+  };
+  return { instant, data: body3d
+    ? { ...base, source: '3d', body3d }
+    : { ...base, ...(condition ? { condition: condition.replace(/\r\n?/g, '\n') } : {}) } };
 }

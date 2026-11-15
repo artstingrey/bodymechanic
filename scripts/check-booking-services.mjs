@@ -153,7 +153,7 @@ async function checkAvailability(page, booking, messages) {
   await expect(page.locator('.bk-picked')).toContainText('00:20');
   assert.equal((await draft()).date, second);
   assert.equal((await draft()).datetime, midnight);
-  await expect(button(next)).toBeDisabled();
+  await expect(button(next)).toBeEnabled();
   await page.reload();
   await expect(button('00:20')).toHaveAttribute('aria-pressed', 'true');
 
@@ -180,11 +180,11 @@ async function checkAvailability(page, booking, messages) {
   await expect(page.locator('.dates button[aria-pressed="true"]')).toHaveCount(0);
   assert.equal((await draft()).date, null);
 
-  await page.goto(`${booking}?step=7&service=${sports}&staff=91602&date=${second}&time=00:20&utm_source=fixture#st4`);
+  await page.goto(`${booking}?step=4&service=${sports}&staff=91602&date=${second}&time=00:20&utm_source=fixture#st4`);
   await expect(page).toHaveURL(`${booking}?step=4&utm_source=fixture#st4`);
   await expect(button('00:20')).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(async () => (await draft()).datetime).toBe(midnight);
-  await expect(page.locator('#st5, #st7')).toHaveCount(0);
+  await expect(page.locator('#st6, #st7')).toHaveCount(0);
 
   await page.goto(`${booking}?step=4&service=${sports}&staff=91602&date=${second}&time=12:00`);
   await expect(page.getByTestId('slot-unfit')).toBeVisible();
@@ -202,6 +202,65 @@ async function checkAvailability(page, booking, messages) {
 
   await page.goto(`${booking}?step=4&service=91204`);
   await expect(page.getByText(time.noDates, { exact: true })).toBeVisible();
+}
+
+async function checkContacts(page, booking, messages) {
+  const { contacts } = messages.booking;
+  const save = page.getByRole('button', { name: contacts.next, exact: true });
+  await page.goto(booking);
+  const savedAt = await page.evaluate(() => {
+    sessionStorage.removeItem('bm.bookingSteps');
+    const savedAt = Date.now() - 60_000;
+    sessionStorage.setItem('bm.bookingDraft', JSON.stringify({
+      v: 1, model: 'female', savedAt, generalNote: 'a'.repeat(900),
+      markers: [{ id: 'legacy-marker', zoneId: 'knee_l', position: [0, 0, 0], note: 'a'.repeat(199) + '😀' + 'b'.repeat(50) }],
+    }));
+    return savedAt;
+  });
+  await page.reload();
+  const marker = page.getByTestId('b3d-marker');
+  const markerNote = marker.locator('textarea');
+  const generalNote = page.locator('.b3d-general textarea');
+  await expect(markerNote).toHaveAttribute('maxlength', '200');
+  await expect(markerNote).toHaveValue('a'.repeat(199));
+  await expect(generalNote).toHaveAttribute('maxlength', '400');
+  await expect(generalNote).toHaveValue('a'.repeat(400));
+  await expect(marker.locator('[role="radio"][aria-checked="true"]')).toHaveText('5');
+  await expect(marker.locator('.b3d-count')).toContainText('200');
+  await expect(page.locator('.b3d-general .b3d-count')).toContainText('400');
+  assert.equal(await page.evaluate(() => JSON.parse(sessionStorage.getItem('bm.bookingDraft')).savedAt), savedAt);
+
+  await page.goto(`${booking}?step=5&service=${sports}`);
+  await expect(page).toHaveURL(`${booking}?step=4`);
+  await page.goto(`${booking}?step=7&service=${sports}&staff=91602&date=2026-12-01&time=00:20`);
+  await expect(page).toHaveURL(`${booking}?step=5`);
+  await expect(page.locator('#c-email')).toHaveAttribute('required', '');
+  await save.click();
+  await expect(page.locator('#c-name')).toBeFocused();
+  for (const id of ['name', 'phone', 'email', 'consent', 'health']) {
+    await expect(page.locator(`#c-${id}`)).toHaveAttribute('aria-invalid', 'true');
+  }
+  await page.locator('#c-name').fill('  Fixture visitor  ');
+  await page.locator('#c-phone').fill('+971 50 123 4567');
+  await page.locator('#c-email').fill('invalid');
+  await page.locator('#c-consent').check();
+  await page.locator('#c-health').check();
+  await save.click();
+  await expect(page.locator('#c-email')).toBeFocused();
+  await page.locator('#c-email').fill('fixture@example.test');
+  await save.click();
+  await expect(page).toHaveURL(`${booking}?step=6`);
+  await expect(page.getByRole('button', { name: messages.booking.review.confirm })).toBeEnabled();
+  await expect(page.getByTestId('captcha')).toHaveAttribute('hidden', '');
+  await expect(page.getByTestId('captcha')).toBeHidden();
+  await expect(page.locator('#st7')).toHaveCount(0);
+  await page.getByRole('button', { name: messages.common.actions.back, exact: true }).click();
+  await expect(page).toHaveURL(`${booking}?step=5`);
+  await page.reload();
+  await expect(page.locator('#c-name')).toHaveValue('Fixture visitor');
+  await expect(page.locator('#c-phone')).toHaveValue('+971501234567');
+  await expect(page.locator('#c-age')).toHaveValue('');
+  await expect(page.locator('#c-health')).toBeChecked();
 }
 
 try {
@@ -321,6 +380,7 @@ try {
           assert.ok(requests.length > 0);
           assert.ok(requests.every(([method, pathname, lang]) => method === 'GET' && pathname === '/api/booking/staff' && lang === locale));
           await checkAvailability(page, booking, messages);
+          await checkContacts(page, booking, messages);
           assert.ok(requests.some(([, pathname]) => pathname === '/api/booking/dates'));
           assert.ok(requests.some(([, pathname]) => pathname === '/api/booking/times'));
           assert.ok(requests.every(([method, pathname, lang]) => method === 'GET' &&
@@ -334,7 +394,7 @@ try {
       assert.match(logs(), /\[catalog-fixture\] service-detail en-US/);
       assert.match(logs(), /\[service-staff-fixture\] success ru-RU 13982355/);
       assert.match(logs(), /\[service-staff-fixture\] success en-US 13982355/);
-      console.log('3D booking: services, staff, Dubai availability, retries, drafts, presets and staged boundary passed in RU and EN');
+      console.log('3D booking: services, availability, contacts, legacy note limits and staged boundary passed in RU and EN');
     } finally {
       for (const [, key] of logs().matchAll(/\[catalog-cache-write\] ([\w-]+)/g)) cacheKeys.add(key);
     }

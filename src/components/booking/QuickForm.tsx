@@ -12,18 +12,13 @@ import { track } from '@/lib/analytics/track';
 import type { BookingRecordErrorCode, BookingRecordRequest } from '@/lib/contracts/booking-record';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';
-import { collect, messageArgs, normalizePhone, rules, type ErrorCode } from '@/lib/forms/validate';
+import { collect, messageArgs, normalizePhone, requiredEmail, rules, type ErrorCode } from '@/lib/forms/validate';
 import { QuickFormContext, type AvailabilityConflict } from './quick-form-context';
-import { sendQuickBooking, type CreatedBooking } from './quick-form-submit';
+import { bookingRejectionNotice, sendBooking, type CreatedBooking } from './booking-submit';
 
 const subscribeToHydration = () => () => {};
 
-const notices = {
-  SLOT_TAKEN: 'slotTaken', STAFF_NOT_FOUND: 'staffUnavailable', SERVICE_NOT_FOUND: 'serviceUnavailable',
-  PREPAYMENT_REQUIRED: 'prepayment', SMS_REQUIRED: 'sms', RATE_LIMITED: 'rateLimited', UPSTREAM_RATE_LIMITED: 'rateLimited',
-  INVALID_FIELDS: 'invalidFields',
-} as const satisfies Partial<Record<BookingRecordErrorCode, string>>;
-type Notice = typeof notices[keyof typeof notices] | 'unavailable' | 'unknown' | 'processing';
+type Notice = ReturnType<typeof bookingRejectionNotice> | 'unknown' | 'processing';
 const conflict = (code: BookingRecordErrorCode): code is AvailabilityConflict =>
   code === 'SLOT_TAKEN' || code === 'STAFF_NOT_FOUND' || code === 'SERVICE_NOT_FOUND';
 
@@ -43,7 +38,6 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
   const uncertain = notice === 'unknown' || notice === 'processing';
   const locked = busy || uncertain;
   const fieldText = (id: string) => errors[id] ? t(`forms.error.${errors[id]}`, messageArgs(errors[id])) : undefined;
-  const emailRule = (value: string) => rules.filled(value.trim()) ?? rules.email(value);
   const bind = (id: string, rule: (el: HTMLInputElement) => ErrorCode | null) => ({
     id, disabled: locked, error: fieldText(id),
     onBlur: (e: FocusEvent<HTMLInputElement>) => field(id, rule(e.currentTarget), !!e.currentTarget.value || id === 'qf-email'),
@@ -69,7 +63,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
     if (!submit(collect([
       ['qf-name', rules.name(str('name'))],
       ['qf-phone', rules.phone(str('phone'))],
-      ['qf-email', emailRule(str('email'))],
+      ['qf-email', requiredEmail(str('email'))],
       ['qf-age', rules.age(age.value, age.validity.badInput)],
       ['qf-service', serviceId ? null : 'serviceRequired'],
       [date ? 'qf-time' : 'qf-date', serviceId && !datetime ? 'datetimeRequired' : null],
@@ -95,7 +89,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
     activeAttempt.current = true;
     setBusy(true);
 
-    const result = await sendQuickBooking(input);
+    const result = await sendBooking(input);
     setBusy(false);
     if (result.status === 'processing' || result.status === 'unknown') {
       setNotice(result.status);
@@ -110,8 +104,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
       activeAttempt.current = false;
       const { code } = result.error;
       if (conflict(code)) refresh.current?.(code);
-      const copy: Partial<Record<BookingRecordErrorCode, Notice>> = notices;
-      setNotice(copy[code] ?? 'unavailable');
+      setNotice(bookingRejectionNotice(code));
     }
   }
 
@@ -159,7 +152,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
       </div>
       <div className="row2">
         <TextField label={t('forms.field.email')} required name="email" type="email" maxLength={254} autoComplete="email" placeholder={t('forms.field.emailPlaceholder')}
-          {...bind('qf-email', (el) => emailRule(el.value))} />
+          {...bind('qf-email', (el) => requiredEmail(el.value))} />
         <TextField label={t('forms.field.age')} name="age" type="number" inputMode="numeric" min={1} max={120} {...bind('qf-age', (el) => rules.age(el.value, el.validity.badInput))} />
       </div>
       <QuickFormContext.Provider value={{ locked, errors, clearError: (id) => field(id, null), registerRefresh }}>

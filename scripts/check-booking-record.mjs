@@ -92,6 +92,63 @@ async function post(origin, body, { status, code, ip, headers, retryAfter, raw }
 const createCall = 'POST book_record';
 const checkCall = 'POST book_check';
 const confirmed = { status: 'created', recordId: 12345, serviceId: 13982355, datetime, staff: { id: 91601, name: 'Example specialist' } };
+
+async function check3DRecord(origin) {
+  const body3d = {
+    model: 'female', healthConsent: true, generalNote: 'fixture-private-general\r\nSecond line',
+    markers: [{ zoneId: 'knee_l', note: 'fixture-private-marker', position: [101, 202, 303] }, { zoneId: 'neck_collar', intensity: 9 }],
+  };
+  const input = request({ source: '3d', locale: 'ru', age: 33, body3d });
+  const options = { status: 400, code: 'INVALID_FIELDS' };
+  const invalidDetails = [
+    [undefined, ['body3d']],
+    [{ ...body3d, healthConsent: false }, ['healthConsent']],
+    [{ ...body3d, model: 'other' }, ['model']],
+    [{ ...body3d, generalNote: 'x'.repeat(401) }, ['generalNote']],
+    [{ ...body3d, markers: Array(11).fill(body3d.markers[0]) }, ['markers']],
+    [{ ...body3d, markers: [{ zoneId: 'knee' }] }, ['markers']],
+    [{ ...body3d, markers: [{ zoneId: 'chest_l', intensity: 6 }] }, ['markers']],
+    [{ ...body3d, markers: [{ zoneId: 'knee_l', intensity: 11 }] }, ['markers']],
+    [{ ...body3d, markers: [{ zoneId: 'knee_l', note: 'x'.repeat(201) }] }, ['markers']],
+  ];
+  for (const [details, fields] of invalidDetails) {
+    assert.deepEqual((await post(origin, { ...input, body3d: details }, options)).error.fields, fields);
+  }
+  assert.deepEqual((await post(origin, { ...input, source: undefined }, options)).error.fields, ['source']);
+  assert.deepEqual((await post(origin, { ...input, consent: false }, options)).error.fields, ['consent']);
+  assert.deepEqual(await history(), []);
+
+  assert.deepEqual((await post(origin, input, { status: 201 })).data, confirmed);
+  const comment = JSON.parse(await fs.readFile(comments, 'utf8'));
+  assert.match(comment, /^\[Сайт\/3D\].*33/m);
+  assert.match(comment, /Колено, левая сторона \/ Knee, left side.*5\/10.*fixture-private-marker/);
+  assert.match(comment, /9\/10/);
+  assert.match(comment, /fixture-private-general\nSecond line/);
+  assert.doesNotMatch(comment, /101,202,303|healthConsent/);
+  const equivalentMarkers = [{ ...body3d.markers[0], intensity: 5 }, body3d.markers[1]];
+  await post(origin, { ...input, body3d: { ...body3d, markers: equivalentMarkers } }, { status: 201 });
+  await post(origin, { ...input, body3d: { ...body3d, generalNote: 'Changed note' } }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
+  assert.equal((await history()).filter((call) => call === createCall).length, 1);
+
+  await scenario('empty-201');
+  const full = request({ source: '3d', body3d: {
+    model: 'male', healthConsent: true,
+    generalNote: '界'.repeat(400),
+    markers: Array.from({ length: 10 }, (_, index) => ({
+      zoneId: index % 2 ? 'quadriceps_r' : 'hamstrings_l', intensity: index + 1, note: '界'.repeat(190) + '😀'.repeat(5),
+    })),
+  } });
+  const raw = JSON.stringify(full).replaceAll('界', '\\u754c');
+  assert.ok(Buffer.byteLength(raw) > 8192);
+  await post(origin, full, { status: 201, raw });
+  const bounded = JSON.parse(await fs.readFile(comments, 'utf8'));
+  assert.ok(bounded.length <= 1000 && bounded.isWellFormed());
+  assert.match(bounded, /…/);
+  assert.equal((bounded.match(/Back of thigh, left side/g) ?? []).length, 5);
+  assert.equal((bounded.match(/Front thigh, right side/g) ?? []).length, 5);
+  assert.deepEqual(bounded.match(/\b\d+\/10\b/g), Array.from({ length: 10 }, (_, index) => `${index + 1}/10`));
+}
+
 try {
   await scenario('empty-201');
   await run(async (origin) => {
@@ -99,6 +156,8 @@ try {
     assert.deepEqual(await history(), []);
   }, { BOOKING_ORIGIN: '' });
 
+  await run(check3DRecord);
+  await scenario('empty-201');
   await run(async (origin, logs) => {
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', headers: { Origin: 'https://elsewhere.fixture.test' } });
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', headers: { 'Sec-Fetch-Site': 'cross-site' } });
