@@ -18,6 +18,7 @@
     "test:home-team": "node scripts/check-home-team.mjs",
     "test:service-details": "node scripts/check-service-details.mjs",
     "test:service-staff": "node scripts/check-service-staff.mjs",
+    "test:booking-services": "node scripts/check-booking-services.mjs",
     "test:booking-availability": "node scripts/check-booking-availability.mjs",
     "test:booking-record": "node scripts/check-booking-record.mjs",
     "test:quick-form": "node scripts/check-quick-form.mjs",

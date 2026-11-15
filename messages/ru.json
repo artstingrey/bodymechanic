@@ -711,8 +711,9 @@
       "suggested": "Подобрано по вашим зонам",
       "priceFromDuration": "от {priceMin} AED · {durationMin} мин",
       "priceExact": "{price} AED · {durationMin} мин",
-      "empty": "В этой категории пока нет услуг.",
-      "loadError": "Не удалось загрузить услуги."
+      "empty": "Сейчас нет услуг для онлайн-записи.",
+      "loadError": "Не удалось загрузить услуги.",
+      "nextUnavailable": "Чтобы выбрать время и записаться, воспользуйтесь <form>формой на главной</form>."
     },
     "staff": {
       "heading": "Выберите специалиста",

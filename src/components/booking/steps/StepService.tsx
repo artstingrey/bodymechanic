@@ -1,34 +1,44 @@
 'use client';
-/** Step 2 «Услуга»: services from the BFF (prerendered), recommended first by the marked zones (ТЗ 6.6). */
-import { useServiceFacts } from '@/components/services/ServiceFacts';
+/** Step 2 «Услуга»: the public catalog and recommendations from the marked zones. */
+import { Link } from '@/i18n/navigation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { StateCard } from '@/components/ui/Misc';
+import { Loading } from '../ui';
 import { Summary } from './Summary';
 import type { Flow } from '../useBookingFlow';
 
 export function StepService({ flow }: { flow: Flow }) {
-  const { t, ordered, recommended, sel, update, go } = flow;
-  const facts = useServiceFacts();
+  const { t, ordered, recommended, catalogQ, catalogService, selectService, canAdvanceFromService, go } = flow;
   return (
     <section aria-labelledby="st2" className="bk-step bk-grid">
       <Summary flow={flow} />
       <div className="bk-main">
         <h1 id="st2" tabIndex={-1} className="h2">{t('booking.service.heading')}</h1>
-        <ul className="bk-list">{ordered.map((s) => (
+        {catalogQ.status === 'loading' && <Loading label={t('common.state.loading')} />}
+        {catalogQ.status === 'error' && (
+          <StateCard kind="error" text={t('booking.service.loadError')} action={
+            <Button variant="secondary" size="sm" onClick={catalogQ.retry}>{t('common.actions.retry')}</Button>
+          } />
+        )}
+        {catalogQ.status === 'ready' && (ordered.length > 0 ? <ul className="bk-list">{ordered.map((s) => (
           <li key={s.id}>
             <label className="rcard bk-opt">
-              <input type="radio" name="service" checked={sel.serviceId === s.id} onChange={() => update({ serviceId: s.id, datetime: null, date: null })} />
+              <input type="radio" name="service" value={s.id} checked={catalogService?.id === s.id} onChange={() => selectService(s.id)} />
               <span className="dot" aria-hidden="true" />
-              <span className="bk-opt__body"><b>{s.title}</b><span>{s.categoryTitle}</span>
+              <span className="bk-opt__body"><b>{s.title}</b>{s.categoryTitle && <span>{s.categoryTitle}</span>}
                 {recommended[0] === s.id ? <Badge tone="accent">{t('booking.service.suggested')}</Badge> : null}</span>
-              <span className="bk-opt__meta tn"><b>{facts.price(s)}</b>{facts.duration(s) ? <span>{facts.duration(s)}</span> : null}<Badge>{facts.demo}</Badge></span>
+              <span className="bk-opt__meta tn"><b>{s.price}</b>{s.duration && <span>{s.duration}</span>}</span>
             </label>
           </li>))}
-        </ul>
+        </ul> : <p className="hint" role="status">{t('booking.service.empty')}</p>)}
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(1)}>{t('common.actions.back')}</Button>
-          <Button disabled={!sel.serviceId} onClick={() => go(3)}>{t('common.actions.next')}</Button>
+          <Button disabled={!catalogService || !canAdvanceFromService} aria-describedby={canAdvanceFromService ? undefined : 'booking-service-next'} onClick={() => go(3)}>{t('common.actions.next')}</Button>
         </div>
+        {!canAdvanceFromService && <p className="hint" id="booking-service-next">
+          {t.rich('booking.service.nextUnavailable', { form: (label) => <Link href={{ pathname: '/', hash: 'form-title' }}>{label}</Link> })}
+        </p>}
       </div>
     </section>
   );

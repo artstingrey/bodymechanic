@@ -17,10 +17,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useSearchParams } from 'next/navigation';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
+import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
 import { errorKind, getDates, getStaff, getTimes, postCheck, postCode, postRecord, recommendServices } from '@/lib/api';
 import type { ApiErrorKind } from '@/lib/api/errors';
 import type { Service, Slot, Staff } from '@/lib/api/types';
 import { body, useBody } from '@/lib/body3d/store';
+import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
 import { BOOKING_SMS_REQUIRED } from '@/lib/config';
 import { track } from '@/lib/analytics/track';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';
@@ -28,6 +30,7 @@ import { collect, messageArgs, normalizePhone, rules, type ErrorCode } from '@/l
 import { clearResult, loadResult, saveResult, type BookingResult } from '@/lib/booking/result';
 import { PRESET_PARAMS, absorbPresetFromUrl, entryBroughtService, takePreset, type HandOver } from '@/lib/booking/preset';
 import type { Locale } from '@/i18n/routing';
+import { confirmedCatalogId, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
 import { useBookingSelection } from './useBookingSelection';
 
 /** search params on the client only: calling useSearchParams() in the static prerender would make the whole flow
@@ -36,18 +39,20 @@ const useClientSearchParams: () => Pick<URLSearchParams, 'get'> | null = typeof 
 const NO_PARAMS: Pick<URLSearchParams, 'get'> = new URLSearchParams();
 
 export const STEPS = ['zones', 'service', 'specialist', 'time', 'contacts', 'review', 'done'] as const;
+// During the staged rollout, live services stop at the last connected step.
+const LAST_AVAILABLE_STEP = 2;
 export type BookingError = ApiErrorKind | 'slotTaken';
 
 /** Async data with loading / error / retry, without setState in the effect body (state is keyed by the request). */
-export function useAsync<T>(enabled: boolean, load: () => Promise<T>, key: unknown[]) {
+export function useAsync<T>(enabled: boolean, load: (signal: AbortSignal) => Promise<T>, key: unknown[]) {
   const [nonce, setNonce] = useState(0);
   const k = JSON.stringify([...key, nonce]);
   const [res, setRes] = useState<{ k: string; data?: T; error?: ApiErrorKind }>({ k: '' });
   useEffect(() => {
     if (!enabled) return;
-    let alive = true;
-    load().then((data) => { if (alive) setRes({ k, data }); }, (e) => { if (alive) { setRes({ k, error: errorKind(e) }); track('booking_error', { reason: errorKind(e) }); } });
-    return () => { alive = false; };
+    const request = new AbortController();
+    load(request.signal).then((data) => { if (!request.signal.aborted) setRes({ k, data }); }, (e) => { if (!request.signal.aborted) { setRes({ k, error: errorKind(e) }); track('booking_error', { reason: errorKind(e) }); } });
+    return () => request.abort();
     // `k` captures every input of `load` (the caller passes them in `key`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k, enabled]);
@@ -55,7 +60,7 @@ export function useAsync<T>(enabled: boolean, load: () => Promise<T>, key: unkno
   return { status, data: res.k === k ? res.data : undefined, error: res.k === k ? res.error : undefined, retry: useCallback(() => setNonce((n) => n + 1), []) };
 }
 
-export function useBookingFlow(services: Service[]) {
+export function useBookingFlow(demoServices: Service[]) {
   const t = useTranslations();
   const f = useFormatter();
   const locale = useLocale() as Locale;
@@ -63,12 +68,14 @@ export function useBookingFlow(services: Service[]) {
   const urlParams = useClientSearchParams();
   const [ready, setReady] = useState(false); // hydrated: the URL and the stored choices are in effect
   const sp = ready && urlParams ? urlParams : NO_PARAMS;
-  const step = Math.min(7, Math.max(1, Number(sp.get('step')) || 1));
+  const requestedStep = Number(sp.get('step'));
+  const step = Number.isInteger(requestedStep) ? Math.min(LAST_AVAILABLE_STEP, Math.max(1, requestedStep)) : 1;
   const slotLink = useRef(false); // R-FINAL-2: came from a specialist's slot (staff + date + time) → step 2 → straight to 4
   const stepNow = useRef(step);
   useEffect(() => { stepNow.current = step; }, [step]);
   const go = useCallback((n: number, replace = false) => {
     if (n === 3 && stepNow.current === 2 && slotLink.current) n = 4; // forward from the service only; «Назад» from 4 still reaches 3
+    n = Math.min(LAST_AVAILABLE_STEP, n);
     const href = n === 1 ? '/booking/' : `/booking/?step=${n}`;
     if (replace) router.replace(href); else router.push(href);
   }, [router]);
@@ -78,8 +85,7 @@ export function useBookingFlow(services: Service[]) {
   const model = useBody((s) => s.model);
   const restoredDraft = useBody((s) => s.restored);
 
-  // The service and specialist pages, a specialist's free window and «Записаться снова» preselect the choice (only known
-  // services, ids > 0). Ж-9: it is handed over, not written into the address (lib/booking/preset).
+  // Ж-9: presets are handed over, not written into the address (lib/booking/preset).
   const { sel, update, updateContact, clear, load } = useBookingSelection();
   const [selRestored, setSelRestored] = useState(false);
   const handedOver = useRef<HandOver | null | undefined>(undefined); // taken once, also when the effect runs twice (StrictMode)
@@ -93,49 +99,87 @@ export function useBookingFlow(services: Service[]) {
     absorbPresetFromUrl();
     if (handedOver.current === undefined) handedOver.current = takePreset();
     const p = handedOver.current ?? {};
+    const presetServiceId = restoreServiceId(p.service ?? null);
+    const legacyStaff = p.staff !== undefined && isLegacyStaffId(p.staff);
     const s = load({
-      ...(services.some((x) => x.id === p.service) ? { serviceId: p.service } : {}),
-      ...(p.staff ? { staffId: p.staff } : {}),
-      ...(p.date ? { wantDate: p.date, date: null, datetime: null } : {}),
-      ...(p.date && p.time ? { wantTime: p.time } : {}),
+      ...(presetServiceId === null ? {} : { serviceId: presetServiceId }),
+      ...(p.staff && !legacyStaff ? { staffId: p.staff } : {}),
+      ...(p.date && !legacyStaff ? { wantDate: p.date, wantTime: p.time ?? null, date: null, datetime: null } : {}),
     });
     // a service this visit brought itself is not «a draft found» — also after F5 on the same history entry and after the
     // language switch (`own`: the flag of the entry in the other language came along)
-    setSelRestored(s.serviceId != null && !entryBroughtService(!!p.service || !!p.own));
+    const ownService = entryBroughtService(presetServiceId !== null || !!p.own);
+    const hasSavedSelection = s.serviceId !== null || !!(s.contact.fullname || s.contact.phone || s.contact.email || s.contact.age);
+    setSelRestored(hasSavedSelection && !ownService);
     setResult(loadResult());
     setReady(true);
     // once, on mount: a later hand-over on the same page does not override the choice (as ?service= did not)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // The router read the address before the parameters left it (only when the layout effect above had to move them): it
-  // would write them back with its next history update. Its own documented way to learn the current address without a
-  // navigation or a request is a native replaceState with a state object that is not the router's (Native History API).
+  // Sync the cleaned address with the router and send links to unfinished steps back to the catalog.
   useEffect(() => {
-    if (!ready || !PRESET_PARAMS.some((k) => urlParams?.get(k) != null)) return;
-    if (PRESET_PARAMS.some((k) => new URLSearchParams(window.location.search).has(k))) return; // nothing was moved: leave it
+    if (!ready) return;
+    const url = new URL(window.location.href);
+    const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
+    const linkedStep = Number(url.searchParams.get('step'));
+    const blockedStep = Number.isInteger(linkedStep) && linkedStep > LAST_AVAILABLE_STEP;
+    if (!syncPreset && !blockedStep) return;
+    if (blockedStep) url.searchParams.set('step', String(LAST_AVAILABLE_STEP));
     const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
-    window.history.replaceState(own, '', `${window.location.pathname}${window.location.search}${window.location.hash}`);
+    window.history.replaceState(own, '', url);
   }, [ready, urlParams]);
   const [restoreDismissed, setRestoreDismissed] = useState(false);
 
-  const recommended = useMemo(() => recommendServices(markers.map((m) => m.zoneId)), [markers]);
+  const catalogQ = useAsync(ready && step >= 2, (signal) => getBookingCatalog(locale, signal), ['catalog', locale]);
+  const catalog = catalogQ.data;
+  const services = useMemo(() => {
+    if (!catalog) return [];
+    const categories = new Map(catalog.categories.map(({ id, title }) => [id, title]));
+    const translations = t.raw('home.services.cards') as HomeServiceTranslations;
+    return catalog.services.map((item) => ({
+      id: item.id,
+      title: homeServiceTitle(locale, item, translations),
+      categoryTitle: item.categoryId === null ? undefined : categories.get(item.categoryId),
+      price: formatCatalogServicePrice(item, locale, {
+        unknown: () => t('home.services.priceUnknown'),
+        from: (price) => t('home.services.priceFrom', { price }),
+      }),
+      duration: item.durationMin === null ? null : t('home.services.duration', { minutes: item.durationMin }),
+    }));
+  }, [catalog, locale, t]);
+  const recommended = useMemo(() => recommendServices(markers.map((m) => m.zoneId))
+    .map(confirmedCatalogId)
+    .filter((id): id is number => id !== undefined && services.some((s) => s.id === id)), [markers, services]);
   const ordered = useMemo(() => [...services].sort((a, b) => {
     const ra = recommended.indexOf(a.id), rb = recommended.indexOf(b.id);
     return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb);
   }), [services, recommended]);
-  const service = services.find((s) => s.id === sel.serviceId) ?? null;
+  const catalogService = services.find((s) => s.id === sel.serviceId) ?? null;
+  useEffect(() => {
+    if (catalogQ.status === 'ready' && sel.serviceId !== null && !catalogService) {
+      update({ serviceId: null, staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null });
+    }
+  }, [catalogQ.status, sel.serviceId, catalogService, update]);
+  const selectService = (serviceId: number) => update({
+    serviceId,
+    date: null,
+    datetime: null,
+    // A preset without a service can carry a specialist or preferred day for the first choice.
+    ...(sel.serviceId === null ? {} : { staffId: 0, wantDate: null, wantTime: null }),
+  });
 
-  // ---- data (steps 3, 4, 6)
+  // ---- legacy steps: a live service must never enter the demo cascade or submit a demo record
+  const service = demoServices.find((s) => s.id === sel.serviceId) ?? null;
   const [takenSeq, setTakenSeq] = useState(0); // a slot_taken answer refreshes the times (the taken slot disappears)
-  const staffQ = useAsync<Staff[]>((step === 3 || step === 6) && !!sel.serviceId, () => getStaff(locale, sel.serviceId!), ['staff', locale, sel.serviceId]);
-  const datesQ = useAsync<string[]>(step === 4 && !!sel.serviceId, () => getDates(sel.serviceId!, sel.staffId), ['dates', sel.serviceId, sel.staffId]);
+  const staffQ = useAsync<Staff[]>((step === 3 || step === 6) && !!service, () => getStaff(locale, service!.id), ['staff', locale, service?.id]);
+  const datesQ = useAsync<string[]>(step === 4 && !!service, () => getDates(service!.id, sel.staffId), ['dates', service?.id, sel.staffId]);
   // the day in effect: picked by the visitor, else the preferred day of the link when it is free for this service / specialist
   const day0 = sel.date ?? (sel.wantDate && datesQ.data?.includes(sel.wantDate) ? sel.wantDate : null);
-  const timesQ = useAsync<Slot[]>(step === 4 && !!sel.serviceId && !!day0, () => getTimes(sel.serviceId!, sel.staffId, day0!), ['times', sel.serviceId, sel.staffId, day0, takenSeq]);
+  const timesQ = useAsync<Slot[]>(step === 4 && !!service && !!day0, () => getTimes(service!.id, sel.staffId, day0!), ['times', service?.id, sel.staffId, day0, takenSeq]);
   // N2-01: the specialist's name for the summary of steps 4–6 when it came with the link (?staff — the slot link skips step 3,
   // so the per-service list above was never loaded); also covers a specialist outside the chosen service's list
   const knownInList = !!staffQ.data?.some((s) => s.id === sel.staffId);
-  const staffAllQ = useAsync<Staff[]>(step >= 4 && step <= 6 && sel.staffId > 0 && !knownInList, () => getStaff(locale), ['staff-all', locale]);
+  const staffAllQ = useAsync<Staff[]>(step >= 4 && step <= 6 && !!service && sel.staffId > 0 && !knownInList, () => getStaff(locale), ['staff-all', locale]);
   const staffName = sel.staffId ? (staffQ.data?.find((s) => s.id === sel.staffId) ?? staffAllQ.data?.find((s) => s.id === sel.staffId))?.name ?? null : null;
 
   // ---- slot link of the specialist page (?staff&date&time, R-FINAL-2): after the service → step 4 with that slot picked
@@ -202,7 +246,7 @@ export function useBookingFlow(services: Service[]) {
   const [error, setError] = useState<BookingError | null>(null);
   const [idempotencyKey] = useState(() => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `k${Date.now()}`));
   const confirm = useCallback(async () => {
-    if (!service || !sel.datetime || !captchaToken) return;
+    if (step !== 6 || !service || !sel.datetime || !captchaToken) return;
     setError(null);
     if (BOOKING_SMS_REQUIRED && !codeSent) { await postCode(sel.contact.phone); setCodeSent(true); return; }
     setBusy(true);
@@ -224,19 +268,20 @@ export function useBookingFlow(services: Service[]) {
       setError(errorKind(e));
       track('booking_error', { reason: errorKind(e) });
     }
-  }, [service, sel, captchaToken, codeSent, locale, update, go, idempotencyKey, code, staffName, markers, clear]);
+  }, [step, service, sel, captchaToken, codeSent, locale, update, go, idempotencyKey, code, staffName, markers, clear]);
 
   const startOver = useCallback(() => {
     clearResult(); setResult(null); clear(); body.resetDraft(); setError(null); setRestoreDismissed(true); go(1);
   }, [clear, go]);
 
   return {
-    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel: day0 === sel.date ? sel : { ...sel, date: day0 }, update, updateContact, services, ordered, recommended, service, staffName,
+    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel: day0 === sel.date ? sel : { ...sel, date: day0 }, update, updateContact, services: demoServices, ordered, recommended, service, staffName,
+    catalogQ, catalogService, selectService, canAdvanceFromService: LAST_AVAILABLE_STEP > 2,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,
     contactErrors: contactV.errors, contactAttempt: contactV.attempt, contactMsg, contactField, submitContacts,
     captchaToken, code, setCode, codeSent, busy, error, setError, confirm, result, startOver,
     offerRestore: step === 1 && !restoreDismissed && (restoredDraft || selRestored),
-    continueDraft: () => { setRestoreDismissed(true); body.dismissRestored(); const n = firstIncomplete(); if (n > 1 && sel.serviceId) go(n); },
+    continueDraft: () => { setRestoreDismissed(true); body.dismissRestored(); if (selRestored) go(firstIncomplete()); },
     discardDraft: () => { setRestoreDismissed(true); clear(); body.resetDraft(); },
   };
 }

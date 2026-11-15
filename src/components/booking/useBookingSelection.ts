@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import type { Contact } from '@/lib/api/types';
 import { draftExpired } from '@/lib/booking/draft-ttl';
+import { isLegacyStaffId, restoreServiceId } from './service-catalog';
 
 export interface Selection {
   serviceId: number | null;
@@ -18,9 +19,10 @@ export interface Selection {
   contact: Contact & { consent: boolean; health: boolean };
 }
 const KEY = 'bm.bookingSteps';
+const VERSION = 2;
 const EMPTY: Selection = { serviceId: null, staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false, health: false } }; // phone: PhoneField puts «+971 » on focus
 /** every write stamps the time of the change: the name and the phone are dropped a day after it (lib/booking/draft-ttl, Ж-5) */
-const persist = (next: Selection) => { try { sessionStorage.setItem(KEY, JSON.stringify({ ...next, savedAt: Date.now() })); } catch { /* ignore */ } };
+const persist = (next: Selection) => { try { sessionStorage.setItem(KEY, JSON.stringify({ ...next, version: VERSION, savedAt: Date.now() })); } catch { /* ignore */ } };
 
 /**
  * Starts EMPTY — the same as the prerendered step 1 (R-FINAL perf, option A) — and `load(preset)` reads the stored
@@ -30,18 +32,32 @@ const persist = (next: Selection) => { try { sessionStorage.setItem(KEY, JSON.st
  */
 export function useBookingSelection() {
   const [sel, setSel] = useState<Selection>(EMPTY);
-  const load = useCallback((preset: Partial<Pick<Selection, 'serviceId' | 'staffId' | 'wantDate' | 'wantTime'>> = {}) => {
+  const load = useCallback((preset: Partial<Omit<Selection, 'contact'>> = {}) => {
     let stored: Selection = EMPTY;
     try {
       const raw = sessionStorage.getItem(KEY);
-      const { savedAt, ...kept } = (raw ? JSON.parse(raw) : {}) as Partial<Selection> & { savedAt?: number };
+      const { savedAt, version, ...kept } = (raw ? JSON.parse(raw) : {}) as Partial<Selection> & { savedAt?: number; version?: number };
       if (draftExpired(savedAt)) sessionStorage.removeItem(KEY); // Ж-5: older than a day → gone
-      else if (raw) stored = { ...EMPTY, ...kept };
+      else if (raw) {
+        stored = { ...EMPTY, ...kept, contact: { ...EMPTY.contact, ...kept.contact } };
+        if (version !== VERSION) stored = {
+          ...stored,
+          serviceId: restoreServiceId(stored.serviceId),
+          staffId: isLegacyStaffId(stored.staffId) ? 0 : stored.staffId,
+          date: null, datetime: null, wantDate: null, wantTime: null,
+        };
+      }
     } catch { /* ignore */ }
     let next = stored;
-    if (preset.serviceId !== undefined || preset.staffId !== undefined || preset.wantDate !== undefined || preset.wantTime !== undefined) {
+    if (Object.keys(preset).length) {
       const changedService = preset.serviceId !== undefined && preset.serviceId !== stored.serviceId;
-      next = { ...stored, ...preset, ...(changedService ? { date: null, datetime: null } : {}) };
+      const changedStaff = preset.staffId !== undefined && preset.staffId !== stored.staffId;
+      next = {
+        ...stored,
+        ...(changedService ? { staffId: 0 } : {}),
+        ...(changedService || changedStaff ? { date: null, datetime: null, wantDate: null, wantTime: null } : {}),
+        ...preset,
+      };
       persist(next);
     }
     setSel(next);

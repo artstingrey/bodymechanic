@@ -711,8 +711,9 @@
       "suggested": "Matched to your areas",
       "priceFromDuration": "from {priceMin} AED · {durationMin} min",
       "priceExact": "{price} AED · {durationMin} min",
-      "empty": "There are no services in this category yet.",
-      "loadError": "We couldn’t load the services."
+      "empty": "No services are currently available for online booking.",
+      "loadError": "We couldn’t load the services.",
+      "nextUnavailable": "To choose a time and book, use the <form>form on the home page</form>."
     },
     "staff": {
       "heading": "Choose a specialist",
