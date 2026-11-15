@@ -203,9 +203,10 @@ try {
     });
     for (const locale of ['en', 'ru']) {
       const html = await home(origin, locale);
-      const nameLinks = [...html.matchAll(/<a\s[^>]*href="#"[^>]*>([^<]+)<\/a>/g)]
-        .map((match) => match[1]).filter((name) => names.includes(name));
-      assert.deepEqual(nameLinks, names, 'server-rendered name links');
+      const nameLinks = [...html.matchAll(/<a\s[^>]*href="([^"]+)"[^>]*>([^<]+)<\/a>/g)]
+        .filter(([, , name]) => names.includes(name)).map(([, href, name]) => ({ href, name }));
+      assert.deepEqual(nameLinks, dataFor(locale).staff.map(({ id, name }) => ({ href: `/${locale}/team/staff-${id}/`, name })),
+        'server-rendered name links');
       assert.ok(!html.includes('Hidden Example') && !html.includes('Dismissed Example'));
       await api(origin, `?locale=${locale}`, 200, expected(locale));
       const service = await fetch(`${origin}/api/catalog/services?locale=${locale}`);
@@ -231,8 +232,12 @@ try {
         await expect(block.locator('.team-intro a')).toHaveAttribute('href', '#');
         assert.equal(await block.locator('.team-intro').evaluate((el) => el.scrollWidth <= el.clientWidth
           && el.getBoundingClientRect().right <= el.parentElement.getBoundingClientRect().right + 1), true);
-        await expect(cards.locator('b a[href="#"]')).toHaveText(names);
-        await expect(block.locator('a:not([href="#"]), .go, .badge')).toHaveCount(0);
+        const nameLinks = cards.locator('b a');
+        await expect(nameLinks).toHaveText(names);
+        for (const [index, { id }] of dataFor(locale).staff.entries()) {
+          await expect(nameLinks.nth(index)).toHaveAttribute('href', `/${locale}/team/staff-${id}/`);
+        }
+        await expect(block.locator('a:not([href="#"]), .go, .badge')).toHaveCount(names.length);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.equal(await cards.first().locator('b').evaluate((el) => el.scrollWidth <= el.clientWidth), true);
         await cards.first().scrollIntoViewIfNeeded();

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
+import { catalogStaffSlug } from '@/lib/catalog-staff-slug';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { getCatalogStaff } from '@/server/catalog/staff';
 import { ButtonLink } from '@/components/ui/Button';
@@ -29,7 +30,7 @@ async function HomeTeamCards({ locale, t }: { locale: CatalogLocale; t: Awaited<
             </ButtonLink>
           </div>
           {staff.map(({ id, name, imageUrl }) => (
-            <StaffCard key={id} name={name} href="#"
+            <StaffCard key={id} name={name} href={`/team/${catalogStaffSlug(id)}`}
               photo={<HomeTeamPhoto key={imageUrl ?? 'placeholder'} src={imageUrl} alt={name} unavailable={t('home.team.photoUnavailable')} />} />
           ))}
         </Carousel>
