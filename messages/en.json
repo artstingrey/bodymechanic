@@ -461,11 +461,21 @@
     "form": {
       "eyebrow": "Quick booking, no 3D needed",
       "title": "It starts with you",
-      "lead": "Leave your details, choose a service and a free slot, and your booking goes straight into the studio’s schedule.",
+      "lead": "Choose a service, specialist, date and time, and enter your contact details.",
       "submit": "Book",
       "showOn3d": "Show on the 3D model",
       "submitting": "Sending…",
-      "anyStaffOption": "Any"
+      "anyStaffOption": "Any specialist",
+      "timeLabel": "Time in Dubai",
+      "timePlaceholder": "Choose a time",
+      "submitUnavailable": "You can check availability here. Online booking through this form is temporarily unavailable.",
+      "retry": "Try again",
+      "availability": {
+        "services": { "loading": "Loading services…", "empty": "There are no services available for online booking.", "error": "We couldn’t load the services." },
+        "staff": { "loading": "Loading specialists…", "empty": "No specialists are listed for this service.", "error": "We couldn’t load the specialists." },
+        "dates": { "loading": "Loading dates…", "empty": "There are no available dates.", "error": "We couldn’t load the dates." },
+        "times": { "loading": "Loading times…", "empty": "There are no free times on this date.", "error": "We couldn’t load the times." }
+      }
     }
   },
   "body3d": {

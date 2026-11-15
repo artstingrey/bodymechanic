@@ -23,7 +23,7 @@ async function availabilityFixture(url, resource, staffPath, date, language, sig
   if (resource === 'book_dates') query.set('staff_id', staffId);
   assert.equal(url.search, `?${query}`);
   assert.match(staffId, /^(0|91601|91602|91605)$/);
-  assert.ok(['13982355', '91201'].includes(serviceId));
+  assert.ok(['13982355', '91201', '91204'].includes(serviceId));
   console.info('[availability-fixture]', resource, language, serviceId, staffId, date ?? '-');
 
   const scenario = readFileSync(process.env.AVAILABILITY_TEST_SCENARIO, 'utf8');
@@ -44,6 +44,7 @@ async function availabilityFixture(url, resource, staffPath, date, language, sig
     '13982355:91602': [end],
     '91201:0': [end],
     '91201:91605': [end],
+    '91204:0': [],
   };
   const dates = options[`${serviceId}:${staffId}`];
   assert.ok(dates);

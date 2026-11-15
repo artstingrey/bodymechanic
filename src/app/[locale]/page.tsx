@@ -3,11 +3,10 @@ import { ButtonLink } from '@/components/ui/Button';
 import { pageLocale } from '@/lib/locale';
 import { pageMetadata } from '@/lib/seo';
 import { PageLd } from '@/components/seo/PageLd';
-import { getServices } from '@/lib/api';
 import { HeroAtlas } from '@/components/sections/HeroAtlas';
 import { HomeServices } from '@/components/sections/HomeServices';
 import { HomeTeam } from '@/components/sections/HomeTeam';
-import { QuickForm } from '@/components/booking/QuickForm';
+import { HomeQuickForm } from '@/components/booking/HomeQuickForm';
 import { ReviewCard, PhotoPlaceholder } from '@/components/ui/Cards';
 import { AccordionItem } from '@/components/ui/Misc';
 import { Todo } from '@/components/ui/Todo';
@@ -31,12 +30,11 @@ const FAQ = ['choose', 'duration', 'prepare', 'specialist', 'reschedule', 'contr
 export default async function HomePage() {
   const locale = await pageLocale();
   const t = await getTranslations();
-  const mockServices = await getServices(locale);
   const faq = FAQ.filter((k) => t.has(`home.faq.${k}.q`));
   const title = t('home.hero.title');
   const [titleA, titleB] = splitTitle(title);
   return (
-    <ScopeMessages messages={await pickMessages(['body3d', 'home.hero', 'home.form', 'forms', 'booking.queued', 'booking.done', 'booking.review', 'booking.error'])}>
+    <ScopeMessages messages={await pickMessages(['body3d', 'home.hero', 'home.form', 'forms', 'booking.review'])}>
     <>
       <PageLd kind="home" />
       {/* 1 Hero A «Анатомический атлас» (site/design/hifi/hifi-hero.html) */}
@@ -152,7 +150,7 @@ export default async function HomePage() {
             <p className="lead">{t('home.form.lead')}</p>
           </div>
           <div className="form-card" data-reveal="">
-            <QuickForm services={mockServices.map((s) => ({ id: s.id, title: s.title, price: s.priceOnRequest ? null : s.priceMin }))} />
+            <HomeQuickForm locale={locale} />
           </div>
         </div>
       </section>

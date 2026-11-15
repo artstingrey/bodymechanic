@@ -196,8 +196,8 @@ try {
       assert.equal(await servicePhoto.evaluate((el) => getComputedStyle(el).clipPath), 'none', 'team refresh reset service reveals');
       await photo.scrollIntoViewIfNeeded();
       await expect.poll(() => photo.evaluate((el) => getComputedStyle(el).clipPath)).toBe('none');
-      await expect(page.locator('#qf-service option[value="101"]')).toHaveCount(1);
-      await expect(page.locator('[aria-labelledby="form-title"] select option[value^="912"]')).toHaveCount(0);
+      await expect(page.locator('#qf-service option[value="101"]')).toHaveCount(0);
+      await expect(page.locator('#qf-service option[value^="912"]')).toHaveCount(5);
       await expect(page.locator('[aria-labelledby="form-title"] select[name="staff"] option')).toHaveCount(1);
       await expect(page.locator('.demo-notice')).toBeVisible();
     });

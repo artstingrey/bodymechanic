@@ -548,30 +548,24 @@ test.describe('form validation (R-CODE-02 F-05)', () => {
     expect(texts.join(' | '), `${id} described by its error`).toContain(text);
   }
 
-  test('home «Start with yourself»: empty submit → 5 errors, focus on the name, summary; wrong phone → phone error', async ({ page, baseURL }) => {
+  test('home «Start with yourself»: email is required, invalid contacts are explained on blur', async ({ page, baseURL }) => {
     const g = guard(page, baseURL!);
     await page.goto('/en/', { waitUntil: 'networkidle' });
     const form = page.locator('form.qform');
     await expect(form).toHaveAttribute('novalidate', '');
-    await form.getByRole('button', { name: en.home.form.submit, exact: true }).click();
-    await expect(page.locator('#qf-name')).toBeFocused();
-    await expectFieldError(page, 'qf-name', E.required);
-    await expectFieldError(page, 'qf-phone', E.required);
-    await expectFieldError(page, 'qf-service', E.serviceRequired);
-    await expectFieldError(page, 'qf-date', E.datetimeRequired);
-    await expectFieldError(page, 'qf-consent', E.consentRequired);
-    const summary = form.locator('.form-errors[role="alert"]');
-    await expect(summary).toContainText(E.summary);
-    await expect(summary.locator('li')).toHaveCount(5);
-    // a summary link focuses its field
-    await summary.getByRole('link', { name: `${en.forms.field.service}: ${E.serviceRequired}` }).click();
-    await expect(page.locator('#qf-service')).toBeFocused();
-    // fixed name clears its error as you type; a wrong phone is named after the next submit
-    await page.locator('#qf-name').fill('Demo');
-    await expect(page.locator('#qf-name')).not.toHaveAttribute('aria-invalid', 'true');
+    await expect(form.getByRole('button', { name: en.home.form.submit, exact: true })).toBeDisabled();
+    const email = page.locator('#qf-email');
+    await expect(email).toHaveAttribute('required', '');
+    await email.focus();
+    await email.blur();
+    await expectFieldError(page, 'qf-email', E.required);
+    await email.fill('invalid');
+    await email.blur();
+    await expectFieldError(page, 'qf-email', E.emailInvalid);
+    await email.fill('visitor@example.test');
+    await expect(email).not.toHaveAttribute('aria-invalid', 'true');
     await page.locator('#qf-phone').fill('+971 5012');
-    await form.getByRole('button', { name: en.home.form.submit, exact: true }).click();
-    await expect(page.locator('#qf-phone')).toBeFocused();
+    await page.locator('#qf-phone').blur();
     await expectFieldError(page, 'qf-phone', E.phoneInvalid.split('+')[0].trim());
     expectClean(await g.problems(), 'home form validation');
   });

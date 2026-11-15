@@ -301,12 +301,13 @@
 .qform .input input, .qform .input select { min-height: 46px; }
 .qform .input textarea { min-height: 104px; padding: 12px 0; }
 .qform .row2 { display: grid; gap: 18px; }
-.qform .row2:has(.field--nolabel select:disabled) { grid-template-columns: minmax(0, 1fr); } /* the date takes the whole row until a date is picked and the time select appears */
-@media (min-width: 768px) { .qform .row2 { grid-template-columns: 1fr 1fr; align-items: start; } .qform .field--nolabel { padding-top: 27px; } }
+@media (min-width: 768px) { .qform .row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .qform .field--nolabel { padding-top: 27px; } }
 .qform .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
-/* the time select (label read by screen readers only) appears once a date is picked: before that it was an empty, unlabelled box
-   under «Дата и время» (design audit F15). Visual only — the form logic and the validation are unchanged. */
-.qform .field--nolabel:has(select:disabled) { display: none; }
+.qform .captcha[hidden] { display: none; }
+.qform__choice { min-width: 0; }
+.qform__choice select { width: 100%; min-width: 0; }
+.qform__option-status:not(:empty) { margin: 6px 0; }
+.qform__option-status:empty { margin: 0; }
 
 /* ---------- RC-8: the approved home page (review/skill-bakeoff/variant-final.html), values shared components take only here ----------
    .svc, .staff, .review, .acc and .btn also live on other pages, which must not change: .home-sec = the home page's sections below the hero.

@@ -11,7 +11,7 @@ import { ServiceCard } from '@/components/ui/Cards';
 import { Photo, hasPhoto } from '@/components/ui/Photo';
 import { HomeServicePhoto } from './HomeServicePhoto';
 import { HomeCatalogResult } from './HomeCatalogResult';
-import { homeServiceIllustrations } from '@/content/home-services';
+import { homeServiceIllustrations, homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
 
 const CARD_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
 const TONES = ['lav', 'sand', 'sky'] as const;
@@ -21,7 +21,7 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
   await connection();
   const catalog = await getCatalogServices(locale).catch(() => null);
   const services = catalog?.data.services;
-  const translations = t.raw('home.services.cards') as Record<string, { title: string; description: string } | undefined>;
+  const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   return (
     <HomeCatalogResult
       headingId="services-title"
@@ -38,7 +38,7 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
         }}>
           {services.map((service, i) => {
             const translation = translations[service.id];
-            const title = (locale === 'ru' && service.title) || translation?.title || service.title;
+            const title = homeServiceTitle(locale, service, translations);
             const description = locale === 'en'
               ? translation?.description ?? service.description
               : service.description ?? translation?.description;

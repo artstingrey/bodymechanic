@@ -116,8 +116,8 @@ try {
       await expect.poll(() => photo.evaluate((el) => getComputedStyle(el).clipPath)).toContain('inset(8%');
       await photo.scrollIntoViewIfNeeded();
       await expect.poll(() => photo.evaluate((el) => getComputedStyle(el).clipPath)).toBe('none');
-      await expect(page.locator('#qf-service option[value="101"]')).toHaveCount(1);
-      await expect(page.locator('#qf-service option[value^="9120"]')).toHaveCount(0);
+      await expect(page.locator('#qf-service option[value="101"]')).toHaveCount(0);
+      await expect(page.locator('#qf-service option[value^="9120"]')).toHaveCount(5);
       await expect(page.locator('.demo-notice')).toBeVisible();
     });
 

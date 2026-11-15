@@ -78,7 +78,7 @@ test('home: cookie sheet and FAB above the home indicator, quick form without au
   expectClean(await g.problems(), 'mobile home');
 });
 
-test('quick form: the focused field is not left under the keyboard; the request goes through', async ({ page, baseURL }) => {
+test('quick form: the focused field stays above the keyboard and booking is paused', async ({ page, baseURL }) => {
   await seedConsent(page);
   const g = guard(page, baseURL!);
   await page.goto('/en/', { waitUntil: 'networkidle' });
@@ -86,14 +86,12 @@ test('quick form: the focused field is not left under the keyboard; the request 
   const form = page.locator('form.qform');
   await page.locator('#qf-name').fill('Demo');
   await page.locator('#qf-phone').fill('+971501234567');
-  await page.locator('#qf-service').selectOption({ index: 1 });
-  await expect(page.locator('#qf-date')).toBeEnabled();
-  await page.locator('#qf-date').selectOption({ index: 1 });
-  await expect(page.locator('#qf-time')).toBeEnabled();
-  await page.locator('#qf-consent').check();
-  await form.getByRole('button', { name: en.home.form.submit, exact: true }).tap();
-  await expect(page.getByRole('status').filter({ hasText: en.booking.done.title })).toBeVisible();
-  await noHorizontalScroll(page, 'quick form done');
+  await expect(page.locator('#qf-email')).toHaveAttribute('required', '');
+  await expect(page.locator('#qf-time')).toBeVisible();
+  await expect(form.getByRole('button', { name: en.home.form.submit, exact: true })).toBeDisabled();
+  await expect(form.getByText(en.home.form.submitUnavailable)).toBeVisible();
+  await expect(form.getByTestId('captcha')).toBeHidden();
+  await noHorizontalScroll(page, 'quick form');
   expectClean(await g.problems(), 'mobile quick form');
 });
 

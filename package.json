@@ -19,6 +19,7 @@
     "test:service-details": "node scripts/check-service-details.mjs",
     "test:service-staff": "node scripts/check-service-staff.mjs",
     "test:booking-availability": "node scripts/check-booking-availability.mjs",
+    "test:quick-form": "node scripts/check-quick-form.mjs",
     "test:server": "node scripts/check-server.mjs",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",

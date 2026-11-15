@@ -486,7 +486,7 @@ test.describe('UTM of the first visit (ТЗ §14 → §08)', () => {
     expectClean(await g.problems(), 'utm wording');
   });
 
-  test('home form: [Сайт/форма] comment with the UTM line, booking_success source form', async ({ page, baseURL }) => {
+  test('home form: availability-only mode emits no booking_success or booking comment', async ({ page, baseURL }) => {
     await seedConsent(page, { analytics: true, marketing: false });
     await testHook(page);
     const g = guard(page, baseURL!);
@@ -494,24 +494,16 @@ test.describe('UTM of the first visit (ТЗ §14 → §08)', () => {
     const form = page.locator('form.qform');
     await form.locator('input[name="name"]').fill('Demo');
     await form.locator('input[name="phone"]').fill('+971500000000');
-    await form.locator('select[name="service"]').selectOption({ index: 1 });
-    const day = form.locator('select').nth(2);
-    await expect(day).toBeEnabled();
-    await day.selectOption({ index: 1 });
-    await expect(form.locator('select[name="datetime"]')).toBeEnabled();
     await form.locator('input[type="checkbox"]').check();
-    await form.getByRole('button', { name: en.home.form.submit }).click();
-    await expect(page.getByRole('status').filter({ hasText: en.booking.done.title })).toBeVisible();
+    await expect(form.getByRole('button', { name: en.home.form.submit, exact: true })).toBeDisabled();
+    await form.evaluate((element: HTMLFormElement) => element.requestSubmit());
+    await expect(page.getByRole('status').filter({ hasText: en.booking.done.title })).toHaveCount(0);
     const comment = await page.evaluate(() => (window as unknown as { __bmLastComment?: string }).__bmLastComment);
-    expect(comment).toMatch(/^\[Сайт\/форма\]/);
-    expect(comment!.split('\n').at(-1)).toBe(LINE);
+    expect(comment).toBeUndefined();
     const { events } = (await dataLayer(page))!;
     expectTable(events);
     const success = events.filter((e) => e.event === 'booking_success');
-    expect(success).toHaveLength(1);
-    const svc = SERVICES.find((s) => s.id === success[0].service_id)!;
-    expect(svc).toBeDefined();
-    expect(success[0]).toEqual({ event: 'booking_success', service_id: svc.id, staff_id: 0, ...(svc.priceOnRequest || svc.priceMin == null ? {} : { value: svc.priceMin }), currency: 'AED', source: 'form' });
+    expect(success).toHaveLength(0);
     expectClean(await g.problems(), 'utm form');
   });
 });
