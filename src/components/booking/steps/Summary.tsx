@@ -14,7 +14,8 @@ export function Summary({ flow }: { flow: Flow }) {
           <div><dt>{t('booking.review.service')}</dt><dd>{catalogService.title}
             <span className="cap">{[catalogService.price, catalogService.duration].filter(Boolean).join(' · ')}</span></dd></div>
         ) : null}
-        {step > 3 ? <div><dt>{t('booking.review.specialist')}</dt><dd>{sel.staffId ? staffName ?? '—' : t('booking.staff.any')}</dd></div> : null}
+        {step >= 3 && catalogService && (staffName || sel.staffId === 0)
+          ? <div><dt>{t('booking.review.specialist')}</dt><dd>{staffName ?? t('booking.staff.any')}</dd></div> : null}
         {step > 4 && sel.datetime ? <div><dt>{t('booking.review.datetime')}</dt><dd>{when(sel.datetime)}</dd></div> : null}
       </dl>
     </aside>

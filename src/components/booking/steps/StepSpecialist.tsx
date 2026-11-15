@@ -1,14 +1,16 @@
 'use client';
-/** Step 3 «Специалист»: «Любой» + the specialists of the service with the nearest slot; loading / error / retry. */
-import { Badge } from '@/components/ui/Badge';
+/** Step 3 shows the specialists assigned to the selected service. */
+import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/Button';
 import { Silhouette } from '@/components/ui/Cards';
-import { ErrorBox, Loading } from '../ui';
+import { StateCard } from '@/components/ui/Misc';
+import { Loading } from '../ui';
 import { Summary } from './Summary';
 import type { Flow } from '../useBookingFlow';
 
 export function StepSpecialist({ flow }: { flow: Flow }) {
-  const { t, sel, update, go, staffQ, day, time } = flow;
+  const { t, sel, selectStaff, go, staffQ, catalogQ, staffName, canAdvanceFromStaff } = flow;
+  const staffReady = staffQ.status === 'ready';
   return (
     <section aria-labelledby="st3" className="bk-step bk-grid">
       <Summary flow={flow} />
@@ -17,29 +19,37 @@ export function StepSpecialist({ flow }: { flow: Flow }) {
         <ul className="bk-list">
           <li>
             <label className="rcard bk-opt">
-              <input type="radio" name="staff" checked={sel.staffId === 0} onChange={() => update({ staffId: 0, date: null, datetime: null })} />
+              <input type="radio" name="staff" value="0" disabled={!staffReady} checked={sel.staffId === 0} onChange={() => selectStaff(0)} />
               <span className="dot" aria-hidden="true" />
               <span className="bk-opt__body"><b>{t('booking.staff.any')}</b><span>{t('booking.staff.anyHint')}</span></span>
             </label>
           </li>
-          {staffQ.status === 'loading' ? <li><Loading label={t('common.state.loading')} /></li> : null}
-          {staffQ.status === 'error' && staffQ.error ? <li><ErrorBox kind={staffQ.error} onRetry={staffQ.retry} /></li> : null}
-          {(staffQ.data ?? []).map((s) => (
-            <li key={s.id}>
+          {(catalogQ.status === 'loading' || staffQ.status === 'loading') && <li><Loading label={t('common.state.loading')} /></li>}
+          {catalogQ.status === 'error' && <li><StateCard kind="error" text={t('booking.service.loadError')} action={
+            <Button variant="secondary" size="sm" onClick={catalogQ.retry}>{t('common.actions.retry')}</Button>
+          } /></li>}
+          {staffQ.status === 'error' && <li><StateCard kind="error" text={t('booking.staff.loadError')} action={
+            <Button variant="secondary" size="sm" onClick={staffQ.retry}>{t('common.actions.retry')}</Button>
+          } /></li>}
+          {staffReady && staffQ.data?.length === 0 && <li className="hint" role="status">{t('booking.staff.empty')}</li>}
+          {staffReady && staffQ.data?.map(({ id, name }) => (
+            <li key={id}>
               <label className="rcard bk-opt">
-                <input type="radio" name="staff" checked={sel.staffId === s.id} onChange={() => update({ staffId: s.id, date: null, datetime: null })} />
+                <input type="radio" name="staff" value={id} checked={sel.staffId === id} onChange={() => selectStaff(id)} />
                 <span className="dot" aria-hidden="true" />
                 <span className="bk-opt__ava" aria-hidden="true"><Silhouette /></span>
-                <span className="bk-opt__body"><b>{s.name}</b>
-                  <span>{s.nearestSlot ? t('booking.staff.nearest', { slot: `${day(s.nearestSlot.slice(0, 10))}, ${time(s.nearestSlot)}` }) : t('booking.staff.noSlots')}</span></span>
-                <span className="bk-opt__meta"><Badge>{s.position}</Badge></span>
+                <span className="bk-opt__body"><b>{name}</b></span>
               </label>
             </li>))}
         </ul>
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(2)}>{t('common.actions.back')}</Button>
-          <Button onClick={() => go(4)}>{t('common.actions.next')}</Button>
+          <Button disabled={!canAdvanceFromStaff || !staffReady || (sel.staffId !== 0 && !staffName)}
+            aria-describedby={canAdvanceFromStaff ? undefined : 'booking-staff-next'} onClick={() => go(4)}>{t('common.actions.next')}</Button>
         </div>
+        {!canAdvanceFromStaff && <p className="hint" id="booking-staff-next">
+          {t.rich('booking.staff.nextUnavailable', { form: (label) => <Link href={{ pathname: '/', hash: 'form-title' }}>{label}</Link> })}
+        </p>}
       </div>
     </section>
   );

@@ -722,7 +722,9 @@
       "nearest": "Next available: {slot}",
       "noSlots": "No available times at the moment",
       "rating": "Rating {rating}",
-      "loadError": "We couldn’t load the specialists."
+      "loadError": "We couldn’t load the specialists.",
+      "empty": "No specialists are listed for this service.",
+      "nextUnavailable": "To choose a time and book, use the <form>form on the home page</form>."
     },
     "time": {
       "heading": "Choose a date and time",

@@ -18,9 +18,9 @@ import { useSearchParams } from 'next/navigation';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
-import { errorKind, getDates, getStaff, getTimes, postCheck, postCode, postRecord, recommendServices } from '@/lib/api';
+import { errorKind, getDates, getTimes, postCheck, postCode, postRecord, recommendServices } from '@/lib/api';
 import type { ApiErrorKind } from '@/lib/api/errors';
-import type { Service, Slot, Staff } from '@/lib/api/types';
+import type { Service, Slot } from '@/lib/api/types';
 import { body, useBody } from '@/lib/body3d/store';
 import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
 import { BOOKING_SMS_REQUIRED } from '@/lib/config';
@@ -30,6 +30,7 @@ import { collect, messageArgs, normalizePhone, rules, type ErrorCode } from '@/l
 import { clearResult, loadResult, saveResult, type BookingResult } from '@/lib/booking/result';
 import { PRESET_PARAMS, absorbPresetFromUrl, entryBroughtService, takePreset, type HandOver } from '@/lib/booking/preset';
 import type { Locale } from '@/i18n/routing';
+import { getBookingStaff } from './booking-staff';
 import { confirmedCatalogId, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
 import { useBookingSelection } from './useBookingSelection';
 
@@ -40,7 +41,7 @@ const NO_PARAMS: Pick<URLSearchParams, 'get'> = new URLSearchParams();
 
 export const STEPS = ['zones', 'service', 'specialist', 'time', 'contacts', 'review', 'done'] as const;
 // During the staged rollout, live services stop at the last connected step.
-const LAST_AVAILABLE_STEP = 2;
+const LAST_AVAILABLE_STEP = 3;
 export type BookingError = ApiErrorKind | 'slotTaken';
 
 /** Async data with loading / error / retry, without setState in the effect body (state is keyed by the request). */
@@ -70,11 +71,7 @@ export function useBookingFlow(demoServices: Service[]) {
   const sp = ready && urlParams ? urlParams : NO_PARAMS;
   const requestedStep = Number(sp.get('step'));
   const step = Number.isInteger(requestedStep) ? Math.min(LAST_AVAILABLE_STEP, Math.max(1, requestedStep)) : 1;
-  const slotLink = useRef(false); // R-FINAL-2: came from a specialist's slot (staff + date + time) → step 2 → straight to 4
-  const stepNow = useRef(step);
-  useEffect(() => { stepNow.current = step; }, [step]);
   const go = useCallback((n: number, replace = false) => {
-    if (n === 3 && stepNow.current === 2 && slotLink.current) n = 4; // forward from the service only; «Назад» from 4 still reaches 3
     n = Math.min(LAST_AVAILABLE_STEP, n);
     const href = n === 1 ? '/booking/' : `/booking/?step=${n}`;
     if (replace) router.replace(href); else router.push(href);
@@ -116,18 +113,6 @@ export function useBookingFlow(demoServices: Service[]) {
     // once, on mount: a later hand-over on the same page does not override the choice (as ?service= did not)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Sync the cleaned address with the router and send links to unfinished steps back to the catalog.
-  useEffect(() => {
-    if (!ready) return;
-    const url = new URL(window.location.href);
-    const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
-    const linkedStep = Number(url.searchParams.get('step'));
-    const blockedStep = Number.isInteger(linkedStep) && linkedStep > LAST_AVAILABLE_STEP;
-    if (!syncPreset && !blockedStep) return;
-    if (blockedStep) url.searchParams.set('step', String(LAST_AVAILABLE_STEP));
-    const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
-    window.history.replaceState(own, '', url);
-  }, [ready, urlParams]);
   const [restoreDismissed, setRestoreDismissed] = useState(false);
 
   const catalogQ = useAsync(ready && step >= 2, (signal) => getBookingCatalog(locale, signal), ['catalog', locale]);
@@ -155,6 +140,19 @@ export function useBookingFlow(demoServices: Service[]) {
     return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb);
   }), [services, recommended]);
   const catalogService = services.find((s) => s.id === sel.serviceId) ?? null;
+  const needsService = step >= 3 && (sel.serviceId === null || (catalogQ.status === 'ready' && !catalogService));
+  // Sync the cleaned address with the router and resolve deep links to steps that are available.
+  useEffect(() => {
+    if (!ready) return;
+    const url = new URL(window.location.href);
+    const syncPreset = PRESET_PARAMS.some((k) => urlParams?.get(k) != null) && PRESET_PARAMS.every((k) => !url.searchParams.has(k));
+    const linkedStep = Number(url.searchParams.get('step'));
+    const replacement = needsService ? 2 : Number.isInteger(linkedStep) && linkedStep > LAST_AVAILABLE_STEP ? LAST_AVAILABLE_STEP : null;
+    if (!syncPreset && replacement === null) return;
+    if (replacement !== null) url.searchParams.set('step', String(replacement));
+    const own = Object.fromEntries(Object.entries((window.history.state ?? {}) as Record<string, unknown>).filter(([k]) => !k.startsWith('__')));
+    window.history.replaceState(own, '', url);
+  }, [ready, urlParams, needsService]);
   useEffect(() => {
     if (catalogQ.status === 'ready' && sel.serviceId !== null && !catalogService) {
       update({ serviceId: null, staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null });
@@ -168,23 +166,26 @@ export function useBookingFlow(demoServices: Service[]) {
     ...(sel.serviceId === null ? {} : { staffId: 0, wantDate: null, wantTime: null }),
   });
 
+  const catalogServiceId = catalogService?.id;
+  const staffQ = useAsync(step >= 3 && catalogServiceId !== undefined,
+    (signal) => getBookingStaff(locale, catalogServiceId!, signal), ['staff', locale, catalogServiceId]);
+  const staffName = staffQ.status === 'ready' ? staffQ.data?.find(({ id }) => id === sel.staffId)?.name ?? null : null;
+  const staffUnavailable = staffQ.status === 'ready' && sel.staffId !== 0 && staffName === null;
+  const selectStaff = useCallback((staffId: number) => {
+    update({ staffId, date: null, datetime: null, wantDate: null, wantTime: null });
+  }, [update]);
+  useEffect(() => {
+    if (staffUnavailable) selectStaff(0);
+  }, [staffUnavailable, selectStaff]);
+
   // ---- legacy steps: a live service must never enter the demo cascade or submit a demo record
   const service = demoServices.find((s) => s.id === sel.serviceId) ?? null;
   const [takenSeq, setTakenSeq] = useState(0); // a slot_taken answer refreshes the times (the taken slot disappears)
-  const staffQ = useAsync<Staff[]>((step === 3 || step === 6) && !!service, () => getStaff(locale, service!.id), ['staff', locale, service?.id]);
   const datesQ = useAsync<string[]>(step === 4 && !!service, () => getDates(service!.id, sel.staffId), ['dates', service?.id, sel.staffId]);
   // the day in effect: picked by the visitor, else the preferred day of the link when it is free for this service / specialist
   const day0 = sel.date ?? (sel.wantDate && datesQ.data?.includes(sel.wantDate) ? sel.wantDate : null);
   const timesQ = useAsync<Slot[]>(step === 4 && !!service && !!day0, () => getTimes(service!.id, sel.staffId, day0!), ['times', service?.id, sel.staffId, day0, takenSeq]);
-  // N2-01: the specialist's name for the summary of steps 4–6 when it came with the link (?staff — the slot link skips step 3,
-  // so the per-service list above was never loaded); also covers a specialist outside the chosen service's list
-  const knownInList = !!staffQ.data?.some((s) => s.id === sel.staffId);
-  const staffAllQ = useAsync<Staff[]>(step >= 4 && step <= 6 && !!service && sel.staffId > 0 && !knownInList, () => getStaff(locale), ['staff-all', locale]);
-  const staffName = sel.staffId ? (staffQ.data?.find((s) => s.id === sel.staffId) ?? staffAllQ.data?.find((s) => s.id === sel.staffId))?.name ?? null : null;
-
-  // ---- slot link of the specialist page (?staff&date&time, R-FINAL-2): after the service → step 4 with that slot picked
-  //      when the service has it; else the calendar opens on that day with booking.time.slotUnfit (no default service)
-  useEffect(() => { slotLink.current = !!(sel.wantTime && sel.wantDate && sel.staffId); }, [sel.wantTime, sel.wantDate, sel.staffId]);
+  // A slot preset is applied only after its specialist and time have been verified.
   const wantedSlot = step === 4 && sel.wantTime && day0 === sel.wantDate ? timesQ.data?.find((s) => s.time === sel.wantTime) ?? null : null;
   useEffect(() => { if (wantedSlot && !sel.datetime) update({ date: wantedSlot.datetime.slice(0, 10), datetime: wantedSlot.datetime, wantTime: null }); }, [wantedSlot, sel.datetime, update]);
   const slotUnfit = step === 4 && !!sel.wantTime && !sel.datetime && (
@@ -276,7 +277,7 @@ export function useBookingFlow(demoServices: Service[]) {
 
   return {
     t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel: day0 === sel.date ? sel : { ...sel, date: day0 }, update, updateContact, services: demoServices, ordered, recommended, service, staffName,
-    catalogQ, catalogService, selectService, canAdvanceFromService: LAST_AVAILABLE_STEP > 2,
+    catalogQ, catalogService, selectService, selectStaff, canAdvanceFromStaff: LAST_AVAILABLE_STEP > 3,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,
     contactErrors: contactV.errors, contactAttempt: contactV.attempt, contactMsg, contactField, submitContacts,
     captchaToken, code, setCode, codeSent, busy, error, setError, confirm, result, startOver,
