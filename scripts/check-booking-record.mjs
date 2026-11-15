@@ -62,7 +62,7 @@ async function waitForCall(operation) {
 function run(check, override = {}) {
   return withProductionServer(async (origin, logs) => {
     try {
-      await check(origin);
+      await check(origin, logs);
     } finally {
       assert.doesNotMatch(logs(), secrets);
     }
@@ -99,7 +99,7 @@ try {
     assert.deepEqual(await history(), []);
   }, { BOOKING_ORIGIN: '' });
 
-  await run(async (origin) => {
+  await run(async (origin, logs) => {
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', headers: { Origin: 'https://elsewhere.fixture.test' } });
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', headers: { 'Sec-Fetch-Site': 'cross-site' } });
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', ip: '192.0.2.1, 127.0.0.1' });
@@ -167,9 +167,29 @@ try {
     const grouped = await post(origin, request({ serviceId: 13982379 }), { status: 201 });
     assert.deepEqual(grouped.data, { ...confirmed, serviceId: 13982379 });
 
+    await scenario('package-classic');
+    const anyStaff = request({ serviceId: 13982380, locale: 'ru' });
+    const assigned = await post(origin, anyStaff, { status: 201 });
+    assert.deepEqual(assigned.data.staff, confirmed.staff);
+    assert.equal(assigned.data.datetime, datetime);
+    assert.deepEqual(assigned.data.parts.map(({ title }) => title), ['Classic massage', 'Infrared capsule']);
+    assert.deepEqual((await post(origin, anyStaff, { status: 201 })).data, assigned.data);
+    assert.deepEqual(await history(), [
+      'GET book_services', 'GET book_times', checkCall, 'GET book_staff', 'GET book_times', checkCall,
+      'GET book_times', checkCall, createCall, 'GET book_record', 'GET book_record',
+    ]);
+
+    await scenario('package-classic');
+    await post(origin, request({ serviceId: 13982380, locale: 'ru', staffId: 91603 }), { status: 503, code: 'BOOKING_UNAVAILABLE' });
+    assert.deepEqual(await history(), ['GET book_services', 'GET book_times', checkCall]);
+
+    await scenario('package-any-no-slot');
+    await post(origin, request({ serviceId: 13982380, locale: 'ru' }), { status: 409, code: 'SLOT_TAKEN' });
+    assert.deepEqual(await history(), ['GET book_services', 'GET book_times', checkCall, 'GET book_times', 'GET book_times']);
+
     for (const [mode, lookups] of [
       ['package-partial', 1], ['package-duplicate', 0], ['package-unreadable', 2], ['package-deleted', 2],
-      ['package-wrong-start', 2], ['unexpected-multiple', 0],
+      ['package-wrong-start', 2], ['package-invalid-id', 0], ['unexpected-multiple', 0],
     ]) {
       await scenario(mode);
       const input = request({ serviceId: mode === 'unexpected-multiple' ? 13982355 : 13982380 });
@@ -205,6 +225,9 @@ try {
       await post(origin, request(), { status, code, retryAfter });
       assert.equal((await history()).includes(createCall), sent);
     }
+    assert.match(logs(), /stage: 'book_services',[\s\S]*?reason: 'unknown_prepayment'/);
+    assert.match(logs(), /stage: 'book_check',[\s\S]*?httpStatus: 201,[\s\S]*?dataType: 'array'/);
+    assert.match(logs(), /errorCodes: \[ '433' \]/);
 
     await scenario('competition');
     const [one, two] = await Promise.all([post(origin, request()), post(origin, request())]);

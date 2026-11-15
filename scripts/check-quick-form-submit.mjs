@@ -218,6 +218,7 @@ try {
       await expect(receipt.getByText(title, { exact: true })).toBeVisible();
       await expect(receipt.getByText('Infrared capsule', { exact: true })).toBeVisible();
       for (const time of ['00:20', '01:05', '01:50']) await expect(receipt).toContainText(time);
+      assert.equal(await calls('POST book_check'), packageId === '13982380' ? 3 : 1);
       assert.equal(await calls('POST book_record'), 1);
       assert.equal(await calls('GET book_record'), 2);
       assert.deepEqual(await successEvents(composite.page), [

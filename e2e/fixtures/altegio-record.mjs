@@ -35,6 +35,7 @@ globalThis.fetch = async (input, init) => {
   assert.equal(headers.get('content-type'), 'application/json');
   assert.match(headers.get('accept-language'), /^(en-US|ru-RU)$/);
   const scenario = readFileSync(scenarioFile, 'utf8');
+  const needsConcreteStaff = scenario === 'package-classic' || scenario === 'package-any-no-slot';
   appendFileSync(journal, `${method} ${resource}\n`);
 
   if (method === 'GET') {
@@ -53,7 +54,10 @@ globalThis.fetch = async (input, init) => {
     if (resource === 'book_staff') {
       assert.deepEqual(rest, []);
       assert.match(url.search, /^(|\?service_ids%5B%5D=(13982355|13982379|13982380))$/);
-      return success([{ id: 91601, name: 'Example specialist', bookable: false }]);
+      return success([
+        ...(url.searchParams.get('service_ids[]') === '13982380' ? [{ id: 91603, name: 'Other specialist' }] : []),
+        { id: 91601, name: 'Example specialist', bookable: false },
+      ]);
     }
     if (resource === 'book_dates') {
       assert.deepEqual(rest, []);
@@ -62,9 +66,10 @@ globalThis.fetch = async (input, init) => {
     }
     if (resource === 'book_times') {
       assert.equal(rest[1], date);
-      assert.ok(['0', '91601'].includes(rest[0]));
+      assert.ok(['0', '91601', '91603'].includes(rest[0]));
       assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380|91201)$/);
-      return success(scenario === 'empty-time' ? [] : [{ datetime, time: '23:20' }]);
+      const noSlot = scenario === 'empty-time' || (scenario === 'package-any-no-slot' && rest[0] !== '0');
+      return success(noSlot ? [] : [{ datetime, time: '23:20' }]);
     }
     assert.equal(resource, 'book_record');
     if (scenario.startsWith('package-')) {
@@ -103,13 +108,16 @@ globalThis.fetch = async (input, init) => {
   const { appointments } = payload;
   assert.equal(appointments.length, 1);
   const appointment = appointments[0];
-  assert.ok([0, 91601].includes(appointment.staff_id));
+  assert.ok([0, 91601, 91603].includes(appointment.staff_id));
   assert.equal(appointment.services.length, 1);
   assert.ok([13982355, 91201, ...packageIds].includes(appointment.services[0]));
   assert.deepEqual(appointment, { id: 1, staff_id: appointment.staff_id, services: appointment.services, datetime });
 
   if (resource === 'book_check') {
     assert.deepEqual(Object.keys(payload), ['appointments']);
+    if (needsConcreteStaff && [0, 91603].includes(appointment.staff_id)) {
+      return Response.json({ success: false, data: null, meta: { message: 'fixture-private-upstream-error' } }, { status: 404 });
+    }
     if (scenario === 'check-conflict') return reject(433);
     if (scenario === 'check-staff') return reject(436);
     if (scenario === 'check-429') return new Response(null, { status: 429, headers: { 'Retry-After': '17' } });
@@ -122,6 +130,7 @@ globalThis.fetch = async (input, init) => {
   }
 
   assert.equal(resource, 'book_record');
+  if (needsConcreteStaff) assert.equal(appointment.staff_id, 91601);
   assert.deepEqual(Object.keys(payload).sort(), ['appointments', ...('comment' in payload ? ['comment'] : []), 'email', 'fullname', 'phone']);
   assert.match(payload.email, /^visitor\d*@example\.test$/);
   assert.match(payload.phone, /^\+97150\d{7}$/);
@@ -146,7 +155,13 @@ globalThis.fetch = async (input, init) => {
   }
   if (scenario === 'record-timeout') await delay(50_000, undefined, { signal });
   if (scenario.startsWith('package-') || scenario === 'unexpected-multiple') {
-    const receipts = packageParts.map(({ id }) => ({ id: 1, record_id: id, record_hash: `${receiptHash}-${id}` }));
+    const useComponentIds = scenario !== 'package-grouped' && scenario !== 'unexpected-multiple';
+    const receipts = packageParts.map(({ id }, index) => ({
+      id: useComponentIds ? appointment.services[0] * 10 + index : appointment.id,
+      record_id: id,
+      record_hash: `${receiptHash}-${id}`,
+    }));
+    if (scenario === 'package-invalid-id') receipts[0].id = null;
     if (scenario === 'package-partial' || scenario === 'package-grouped') return success(receipts.slice(0, 1), 201);
     if (scenario === 'package-duplicate') return success([receipts[0], receipts[0]], 201);
     return success(receipts.reverse(), 201);
