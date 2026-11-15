@@ -32,6 +32,7 @@ export function builtPages(locale: string): string[] {
   const pages = Object.keys(manifest.routes)
     .filter((route) => route === prefix || route.startsWith(`${prefix}/`))
     .map((route) => route === prefix ? '' : `${route.slice(prefix.length + 1)}/`);
+  if (fs.existsSync(path.join(NEXT, 'server', 'app', '[locale]', 'services', 'page.js'))) pages.push('services/');
   const demoDetails = SERVICES.filter(({ slug }) => catalogServiceId(slug) === undefined).map(({ slug }) => `services/${slug}/`);
   const demoProfiles = STAFF.map(({ slug }) => `team/${slug}/`);
   return [...new Set(['', ...pages, ...demoDetails, ...demoProfiles, 'account/record/9001/demo-hash/'])].sort();
@@ -49,7 +50,7 @@ export function templateOf(p: string): string {
  * Pages checked in the width × locale matrix: built pages and URL states for filters, booking and record links.
  */
 export function matrixPages(locale: string): string[] {
-  const extra = ['services/?category=massage', 'services/?category=rehab', 'booking/?step=2', 'booking/?step=4&service=101', 'booking/?step=6', 'account/record/1234/abcd/'];
+  const extra = ['services/?category=13838712', 'services/?category=13688468', 'booking/?step=2', 'booking/?step=4&service=101', 'booking/?step=6', 'account/record/1234/abcd/'];
   return [...builtPages(locale), ...extra];
 }
 

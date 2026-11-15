@@ -208,6 +208,7 @@ globalThis.fetch = async (input, init) => {
         { id: 93003, title: ru ? 'Без категории' : 'Uncategorized' },
         { id: 93002, title: ru ? 'Второй массаж' : 'Second massage', category_id: 30 },
         { id: 93001, title: ru ? 'Исчезнувшая категория' : 'Missing category', category_id: 99 },
+        { id: 93005, title: ru ? 'Тренировка' : 'Mobility session', category_id: 10 },
       ],
     } });
   }

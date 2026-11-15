@@ -2,8 +2,8 @@
   "nav": {
     "logoAria": "The Body Mechanic — на главную",
     "main": {
-      "massage": "Массаж",
-      "rehab": "Реабилитация",
+      "onlineBooking": "Онлайн запись",
+      "offsiteServices": "Услуги вне салона",
       "approach": "Подход",
       "team": "Команда",
       "prices": "Цены",
@@ -815,7 +815,7 @@
     "lead": "Выберите услугу и запишитесь онлайн.",
     "filter": {
       "category": "Категория",
-      "categoryAll": "Все категории",
+      "categoryAll": "Все услуги",
       "price": "Цена",
       "duration": "Длительность",
       "reset": "Сбросить фильтры"

@@ -63,10 +63,10 @@ try {
     await expect(page.getByText('Loading services…')).toBeVisible();
     await expect(retry).toHaveAttribute('aria-disabled', 'true');
     await fs.writeFile(release, '');
-    const englishTitles = ['First massage', 'Uncategorized', 'Second massage', 'Missing category'];
+    const englishTitles = ['First massage', 'Uncategorized', 'Second massage', 'Missing category', 'Mobility session'];
     await expect(titles).toHaveText(englishTitles);
     await expect(page.getByRole('heading', { name: 'Services', level: 1 })).toBeFocused();
-    await expect(categories).toHaveText(['All categories', 'Massage', 'Empty category', 'Recovery']);
+    await expect(categories).toHaveText(['All services', 'Massage', 'Empty category', 'Recovery']);
     await expect(cards.locator('.badge')).toHaveCount(0);
 
     await page.goto(`${origin}/en/services/?category=30`);
@@ -83,11 +83,75 @@ try {
     await expect(page.locator('main [role="status"]')).toHaveText('Загружаем услуги…');
     await expect(cards).toHaveCount(0);
     await fs.writeFile(release, '');
-    await expect(titles).toHaveText(['Первый массаж', 'Без категории', 'Второй массаж', 'Исчезнувшая категория']);
-    await expect(categories).toHaveText(['Все категории', 'Массаж', 'Пустая категория', 'Восстановление']);
+    await expect(titles).toHaveText(['Первый массаж', 'Без категории', 'Второй массаж', 'Исчезнувшая категория', 'Тренировка']);
+    await expect(categories).toHaveText(['Все услуги', 'Массаж', 'Пустая категория', 'Восстановление']);
     for (let index = 0; index < 3; index++) {
       await expect(categories.nth(index + 1)).toHaveAttribute('href',
         `/ru/services/?category=${[30, 20, 10][index]}`);
+    }
+
+    const active = page.locator('main .list-bar .chip[aria-current="page"]');
+    const count = page.locator('main .list-bar [role="status"]');
+    const filterLink = (name) => page.locator('main .list-bar').getByRole('link', { name, exact: true });
+    const enList = `${origin}/en/services/`;
+    const checkSelection = async (url, label, visibleTitles, counter) => {
+      await expect(page).toHaveURL(url);
+      await expect(active).toHaveText([label]);
+      await expect(titles).toHaveText(visibleTitles);
+      await expect(count).toHaveText(counter);
+    };
+    const enMassage = () => checkSelection(enList + '?category=30', 'Massage', ['First massage', 'Second massage'], '2 services found');
+    const enRecovery = () => checkSelection(enList + '?category=10', 'Recovery', ['Mobility session'], '1 service found');
+    const enEmpty = () => checkSelection(enList + '?category=20', 'Empty category', [], '0 services found');
+
+    await page.goto(enList + '?category=30');
+    await enMassage();
+    await page.reload();
+    await enMassage();
+    await filterLink('Recovery').click();
+    await enRecovery();
+    await filterLink('Empty category').click();
+    await enEmpty();
+    await expect(page.getByText('Nothing matches these filters.')).toBeVisible();
+    await filterLink('All services').click();
+    await checkSelection(enList, 'All services', englishTitles, '5 services found');
+    await page.goBack();
+    await enEmpty();
+    await page.goBack();
+    await enRecovery();
+    await page.goForward();
+    await enEmpty();
+    await filterLink('Massage').click();
+    await enMassage();
+    await page.locator('header a[hreflang="ru"]').first().click();
+    await checkSelection(`${origin}/ru/services/?category=30`, 'Массаж', ['Первый массаж', 'Второй массаж'], 'Найдено: 2');
+    await page.locator('header a[hreflang="en"]').first().click();
+    await enMassage();
+
+    for (const value of ['massage', 'rehab', '', '-30', '0', '030', '30.0', '999', '30&category=10']) {
+      const url = enList + '?category=' + value;
+      await page.goto(url);
+      await checkSelection(url, 'All services', englishTitles, '5 services found');
+    }
+
+    for (const [locale, allLabel, massageLabel, title, menuLabels] of [
+      ['ru', 'Все услуги', 'Массаж', 'Первый массаж', ['Онлайн запись', 'Услуги вне салона']],
+      ['en', 'All services', 'Massage', 'First massage', ['Online booking', 'Off-site services']],
+    ]) {
+      const listPath = `/${locale}/services/`;
+      await page.goto(`${origin}/${locale}/`);
+      const menu = page.locator('.site-nav');
+      for (const [index, id] of [13838712, 13688468].entries()) {
+        await expect(menu.getByRole('link', { name: menuLabels[index], exact: true })).toHaveAttribute('href', listPath + '?category=' + id);
+      }
+      const homeServices = page.locator('section[aria-labelledby="services-title"]');
+      await homeServices.getByRole('link', { name: allLabel, exact: true }).click();
+      await expect(page).toHaveURL(origin + listPath);
+      await filterLink(massageLabel).click();
+      await expect(page).toHaveURL(origin + listPath + '?category=30');
+      await titles.getByRole('link', { name: new RegExp(title) }).click();
+      await expect(page).toHaveURL(origin + listPath + 'service-93004/');
+      await expect(page.locator('.svc-hero h1')).toHaveText(title);
     }
     assert.deepEqual(logs().match(/\[catalog-fixture\] [^\r\n]+/g), [
       '[catalog-fixture] 500 en-US', '[catalog-fixture] catalog-list-slow en-US', '[catalog-fixture] catalog-list-slow ru-RU',
@@ -193,7 +257,7 @@ try {
   });
   assert.deepEqual(browserRequests, []);
   assert.deepEqual(pageErrors, []);
-  console.log('Services list: RU/EN, order, states, responsive cards, price cases, photos and matching home/detail content: OK');
+  console.log('Services list: RU/EN, order, states, cards, category navigation, history and home-to-detail flow: OK');
 } finally {
   await browser?.close();
   await Promise.all([...cacheFiles, scenario, release].map((file) => fs.rm(file, { force: true })));

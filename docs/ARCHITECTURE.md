@@ -51,7 +51,7 @@ Next 16 отличается от прежних версий. В корне л�
 |---|---|---|
 | `/` | `(root)/page.tsx` | встроенный скрипт уводит на `/ru/` или `/en/` (см. «Тексты и языки») |
 | `/{locale}/` | `[locale]/page.tsx` | главная: 3D-модель, блоки, быстрая форма записи |
-| `/{locale}/services/` | `[locale]/services/page.tsx` | список услуг; фильтр `?category=massage` или `rehab` (`src/components/services/ServiceList.tsx`) |
+| `/{locale}/services/` | `[locale]/services/page.tsx` | каталог Altegio, фильтр `?category=<id>` по ID опубликованной категории (`src/components/services/ServiceList.tsx`) |
 | `/{locale}/services/{slug}/` | `[locale]/services/[slug]/page.tsx` | 10 услуг из каталога-заглушки |
 | `/{locale}/prices/` | `[locale]/prices/page.tsx` | |
 | `/{locale}/team/` | `[locale]/team/page.tsx` | |

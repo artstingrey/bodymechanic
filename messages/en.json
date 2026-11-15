@@ -2,8 +2,8 @@
   "nav": {
     "logoAria": "The Body Mechanic: go to the homepage",
     "main": {
-      "massage": "Massage",
-      "rehab": "Rehabilitation",
+      "onlineBooking": "Online booking",
+      "offsiteServices": "Off-site services",
       "approach": "Approach",
       "team": "Team",
       "prices": "Prices",
@@ -815,7 +815,7 @@
     "lead": "Choose a service and book online.",
     "filter": {
       "category": "Category",
-      "categoryAll": "All categories",
+      "categoryAll": "All services",
       "price": "Price",
       "duration": "Duration",
       "reset": "Clear filters"

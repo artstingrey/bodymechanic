@@ -16,9 +16,10 @@ import { HeaderScroll } from './HeaderScroll';
  */
 export async function Header() {
   const t = await getTranslations();
-  const main: { key: string; href: string | { pathname: string; query?: Record<string, string> } }[] = [
-    { key: 'massage', href: { pathname: '/services', query: { category: 'massage' } } }, // README §13
-    { key: 'rehab', href: { pathname: '/services', query: { category: 'rehab' } } },
+  const main = [
+    // Stable menu links for the studio's public Altegio categories.
+    { key: 'onlineBooking', href: { pathname: '/services', query: { category: 13838712 } } },
+    { key: 'offsiteServices', href: { pathname: '/services', query: { category: 13688468 } } },
     { key: 'approach', href: '/#approach' },
     { key: 'team', href: '/team' },
     { key: 'prices', href: '/prices' },

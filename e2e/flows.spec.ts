@@ -80,7 +80,7 @@ test.describe('404 (DEL-12)', () => {
 test('deep links open directly and survive F5 (DEL-12)', async ({ page, baseURL }) => {
   const g = guard(page, baseURL!);
   const deep = ['/ru/services/sports/', '/en/team/specialist-2/', '/en/booking/?step=4', '/ru/journal/demo-article-3/',
-    '/en/services/?category=rehab', '/ru/account/', '/en/account/record/9001/demo-hash/', '/ru/account/record/777/zzz/', '/en/prices/', '/ru/contacts/'];
+    '/en/services/?category=13688468', '/ru/account/', '/en/account/record/9001/demo-hash/', '/ru/account/record/777/zzz/', '/en/prices/', '/ru/contacts/'];
   for (const u of deep) {
     const r1 = await page.goto(u, { waitUntil: 'networkidle' });
     expect(r1?.status(), u).toBe(200);
@@ -307,9 +307,9 @@ test('only src/ and messages/ feed Tailwind: the utilities that documents and te
 
 test('language switch keeps the page and the query', async ({ page, baseURL }) => {
   const g = guard(page, baseURL!);
-  await page.goto('/en/services/?category=massage', { waitUntil: 'networkidle' });
+  await page.goto('/en/services/?category=13838712', { waitUntil: 'networkidle' });
   await page.locator('header a[hreflang="ru"]').first().click();
-  await page.waitForURL('**/ru/services/?category=massage');
+  await page.waitForURL('**/ru/services/?category=13838712');
   expectClean((await g.problems()), 'lang switch');
 });
 
