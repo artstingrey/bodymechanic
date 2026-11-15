@@ -16,6 +16,50 @@ fs.writeFile = async (file, ...args) => {
 
 const fetchOriginal = globalThis.fetch;
 
+async function availabilityFixture(url, resource, staffPath, date, language, signal) {
+  const serviceId = url.searchParams.get('service_ids[]');
+  const staffId = staffPath ?? url.searchParams.get('staff_id');
+  const query = new URLSearchParams({ 'service_ids[]': serviceId });
+  if (resource === 'book_dates') query.set('staff_id', staffId);
+  assert.equal(url.search, `?${query}`);
+  assert.match(staffId, /^(0|91601|91602|91605)$/);
+  assert.ok(['13982355', '91201'].includes(serviceId));
+  console.info('[availability-fixture]', resource, language, serviceId, staffId, date ?? '-');
+
+  const scenario = readFileSync(process.env.AVAILABILITY_TEST_SCENARIO, 'utf8');
+  if (scenario === 'timeout') await delay(60_000, undefined, { signal });
+  if (scenario === '429') {
+    const retryAfter = resource === 'book_dates' ? new Date('2030-01-01T00:00:00Z').toUTCString() : '0';
+    return new Response(null, { status: 429, headers: { 'Retry-After': retryAfter } });
+  }
+  if (scenario === '503') {
+    return new Response('fixture raw upstream detail', { status: 503, headers: { 'Retry-After': '30' } });
+  }
+
+  const start = '2026-11-30';
+  const end = '2026-12-01';
+  const options = {
+    '13982355:0': [start, end],
+    '13982355:91601': [start],
+    '13982355:91602': [end],
+    '91201:0': [end],
+    '91201:91605': [end],
+  };
+  const dates = options[`${serviceId}:${staffId}`];
+  assert.ok(dates);
+  if (resource === 'book_dates') {
+    const booking_dates = scenario === 'invalid' ? ['2026-11-31'] : scenario === 'empty' ? [] : dates;
+    return Response.json({ success: true, data: { booking_dates, working_dates: [start, end, '2026-12-02'] } });
+  }
+
+  assert.ok([start, end].includes(date));
+  const time = staffId === '91605' ? '13:15' : '09:30';
+  const datetime = date === end && staffId !== '91605' ? '2026-11-30T23:20:00.123+03:00' : `${date}T${time}:00+04:00`;
+  const slots = scenario === 'invalid' ? [{ datetime: `${date}T09:30:00` }]
+    : scenario === 'empty' || !dates.includes(date) ? [] : [{ time, datetime, staff_id: 'fixture raw upstream detail' }];
+  return Response.json({ success: true, data: slots });
+}
+
 async function serviceStaffFixture(serviceId, language, signal) {
   const scenarioFile = process.env.SERVICE_STAFF_TEST_SCENARIO;
   if (!scenarioFile) return Response.json({ success: true, data: [] });
@@ -49,12 +93,6 @@ globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
   if (url.hostname !== 'api.alteg.io') return fetchOriginal(input, init);
 
-  const staff = url.pathname.startsWith('/api/v1/book_staff/');
-  const resource = staff ? 'book_staff' : 'book_services';
-  const serviceId = staff ? url.searchParams.get('service_ids[]') : null;
-  if (serviceId !== null) assert.match(serviceId, /^[1-9]\d*$/);
-  const query = staff ? (serviceId === null ? '' : `?service_ids%5B%5D=${serviceId}`) : '?without_seances=1';
-  assert.equal(url.href, `https://api.alteg.io/api/v1/${resource}/${process.env.ALTEGIO_LOCATION_ID}${query}`);
   assert.equal(init?.method ?? (input instanceof Request ? input.method : 'GET'), 'GET');
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
   assert.equal(headers.get('authorization'), 'Bearer fixture-partner-token');
@@ -63,7 +101,26 @@ globalThis.fetch = async (input, init) => {
   const language = headers.get('accept-language');
   assert.ok(language === 'ru-RU' || language === 'en-US');
   assert.equal(init?.redirect ?? input.redirect, 'error');
-  if (serviceId !== null) return serviceStaffFixture(serviceId, language, init?.signal ?? input.signal);
+  const signal = init?.signal ?? input.signal;
+  const [, api, version, resource, location, staffPath, date, ...extra] = url.pathname.split('/');
+  if (resource === 'book_dates' || resource === 'book_times') {
+    assert.equal(url.origin, 'https://api.alteg.io');
+    assert.equal(api, 'api');
+    assert.equal(version, 'v1');
+    assert.equal(location, process.env.ALTEGIO_LOCATION_ID);
+    assert.equal(extra.length, 0);
+    assert.equal(Boolean(staffPath && date), resource === 'book_times');
+    if (resource === 'book_dates') assert.equal(staffPath, undefined);
+    assert.equal(init?.cache ?? input.cache, 'no-store');
+    return availabilityFixture(url, resource, staffPath, date, language, signal);
+  }
+
+  const staff = resource === 'book_staff';
+  const serviceId = staff ? url.searchParams.get('service_ids[]') : null;
+  if (serviceId !== null) assert.match(serviceId, /^[1-9]\d*$/);
+  const query = staff ? (serviceId === null ? '' : `?service_ids%5B%5D=${serviceId}`) : '?without_seances=1';
+  assert.equal(url.href, `https://api.alteg.io/api/v1/${staff ? 'book_staff' : 'book_services'}/${process.env.ALTEGIO_LOCATION_ID}${query}`);
+  if (serviceId !== null) return serviceStaffFixture(serviceId, language, signal);
   const scenarioFile = staff ? process.env.STAFF_TEST_SCENARIO : process.env.CATALOG_TEST_SCENARIO;
   if (staff && !scenarioFile) return new Response(null, { status: 503 });
   const scenario = readFileSync(scenarioFile, 'utf8');
@@ -73,7 +130,6 @@ globalThis.fetch = async (input, init) => {
   if (['success', 'empty', '429', '500'].includes(scenario)) await delay(400);
 
   if (scenario === 'timeout') {
-    const signal = init?.signal ?? input.signal;
     assert.ok(signal);
     await new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
   }

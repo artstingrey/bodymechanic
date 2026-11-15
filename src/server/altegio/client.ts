@@ -47,8 +47,11 @@ export async function altegioGet(operation: string, path: string, language: stri
     if (!response.ok) {
       // Release the response stream without letting a cleanup failure mask the HTTP error.
       void response.body?.cancel().catch(() => {});
-      if (status === 429) throw new AltegioError('rateLimited', retryAfter(response.headers.get('Retry-After')));
-      throw new AltegioError('unavailable');
+      const header = response.headers.get('Retry-After');
+      const upstreamRetryAfter = header && (/^\d+$/.test(header) || (/ GMT$/.test(header) && Number.isFinite(Date.parse(header))))
+        ? header : undefined;
+      if (status === 429) throw new AltegioError('rateLimited', retryAfter(header), upstreamRetryAfter);
+      throw new AltegioError('unavailable', undefined, upstreamRetryAfter);
     }
 
     const payload: unknown = await response.json();

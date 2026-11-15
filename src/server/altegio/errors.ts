@@ -10,7 +10,11 @@ const failures = {
 export class AltegioError extends Error {
   readonly response: (typeof failures)[keyof typeof failures];
 
-  constructor(kind: keyof typeof failures, readonly retryAfter?: string) {
+  constructor(
+    kind: keyof typeof failures,
+    readonly retryAfter?: string,
+    readonly upstreamRetryAfter?: string,
+  ) {
     super(failures[kind].message);
     this.name = 'AltegioError';
     this.response = failures[kind];
