@@ -6,7 +6,7 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import en from '../messages/en.json';
-import { guard, expectClean, seedConsent, toReview, fillPhone, tapMarksRightAway, deepLinksEveryStep, settle3D, entryProbe, withChoice, CHOICE_IN_URL } from './helpers';
+import { guard, expectClean, seedConsent, toReview, fillPhone, tapMarksRightAway, deepLinksEveryStep, settle3D, entryProbe, withChoice, CHOICE_IN_URL, stubStudioMap } from './helpers';
 import { SERVICES, STAFF } from '../src/lib/api/mock-data';
 
 async function noHorizontalScroll(page: Page, label: string) {
@@ -484,6 +484,7 @@ test('no word of a heading (H1–H3) or a button splits across lines or is cut b
   test.skip(!['A-iphone-se', 'A-moto-g4'].includes(ti.project.name), 'once per engine, the widths are set below');
   test.setTimeout(480_000);
   await seedConsent(page);
+  await stubStudioMap(page);
   await page.route('**/*.{glb,ktx2,wasm,basis}', (r) => r.abort());
   const paths = ['', 'services/', 'services/sports/', 'services/classic-infrared/', 'services/orthopedic-rehab/', 'prices/', 'team/', 'team/specialist-1/',
     'journal/', 'journal/demo-article-1/', 'contacts/', 'privacy/', 'terms/', 'booking/', 'account/', 'lp/a/', 'lp/b/', 'nope-404/'];
@@ -677,6 +678,7 @@ test('a late web font moves nothing on the site\'s first screen: header, H1, lea
   const bad: string[] = [];
   for (const path of ['/ru/', '/ru/services/', '/ru/booking/', '/ru/contacts/']) for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1280, 800]]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, baseURL, ...(w < 768 ? { deviceScaleFactor: 2, hasTouch: true } : {}) });
+    if (path === '/ru/contacts/') await stubStudioMap(ctx);
     const fontFiles: string[] = [];
     ctx.on('request', (r) => { if (/\.woff2(\?|$)/.test(r.url())) fontFiles.push(new URL(r.url()).pathname.split('/').pop()!); });
     await ctx.route(/\.woff2(\?|$)/, async (route) => { const r = await route.fetch(); await new Promise((res) => setTimeout(res, 800)); await route.fulfill({ response: r }); });
@@ -721,6 +723,7 @@ test('first-level pages on 320 / 340 / 360 / 375: one H1 size, its words whole, 
   test.skip(!['A-iphone-se', 'A-moto-g4'].includes(ti.project.name), 'once per engine, the widths are set below');
   test.setTimeout(300_000);
   await seedConsent(page);
+  await stubStudioMap(page);
   await page.route('**/*.{glb,ktx2,wasm,basis}', (r) => r.abort());
   const first = ['services/', 'prices/', 'team/', 'journal/', 'contacts/', 'privacy/', 'terms/', 'account/', 'account/record/'];
   const head = () => page.evaluate(() => {
@@ -809,6 +812,7 @@ test('phone footer on 320 / 360 / 375 / 390 / 440 / 767: every text row centred 
   test.skip(!['A-iphone-se', 'A-moto-g4'].includes(ti.project.name), 'once per engine, the widths are set below');
   test.setTimeout(240_000);
   await seedConsent(page);
+  await stubStudioMap(page);
   await page.route('**/*.{glb,ktx2,wasm,basis}', (r) => r.abort());
   const bad: string[] = [];
   let svgChecked = false;

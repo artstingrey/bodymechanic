@@ -1,13 +1,13 @@
 /**
  * Page matrix: every page × 2 locales × the width of the current project (5 projects = 390/768/1280/1920/2560).
- * Per page: document 200 by direct link, 0 HTTP ≥400 / failed / third-party requests, 0 console errors,
+ * Per page: document 200 by direct link, 0 HTTP ≥400 / failed requests, only the expected studio map on contacts, 0 console errors,
  * meta robots noindex,nofollow, viewport, html lang, one h1, no horizontal overflow, no dead links,
  * every internal link resolves (and its #anchor exists), DEL-09 screenshot.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect, type APIRequestContext } from '@playwright/test';
-import { LOCALES, matrixPages, isShotPage, shotName, guard, settle3D, drawOffscreen3D, domChecks, internalLinks, expectClean, expectNoDemoLabels, seedConsent } from './helpers';
+import { LOCALES, matrixPages, isShotPage, shotName, guard, settle3D, drawOffscreen3D, domChecks, internalLinks, expectClean, expectNoDemoLabels, seedConsent, stubStudioMap } from './helpers';
 import { STUDIO, STUDIO_MAP } from '../src/lib/config';
 import en from '../messages/en.json';
 import ru from '../messages/ru.json';
@@ -31,40 +31,33 @@ async function checkLink(request: APIRequestContext, href: string): Promise<stri
 }
 
 for (const locale of LOCALES) {
-  test(`/${locale}/contacts/ loads the studio map on request`, async ({ page }) => {
+  test(`/${locale}/contacts/ loads the studio map immediately`, async ({ page }) => {
     const { contacts, footer } = locale === 'ru' ? ru : en;
-    const mapRequests: string[] = [];
-    await page.route((url) => url.hostname === 'www.google.com' && url.pathname === '/maps/embed', async (route) => {
-      mapRequests.push(route.request().url());
-      await route.abort();
-    });
+    await stubStudioMap(page);
     await seedConsent(page);
+    const request = page.waitForRequest(STUDIO_MAP.embedUrl);
     await page.goto(`/${locale}/contacts/`, { waitUntil: 'networkidle' });
+    await request;
 
     const list = page.locator('.contacts__list');
     const contactColumn = page.locator('.site-footer__cols > div').filter({ has: page.getByRole('heading', { name: footer.col.contacts, exact: true }) });
     await expect(list.locator('dd').first()).toHaveText(STUDIO.streetAddress);
     await expect(contactColumn.getByText(STUDIO.streetAddress, { exact: true })).toBeVisible();
     await expect(contactColumn.getByRole('link', { name: footer.links.address })).toHaveAttribute('href', `/${locale}/contacts/`);
-    await expect(contactColumn.getByRole('link', { name: contacts.openMap })).toHaveAttribute('href', STUDIO_MAP.url);
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: contacts.openMap })).toHaveCount(0);
     await expect(page.getByText(contacts.pending, { exact: true })).toHaveCount(0);
 
     const map = page.getByRole('figure', { name: contacts.mapLabel });
     const iframe = map.locator('iframe');
     const fallback = page.locator('main').getByRole('link', { name: contacts.openMap });
     await expect(fallback).toHaveAttribute('href', STUDIO_MAP.url);
-    await expect(iframe).toHaveCount(0);
-    expect(mapRequests).toEqual([]);
-
-    const request = page.waitForEvent('requestfailed', (req) => req.url() === STUDIO_MAP.embedUrl);
-    await map.getByRole('button', { name: contacts.mapFacade.button }).click();
+    await expect(map.getByRole('button')).toHaveCount(0);
     await expect(iframe).toHaveAttribute('title', contacts.mapLabel);
     await expect(iframe).toHaveAttribute('src', STUDIO_MAP.embedUrl);
-    await expect(iframe).toHaveAttribute('loading', 'lazy');
+    await expect(iframe).toHaveAttribute('loading', 'eager');
     await expect(iframe).toHaveAttribute('allowfullscreen', '');
     await expect(iframe).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-    await request;
-    expect(mapRequests).toEqual([STUDIO_MAP.embedUrl]);
+    await expect(iframe.contentFrame().getByText('HDS Tower', { exact: true })).toBeVisible();
     await expect(fallback).toBeVisible();
 
     const mapBox = (await map.boundingBox())!;
@@ -89,6 +82,7 @@ for (const locale of LOCALES) {
       // the cookie card is checked (and shot) on the home page of every width and language; elsewhere the choice is made
       // in advance, so the full-page DEL-09 shots show the content, not the card over it (Web Art Director)
       if (p !== '') await seedConsent(page);
+      if (p === 'contacts/') await stubStudioMap(page);
       const g = guard(page, baseURL!);
       const res = await page.goto(url, { waitUntil: 'networkidle' });
       expect(res?.status(), `document status of ${url}`).toBe(200);

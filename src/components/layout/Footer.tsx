@@ -3,7 +3,7 @@ import { Link } from '@/i18n/navigation';
 import { LangSwitch } from './LangSwitch';
 import { CookieSettingsLink } from './CookieBanner';
 import { Todo, isTodo } from '@/components/ui/Todo';
-import { STUDIO, STUDIO_MAP } from '@/lib/config';
+import { STUDIO } from '@/lib/config';
 
 /**
  * Footer (ТЗ §04, §05.10; ui-kit «Подвал»): giant mark on --dark (wide ≥768, stacked on phones), columns
@@ -46,7 +46,6 @@ export async function Footer() {
           <div><h2>{t('footer.col.contacts')}</h2><ul>
             <li><Link prefetch={false} href="/contacts">{t('footer.links.address')}</Link></li>
             <li className="ct ct--address">{STUDIO.streetAddress}</li>
-            <li><a href={STUDIO_MAP.url} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}</a></li>
             {contacts.map(([label, v]) => (
               <li key={v} className="ct"><span>{label === 'social' ? `${t('footer.social.instagram')} · ${t('footer.social.telegram')}` : t(label)}</span><Todo>{t(v)}</Todo></li>
             ))}

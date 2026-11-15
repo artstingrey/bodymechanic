@@ -1,10 +1,11 @@
 /** Shared gate helpers: route inventory from the Next.js build, network/console guard, page-level checks. */
 import fs from 'node:fs';
 import path from 'node:path';
-import { expect, type Page, type Request } from '@playwright/test';
+import { expect, type BrowserContext, type Page, type Request } from '@playwright/test';
 import en from '../messages/en.json';
 import { SERVICES, STAFF } from '../src/lib/api/mock-data';
 import { catalogServiceId } from '../src/lib/catalog-service-slugs';
+import { STUDIO_MAP } from '../src/lib/config';
 
 export const LOCALES = ['en', 'ru'] as const;
 /** The deck glues one-letter words and some numbers to the next word with U+00A0 (808 / 833): compare text as plain spaces. */
@@ -71,8 +72,15 @@ export interface Guard {
   requests: Request[];
 }
 
+export async function stubStudioMap(target: Page | BrowserContext) {
+  await target.route(STUDIO_MAP.embedUrl, (route) => route.fulfill({
+    contentType: 'text/html',
+    body: '<!doctype html><html><title>HDS Tower</title><body>HDS Tower</body></html>',
+  }));
+}
+
 /**
- * Collects everything DEL-02/DEL-08 forbid: 4xx/5xx, failed requests, third-party origins, console errors, page errors.
+ * Collects everything DEL-02/DEL-08 forbid: 4xx/5xx, failed requests, unexpected third-party origins, console errors, page errors.
  * Chrome reports every HEAD fetch as net::ERR_ABORTED over CDP even though the page receives the 2xx response
  * (reproduced with a manual fetch('/robots.txt', {method:'HEAD'})). Next's export-mode prefetch uses HEAD, so a HEAD
  * that already got a response < 400 is not a failure.
@@ -95,7 +103,10 @@ export function guard(page: Page, baseURL: string, opts: { allowStatus?: (url: s
     requests.push(r);
     const u = r.url();
     if (/^(data|blob):/.test(u)) return;
-    if (new URL(u).origin !== origin) out.push(`third-party request: ${r.method()} ${u}`);
+    const studioMap = u === STUDIO_MAP.embedUrl && r.isNavigationRequest()
+      && r.frame().parentFrame() === page.mainFrame()
+      && /^\/(en|ru)\/contacts\/$/.test(new URL(page.url()).pathname);
+    if (new URL(u).origin !== origin && !studioMap) out.push(`third-party request: ${r.method()} ${u}`);
   });
   page.on('response', (r) => {
     responded.set(r.request(), r.status());

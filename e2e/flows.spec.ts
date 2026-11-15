@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import en from '../messages/en.json';
-import { LOCALES, ROOT, NEXT, REQUIRED, builtPages, templateOf, matrixPages, guard, settle3D, domChecks, expectClean, expectNoDemoLabels, seedConsent, tapMarksRightAway, deepLinksEveryStep } from './helpers';
+import { LOCALES, ROOT, NEXT, REQUIRED, builtPages, templateOf, matrixPages, guard, settle3D, domChecks, expectClean, expectNoDemoLabels, seedConsent, tapMarksRightAway, deepLinksEveryStep, stubStudioMap } from './helpers';
 
 test.beforeEach(async ({ page }) => { await seedConsent(page); }); // the cookie card would cover the 3D slot
 
@@ -83,6 +83,7 @@ test('deep links open directly and survive F5 (DEL-12)', async ({ page, baseURL 
   const deep = ['/ru/services/sports/', '/en/team/specialist-2/', '/en/booking/?step=4', '/ru/journal/demo-article-3/',
     '/en/services/?category=13688468', '/ru/account/', '/en/account/record/9001/demo-hash/', '/ru/account/record/777/zzz/', '/en/prices/', '/ru/contacts/'];
   for (const u of deep) {
+    if (u === '/ru/contacts/') await stubStudioMap(page);
     const r1 = await page.goto(u, { waitUntil: 'networkidle' });
     expect(r1?.status(), u).toBe(200);
     const h1 = await page.locator('h1').first().textContent();

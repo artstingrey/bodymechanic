@@ -5,7 +5,6 @@ import { PageLd } from '@/components/seo/PageLd';
 import { PageHead } from '@/components/sections/PageHead';
 import { isTodo } from '@/components/ui/Todo';
 import { STUDIO, STUDIO_MAP } from '@/lib/config';
-import { StudioMap } from './StudioMap';
 
 export async function generateMetadata() {
   return pageMetadata(await pageLocale(), 'contacts', '/contacts');
@@ -15,6 +14,7 @@ const FIELDS = ['directions', 'parking', 'hours', 'whatsapp', 'phone', 'email'] 
 
 export default async function ContactsPage() {
   const t = await getTranslations();
+  const mapTitle = t('contacts.mapLabel');
   const contacts = FIELDS.map((key) => [key, t(`contacts.value.${key}`)] as const).filter(([, value]) => !isTodo(value));
   return (
     <div className="container page">
@@ -28,12 +28,15 @@ export default async function ContactsPage() {
           ))}
         </dl>
         <div className="contacts__map">
-          <StudioMap
-            src={STUDIO_MAP.embedUrl}
-            title={t('contacts.mapLabel')}
-            openLabel={t('contacts.mapFacade.button')}
-            note={t('contacts.mapFacade.note')}
-          />
+          <figure className="contacts__map-frame" aria-label={mapTitle}>
+            <iframe
+              src={STUDIO_MAP.embedUrl}
+              title={mapTitle}
+              allowFullScreen
+              loading="eager"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </figure>
           <a className="btn btn--text" href={STUDIO_MAP.url} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}</a>
         </div>
       </div>

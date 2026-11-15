@@ -6,7 +6,7 @@
  * phones: the bottom sheet fits the screen and scrolls; landscape: side safe areas (notch / Dynamic Island).
  */
 import { test, expect, type Page } from '@playwright/test';
-import { domChecks, guard, expectClean, seedConsent } from './helpers';
+import { domChecks, guard, expectClean, seedConsent, stubStudioMap } from './helpers';
 import en from '../messages/en.json';
 
 const PAGES = ['', 'booking/', 'services/', 'services/sports/', 'journal/', 'contacts/', 'account/'];
@@ -71,6 +71,7 @@ for (const locale of ['ru', 'en'] as const) {
   for (const path of PAGES) {
     test(`/${locale}/${path}`, async ({ page, baseURL }) => {
       await seedConsent(page);
+      if (path === 'contacts/') await stubStudioMap(page);
       const g = guard(page, baseURL!);
       await page.goto(`/${locale}/${path}`, { waitUntil: 'networkidle' });
       const problems = [...(await domChecks(page, locale)), ...(await layoutProblems(page))];
@@ -142,6 +143,7 @@ test('/en/booking/ step 4 (calendar) on narrow phones', async ({ page, baseURL }
 const CONTAINER_WIDTHS = [[744, 1133], [852, 393], [915, 412], [984, 1016], [1100, 800], [1180, 820], [1280, 800], [1440, 900], [2560, 1440]];
 test('content container = the --container token on tablets, landscape phones and desktops (no Tailwind max-width cap)', async ({ page }, ti) => {
   test.skip(!['B-pixel-9pro', 'B-iphone-8plus'].includes(ti.project.name), 'one Chrome + one WebKit project: the test sets its own widths');
+  await stubStudioMap(page);
   const bad: string[] = [];
   for (const url of ['/ru/', '/en/services/', '/ru/services/sports/', '/en/journal/', '/ru/contacts/']) {
     for (const [i, [w, h]] of CONTAINER_WIDTHS.entries()) {
