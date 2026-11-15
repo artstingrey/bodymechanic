@@ -92,7 +92,7 @@ export default async function HomePage() {
 
       <HomeTeam locale={locale} />
 
-      <section id="reviews" className="section home-sec" aria-labelledby="reviews-title">
+      {/* <section id="reviews" className="section home-sec" aria-labelledby="reviews-title">
         <div className="container">
           <h2 id="reviews-title" className="h2" data-split="">{t('home.reviews.title')}</h2>
           <div className="reviews reviews--empty">
@@ -101,10 +101,12 @@ export default async function HomePage() {
           </div>
           <Todo as="p">{t('home.reviews.items')}</Todo>
         </div>
-      </section>
+      </section> */}
 
       {/* 7 Space — branded photo slots until real photos arrive (README §6) */}
-      <section className="section home-sec" aria-labelledby="space-title">
+      {/* one compact branded placeholder until the room photos arrive (lead's empty-state policy, design audit F05: three empty
+              plaques were ≈ 950 px of nothing on a phone) */}
+      {/* <section className="section home-sec" aria-labelledby="space-title">
         <div className="container">
           <div className="sec-head">
             <div>
@@ -112,14 +114,13 @@ export default async function HomePage() {
               <p className="lead">{t('home.space.text')}</p>
             </div>
           </div>
-          {/* one compact branded placeholder until the room photos arrive (lead's empty-state policy, design audit F05: three empty
-              plaques were ≈ 950 px of nothing on a phone) */}
+          
           <div className="space" data-reveal="">
             <PhotoPlaceholder className="space__ph" caption={t('placeholder.roomPhoto')} />
           </div>
           <Todo as="p">{t('home.space.photos')}</Todo>
         </div>
-      </section>
+      </section> */}
 
       {/* 8 FAQ — first item open (ТЗ §05.8) */}
       <section id="faq" className="section home-sec" aria-labelledby="faq-title">

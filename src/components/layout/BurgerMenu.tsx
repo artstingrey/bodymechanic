@@ -141,9 +141,10 @@ export function BurgerButton() {
   );
 }
 
+//['/journal', 'nav.burger.journal']
 const ITEMS: [string, string][] = [
   ['/services', 'nav.burger.services'], ['/prices', 'nav.main.prices'], ['/team', 'nav.main.team'], ['/#approach', 'nav.main.approach'],
-  ['/#reviews', 'nav.main.reviews'], ['/#faq', 'nav.main.faq'], ['/journal', 'nav.burger.journal'], ['/contacts', 'nav.burger.contacts'],
+  ['/#reviews', 'nav.main.reviews'], ['/#faq', 'nav.main.faq'], ['/contacts', 'nav.burger.contacts'],
 ];
 /** the first four are the large tier: what, how much, who, how */
 const MAJOR = 4;
@@ -167,11 +168,11 @@ export function BurgerDialog() {
             </ul>
           </nav>
           {/* RC-9 (S-2): a full page load — the account runs without the tag manager (PrivateLink) */}
-          <PrivateLink href="/account" className="acct" replace onClick={follow}>
+          {/* <PrivateLink href="/account" className="acct" replace onClick={follow}>
             <span className="av" aria-hidden="true"><svg className="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" /></svg></span>
             <span><b>{t('nav.burger.account')}</b><small>{t('nav.burger.accountHint')}</small></span>
             <svg className="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
-          </PrivateLink>
+          </PrivateLink> */}
           <div className="meta">
             <LangSwitch variant="long" />
             {isTodo(t('footer.socialLinks')) ? null : <span className="soc">{t('nav.burger.social')}: {t('footer.socialLinks')}</span>}
