@@ -23,7 +23,7 @@ async function ServicesCatalog({ locale, searchParams }: { locale: CatalogLocale
   return (
     <HomeCatalogResult headingId="services-title" slides={String(category ?? '')} failed={!catalog}
       error={t('home.services.errorLoad')} retry={t('home.services.retry')} loading={t('home.services.loading')}>
-      {catalog ? <ServiceList {...catalog.data} category={category} /> : null}
+      {catalog ? <ServiceList {...catalog.data} locale={locale} category={category} /> : null}
     </HomeCatalogResult>
   );
 }

@@ -2,26 +2,19 @@ import { Suspense } from 'react';
 import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
-import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
-import { catalogServiceSlug } from '@/lib/catalog-service-slugs';
 import { getCatalogServices } from '@/server/catalog/services';
 import { ButtonLink } from '@/components/ui/Button';
 import { Carousel } from '@/components/ui/Carousel';
-import { ServiceCard } from '@/components/ui/Cards';
-import { Photo, hasPhoto } from '@/components/ui/Photo';
-import { HomeServicePhoto } from './HomeServicePhoto';
+import { CatalogServiceCard } from '@/components/services/CatalogServiceCard';
 import { HomeCatalogResult } from './HomeCatalogResult';
-import { homeServiceIllustrations, homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
 
 const CARD_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
-const TONES = ['lav', 'sand', 'sky'] as const;
 
 async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awaited<ReturnType<typeof getTranslations>> }) {
   // Runtime configuration and CRM availability must not decide the build output.
   await connection();
   const catalog = await getCatalogServices(locale).catch(() => null);
   const services = catalog?.data.services;
-  const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   return (
     <HomeCatalogResult
       headingId="services-title"
@@ -36,31 +29,10 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
           label: t('a11y.carousel.label'), prev: t('a11y.carousel.prev'), next: t('a11y.carousel.next'),
           goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string,
         }}>
-          {services.map((service, i) => {
-            const translation = translations[service.id];
-            const title = homeServiceTitle(locale, service, translations);
-            const description = locale === 'en'
-              ? translation?.description ?? service.description
-              : service.description ?? translation?.description;
-            const illustration = homeServiceIllustrations.get(service.id);
-            const caption = t('placeholder.illustrativePhoto');
-            const localPhoto = illustration && hasPhoto('services', illustration)
-              ? <Photo set="services" id={illustration} sizes={CARD_SIZES} alt={title} />
-              : undefined;
-            const src = service.imageUrl && new URL(service.imageUrl).hostname.replace(/\.$/, '') !== 'api.alteg.io'
-              ? service.imageUrl : null;
-            return (
-              <ServiceCard key={service.id} href={`/services/${catalogServiceSlug(service.id)}`} linkLabel={t('home.services.cardLink')} index={i + 1} title={title}
-                description={description ?? undefined} tone={TONES[i % TONES.length]}
-                photo={<HomeServicePhoto key={`${src}:${illustration}`} src={src} alt={title}
-                  illustration={localPhoto} caption={caption} unavailable={t('home.services.photoUnavailable')} />}
-                priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
-                price={formatCatalogServicePrice(service, locale, {
-                  unknown: () => t('home.services.priceUnknown'), from: (price) => t('home.services.priceFrom', { price }),
-                })}
-                duration={service.durationMin === null ? undefined : t('home.services.duration', { minutes: service.durationMin })} />
-            );
-          })}
+          {services.map((service, i) => (
+            <CatalogServiceCard key={service.id} service={service} locale={locale} t={t} index={i + 1} sizes={CARD_SIZES}
+              linkLabel={t('home.services.cardLink')} />
+          ))}
         </Carousel>
       ) : services ? <p className="lead" role="status">{t('home.services.empty')}</p> : null}
     </HomeCatalogResult>

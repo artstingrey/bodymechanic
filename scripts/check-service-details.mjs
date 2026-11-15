@@ -159,8 +159,11 @@ async function browserChecks(origin) {
       await page.goto(origin + paths.page('en', slug));
       await expect(facts).toHaveText([price, '']);
     }
-    for (const section of ['services', 'prices']) {
-      for (const slug of ['sports', 'lfk-kinesio', 'manual']) {
+    for (const [section, slugs] of [
+      ['services', ['sports', 'lfk-kinesio']],
+      ['prices', ['sports', 'lfk-kinesio', 'manual']],
+    ]) {
+      for (const slug of slugs) {
         await page.goto(`${origin}/en/${section}/`);
         await page.locator(`main a[href="${paths.page('en', slug)}"]`).first().click();
         await expect(page).toHaveURL(origin + paths.page('en', slug));

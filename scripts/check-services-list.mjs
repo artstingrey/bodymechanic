@@ -67,7 +67,7 @@ try {
     await expect(titles).toHaveText(englishTitles);
     await expect(page.getByRole('heading', { name: 'Services', level: 1 })).toBeFocused();
     await expect(categories).toHaveText(['All categories', 'Massage', 'Empty category', 'Recovery']);
-    await expect(cards.locator('.badge, dl')).toHaveCount(0);
+    await expect(cards.locator('.badge')).toHaveCount(0);
 
     await page.goto(`${origin}/en/services/?category=30`);
     await expect(titles).toHaveText(['First massage', 'Second massage']);
@@ -101,9 +101,99 @@ try {
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
     await expect(cards).toHaveCount(0);
   });
+
+  await page.route('https://images.example.test/**', async (route) => {
+    assert.equal(route.request().headers().referer, undefined);
+    if (route.request().url().endsWith('/broken.webp')) return route.fulfill({ status: 404 });
+    await route.fulfill({ path: 'public/photos/services/sports-640.webp', contentType: 'image/webp' });
+  });
+  await fs.writeFile(scenario, 'service-detail');
+  await run(async (origin) => {
+    const locales = {
+      ru: {
+        sports: 'Спортивный массаж из каталога',
+        sportsDescription: 'Описание из каталога.',
+        longTitle: /длинным названием для проверки переноса строк/,
+        classicDescription: 'Спокойный классический массаж в приватном кабинете.',
+        from: 'От', minutes: 'мин', unknown: 'Стоимость уточняется',
+      },
+      en: {
+        sports: 'Sports massage',
+        sportsDescription: 'Massage for people who train: before a session, after a race and between workouts.',
+        longTitle: /very long service title/,
+        classicDescription: 'A calm, classic massage in a private room.',
+        from: 'From', minutes: 'min', unknown: 'Price to be confirmed',
+      },
+    };
+    const slugs = ['sports', 'service-91201', 'service-91202', 'service-91203', 'service-91204', 'classic'];
+    for (const [locale, labels] of Object.entries(locales)) {
+      const listUrl = `${origin}/${locale}/services/`;
+      const href = (slug) => `/${locale}/services/${slug}/`;
+      const card = (set, slug) => set.filter({ has: page.locator(`a[href="${href(slug)}"]`) });
+      const sports = card(cards, 'sports');
+      const long = card(cards, 'service-91201');
+      const unknown = card(cards, 'service-91204');
+      await page.setViewportSize({ width: 320, height: 850 });
+      await page.goto(listUrl);
+      await expect(sports.locator('h2')).toHaveText(labels.sports);
+      await expect(sports.locator('.d')).toHaveText(labels.sportsDescription);
+      await expect(card(cards, 'classic').locator('.d')).toHaveText(labels.classicDescription);
+      await expect(sports.locator('dd')).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/]);
+      await expect(long.locator('h2')).toHaveText(labels.longTitle);
+      await expect(long.locator('dd')).toHaveText([/^(?:AED\s+)?0(?:\s+AED)?$/, new RegExp(`^90\\s+${labels.minutes}$`)]);
+      await expect(card(cards, 'service-91202').locator('dd')).toHaveText([new RegExp(`^${labels.from}\\s+(?:AED\\s+)?55[,.]5(?:\\s+AED)?$`)]);
+      await expect(card(cards, 'service-91203').locator('dd')).toHaveText([/^(?:AED\s+125|125\s+AED)$/]);
+      await expect(unknown.locator('dd')).toHaveText([labels.unknown]);
+      await expect(unknown.locator('.d, img')).toHaveCount(0);
+      await expect(unknown.locator('.ph')).toBeAttached();
+      await expect(sports.locator('.ph')).toBeVisible();
+      await expect(cards.locator('.badge')).toHaveCount(0);
+      const photo = long.locator('img');
+      await photo.scrollIntoViewIfNeeded();
+      await expect(photo).toHaveAttribute('alt', labels.longTitle);
+      await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+
+      const grid = page.locator('main .card-grid');
+      for (const [width, columns] of [[320, 1], [1280, 3]]) {
+        await page.setViewportSize({ width, height: 850 });
+        assert.equal(await grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length), columns);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        assert.equal(await long.locator('h2').evaluate((el) => el.scrollWidth <= el.clientWidth), true);
+      }
+
+      const listContent = new Map();
+      for (const slug of slugs) {
+        const item = card(cards, slug);
+        listContent.set(slug, {
+          title: await item.locator('h2').innerText(),
+          facts: await item.locator('dd').allTextContents(),
+          description: await item.locator('.d').allTextContents(),
+        });
+      }
+      await page.goto(`${origin}/${locale}/`);
+      const homeCards = page.locator('section[aria-labelledby="services-title"] article');
+      for (const [slug, expected] of listContent) {
+        const item = card(homeCards, slug);
+        await expect(item.locator('h3')).toHaveText(expected.title);
+        await expect(item.locator('dd')).toHaveText(expected.facts);
+        await expect(item.locator('.d')).toHaveText(expected.description);
+      }
+
+      for (const slug of ['sports', 'service-91201']) {
+        await page.goto(listUrl);
+        await card(cards, slug).locator('h2 a').click();
+        await expect(page).toHaveURL(origin + href(slug));
+        const expected = listContent.get(slug);
+        const hero = page.locator('.svc-hero');
+        await expect(hero.locator('h1')).toHaveText(expected.title);
+        await expect(hero.locator('.hero-lead')).toHaveText(expected.description);
+        await expect(hero.locator('dd')).toHaveText(expected.facts.length === 1 ? [...expected.facts, ''] : expected.facts);
+      }
+    }
+  });
   assert.deepEqual(browserRequests, []);
   assert.deepEqual(pageErrors, []);
-  console.log('Services list: RU/EN, order, category IDs, streaming, empty catalog, retry and server-only CRM requests: OK');
+  console.log('Services list: RU/EN, order, states, responsive cards, price cases, photos and matching home/detail content: OK');
 } finally {
   await browser?.close();
   await Promise.all([...cacheFiles, scenario, release].map((file) => fs.rm(file, { force: true })));
