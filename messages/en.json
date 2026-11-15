@@ -854,15 +854,16 @@
   },
   "prices": {
     "title": "Prices",
-    "lead": "Our current price list by category. All prices are in AED.",
+    "lead": "Our current price list by category.",
+    "uncategorized": "Uncategorized",
+    "loading": "Loading prices…",
     "col": {
       "service": "Service",
-      "duration": "Duration",
       "price": "Price"
     },
     "note": "Prices are updated automatically.",
     "cta": "Book",
-    "error": "We couldn’t load the prices. Please reload the page."
+    "error": "We couldn’t load the prices."
   },
   "team": {
     "title": "Team",
@@ -1299,9 +1300,9 @@
     },
     "prices": {
       "title": "Massage prices in Dubai · The Body Mechanic",
-      "description": "Our current price list by category: service, duration and price in AED. Book online for a time that suits you.",
+      "description": "Browse our massage prices by service category.",
       "ogTitle": "Prices · The Body Mechanic",
-      "ogDescription": "Current price list: duration and cost in AED."
+      "ogDescription": "Service prices from the booking catalog."
     },
     "team": {
       "title": "Meet the team · The Body Mechanic",

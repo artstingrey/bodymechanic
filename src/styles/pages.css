@@ -121,17 +121,15 @@
 .price-table { width: 100%; border-collapse: collapse; font-size: 15px; }
 .price-table th, .price-table td { text-align: left; padding: 6px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .price-table thead th { padding-block: 12px; font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); background: var(--bg); }
-.price-table tbody th { font-weight: 600; }
+.price-table tbody th { font-weight: 600; overflow-wrap: anywhere; }
 .price-table tbody th a { text-decoration: none; }
 @media (hover: hover) { .price-table tbody th a:hover { text-decoration: underline; text-underline-offset: 4px; } }
 .price-table tbody tr:last-child > * { border-bottom: 0; }
 .price-table td { white-space: nowrap; font-weight: 700; }
 .price-table td .badge { margin-left: 6px; }
-.price-table td:not(.price-table__price) { font-weight: 500; color: var(--muted); } /* the price leads, the duration follows (F16) */
 @media (max-width: 599px) {
   .price-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .price-table, .price-table tbody, .price-table tr, .price-table th, .price-table td { display: block; }
-  .price-table td:empty { display: none; } /* no duration → nothing, not a «—» before «Цена — по запросу» (F16) */
   .price-table tr { padding: 10px 16px; border-bottom: 1px solid var(--line); }
   .price-table tbody tr:last-child { border-bottom: 0; }
   .price-table th, .price-table td { padding: 0; border: 0; }
