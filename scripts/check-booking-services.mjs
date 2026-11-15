@@ -17,6 +17,90 @@ const other = 91201;
 const cacheKeys = new Set();
 let browser;
 
+async function checkServiceEntry(page, origin, locale, messages) {
+  const detail = `${origin}/${locale}/services/sports/`;
+  const booking = `${origin}/${locale}/booking/`;
+  const cta = page.locator('.svc-hero').getByRole('link', { name: messages.service.cta, exact: true });
+  const checked = page.locator('input[name="service"]:checked');
+  const next = page.getByRole('button', { name: messages.common.actions.next, exact: true });
+  const draft = () => page.evaluate(() => JSON.parse(sessionStorage.getItem('bm.bookingSteps')));
+  const openFromDetail = async () => {
+    await expect(cta).toHaveAttribute('href', `/${locale}/booking/`);
+    await cta.click();
+    await expect(page).toHaveURL(booking);
+    await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
+    await expect(page.locator('.b3d-slot[data-mode="booking"]')).toBeVisible();
+  };
+  const skipZones = async () => {
+    await page.getByRole('button', { name: messages.body3d.panel.skip, exact: true }).click();
+    await expect(page).toHaveURL(`${booking}?step=2`);
+  };
+
+  await page.goto(detail);
+  // A copied address and a modifier click carry no service.
+  const copied = await cta.getAttribute('href');
+  const [newTab] = await Promise.all([page.context().waitForEvent('page'), cta.click({ modifiers: ['ControlOrMeta'] })]);
+  try {
+    await expect(newTab).toHaveURL(booking);
+    await expect(newTab.locator('.booking[data-ready="true"] #st1')).toBeVisible();
+    await newTab.getByRole('button', { name: messages.body3d.panel.skip, exact: true }).click();
+    await expect(newTab.locator(`input[name="service"][value="${sports}"]`)).not.toBeChecked();
+    await expect(page).toHaveURL(detail);
+  } finally {
+    await newTab.close();
+  }
+  await page.goto(new URL(copied, origin).href);
+  await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
+  await skipZones();
+  await expect(page.locator(`input[name="service"][value="${sports}"]`)).not.toBeChecked();
+
+  await page.goto(detail);
+  await openFromDetail();
+  await skipZones();
+  await expect(checked).toHaveValue(String(sports));
+  await expect(next).toBeEnabled();
+
+  const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true, health: true };
+  await page.evaluate(({ other, contact }) => {
+    const savedAt = Date.now() - 60_000;
+    sessionStorage.setItem('bm.bookingSteps', JSON.stringify({
+      version: 2, savedAt, serviceId: other, staffId: 91605, contact,
+      date: '2026-11-30', datetime: '2026-11-30T12:00:00+04:00', wantDate: '2026-11-30', wantTime: '12:00',
+    }));
+    sessionStorage.setItem('bm.bookingDraft', JSON.stringify({
+      v: 1, savedAt, model: 'male', generalNote: '',
+      markers: [{ id: 'fixture-zone', zoneId: 'chest', position: [0, 0, 0], intensity: 5 }],
+    }));
+  }, { other, contact });
+  await page.goto(detail);
+  await openFromDetail();
+  await expect(page.locator('#zone-list').getByRole('checkbox', { name: messages.body3d.zones.chest, exact: true })).toBeChecked();
+  await page.getByRole('button', { name: messages.body3d.panel.cta, exact: true }).click();
+  await expect(page).toHaveURL(`${booking}?step=2`);
+  await expect(checked).toHaveValue(String(sports));
+  const { serviceId, staffId, date, datetime, wantDate, wantTime, contact: restoredContact } = await draft();
+  assert.deepEqual({ serviceId, staffId, date, datetime, wantDate, wantTime, restoredContact }, {
+    serviceId: sports, staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null, restoredContact: contact,
+  });
+
+  // The detail is still available, but the current booking catalog no longer contains the preset service.
+  await page.route(`**/api/catalog/services?locale=${locale}`, async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    json.data.services = json.data.services.filter(({ id }) => id !== sports);
+    await route.fulfill({ response, json });
+  });
+  await page.goto(detail);
+  await openFromDetail();
+  await skipZones();
+  await expect(page.locator(`input[name="service"][value="${other}"]`)).toBeVisible();
+  await expect(checked).toHaveCount(0);
+  await expect(next).toBeDisabled();
+  await expect.poll(async () => (await draft()).serviceId).toBeNull();
+  await page.locator(`input[name="service"][value="${other}"]`).check();
+  await expect(next).toBeEnabled();
+}
+
 async function checkStaff(page, booking, messages) {
   const { next, back, retry } = messages.common.actions;
   const any = page.locator('input[name="staff"][value="0"]');
@@ -272,6 +356,13 @@ try {
     try {
       for (const [locale, width] of [['ru', 390], ['en', 1280]]) {
         const messages = JSON.parse(await fs.readFile(new URL(`../messages/${locale}.json`, import.meta.url), 'utf8'));
+        const entryPage = await browser.newPage({ viewport: { width, height: 850 } });
+        try {
+          await checkServiceEntry(entryPage, origin, locale, messages);
+          console.log(`Service detail to 3D booking: preset, draft, clean URL and missing service passed in ${locale.toUpperCase()}`);
+        } finally {
+          await entryPage.close();
+        }
         const page = await browser.newPage({ viewport: { width, height: 850 }, timezoneId: 'America/Los_Angeles' });
         const booking = `${origin}/${locale}/booking/`;
         const copy = messages.booking.service;

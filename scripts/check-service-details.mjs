@@ -128,15 +128,9 @@ async function browserChecks(origin) {
         ? 'Для этой услуги пока нет специалистов.' : 'No specialists are currently listed for this service.');
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
       await expect(page.locator('.demo-notice')).toBeVisible();
-      const cta = hero.getByRole('button', { name: locale === 'ru' ? 'Записаться' : 'Book' });
+      const cta = hero.getByRole('link', { name: locale === 'ru' ? 'Записаться' : 'Book' });
       await expect(cta).toBeVisible();
-      await expect(cta).toBeDisabled();
-      assert.equal(await cta.getAttribute('href'), null);
-      const prevUrl = page.url();
-      const storageBefore = await page.evaluate(() => ({ ...sessionStorage }));
-      await cta.click({ force: true });
-      assert.equal(page.url(), prevUrl);
-      assert.deepEqual(await page.evaluate(() => ({ ...sessionStorage })), storageBefore);
+      await expect(cta).toHaveAttribute('href', `/${locale}/booking/`);
       if (locale === 'ru') {
         await page.getByRole('link', { name: /^EN\./ }).click();
         await expect(page).toHaveURL(`${origin}${paths.page('en', 'sports')}?ref=test`);
@@ -173,7 +167,7 @@ async function browserChecks(origin) {
         if (slug === 'sports') await expect(heading).toHaveText('Sports massage');
         else if (slug === 'lfk-kinesio') {
           await expect(heading).toHaveText('Functional training and mobility');
-          await expect(hero.getByRole('button', { name: 'Book' })).toBeDisabled();
+          await expect(hero.getByRole('link', { name: 'Book' })).toHaveAttribute('href', '/en/booking/');
         } else {
           const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
           await expect(demoCta).toHaveAttribute('href', '/en/booking/');
@@ -185,8 +179,7 @@ async function browserChecks(origin) {
     }
     await hero.getByRole('link', { name: 'Book', exact: true }).click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
-    await page.getByRole('button', { name: /I know what I need/ }).click();
-    await expect(page.locator('li', { has: page.locator('input[name="service"]:checked') })).toContainText('Manual therapy');
+    await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
     assert.deepEqual(unexpectedRequests, []);
   } finally {
     await browser.close();
@@ -278,7 +271,7 @@ try {
         const serviceLd = JSON.parse(text.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1]);
         assert.equal(serviceLd.name, locale === 'en' ? englishTitle : json.data.service.title);
         assert.equal(serviceLd.url, canonical);
-        assert.match(text, /class="btn btn--primary btn-book" aria-disabled="true"/);
+        assert.match(text, new RegExp(`<a(?=[^>]*class="btn btn--primary btn-book")(?=[^>]*href="/${locale}/booking/")[^>]*>`));
         await detail(origin, `service-${id}`, useQuery, 404, 'SERVICE_NOT_FOUND');
         await checkNotFound(origin, paths.page(locale, `service-${id}`));
       }

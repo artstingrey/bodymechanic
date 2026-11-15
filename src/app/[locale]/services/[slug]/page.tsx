@@ -138,9 +138,7 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
             <div><dt>{t('services.card.priceLabel')}</dt><dd className="tn">{price}{demoBadge}</dd></div>
             {detail.source === 'altegio' || duration ? <div><dt>{t('services.card.durationLabel')}</dt><dd className="tn">{duration}</dd></div> : null}
           </dl>
-          {detail.source === 'altegio'
-            ? <button type="button" className="btn btn--primary btn-book" aria-disabled="true">{t('service.cta')}</button>
-            : <BookingLink preset={{ service: s.id }} className="btn btn--primary btn-book">{t('service.cta')}</BookingLink>}
+          <BookingLink preset={{ service: s.id }} className="btn btn--primary btn-book">{t('service.cta')}</BookingLink>
           {s.description ? <p className="lead hero-lead">{s.description}</p> : null}
         </div>
       </div>
