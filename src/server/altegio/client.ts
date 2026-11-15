@@ -53,7 +53,7 @@ async function requestAltegio<T>(operation: string, path: string, language: stri
       const upstreamRetryAfter = header && (/^\d+$/.test(header) || (/ GMT$/.test(header) && Number.isFinite(Date.parse(header))))
         ? header : undefined;
       if (status === 429) throw new AltegioError('rateLimited', retryAfter(header), upstreamRetryAfter);
-      throw new AltegioError('unavailable', undefined, upstreamRetryAfter);
+      throw new AltegioError('unavailable', undefined, upstreamRetryAfter, status);
     }
 
     return await decode(response);

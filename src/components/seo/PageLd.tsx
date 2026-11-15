@@ -10,9 +10,9 @@
  */
 import { getTranslations } from 'next-intl/server';
 import { pageLocale } from '@/lib/locale';
-import { getArticles, getStaff } from '@/lib/api';
+import { getArticles } from '@/lib/api';
 import type { Service } from '@/lib/api/types';
-import { articleJsonLd, breadcrumbJsonLd, businessJsonLd, catalogServiceJsonLd, faqJsonLd, personJsonLd, serviceJsonLd, type PublicServiceLd } from '@/lib/jsonld';
+import { articleJsonLd, breadcrumbJsonLd, businessJsonLd, catalogServiceJsonLd, faqJsonLd, personJsonLd, serviceJsonLd, type PublicServiceLd, type PublicStaffLd } from '@/lib/jsonld';
 import { JsonLd } from './JsonLd';
 
 type Section = 'services' | 'prices' | 'team' | 'journal' | 'contacts' | 'privacy' | 'terms';
@@ -24,7 +24,8 @@ const SECTION_TITLE: Record<Section, string> = {
 };
 
 type PageLdProps =
-  | { kind: Exclude<PageLdKind, 'service'>; slug?: string }
+  | { kind: Exclude<PageLdKind, 'service' | 'staff'>; slug?: string }
+  | { kind: 'staff'; profile: PublicStaffLd }
   | { kind: 'service'; detail: { source: 'altegio'; service: PublicServiceLd } | { source: 'demo'; service: Service } };
 
 export async function PageLd(props: PageLdProps) {
@@ -52,8 +53,8 @@ export async function PageLd(props: PageLdProps) {
       return <JsonLd data={[data, crumbs(section('services'), { name: s.title, path: `/services/${s.slug}` })]} />;
     }
     case 'staff': {
-      const s = (await getStaff(locale)).find((x) => x.slug === props.slug);
-      return s ? <JsonLd data={[personJsonLd(locale, s, brand), crumbs(section('team'), { name: s.name, path: `/team/${s.slug}` })]} /> : null;
+      const s = props.profile;
+      return <JsonLd data={[personJsonLd(locale, s, brand), crumbs(section('team'), { name: s.name, path: `/team/${s.slug}` })]} />;
     }
     case 'article': {
       const a = getArticles(locale).find((x) => x.slug === props.slug);

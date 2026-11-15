@@ -880,6 +880,13 @@
       "certificates": "Сертификаты",
       "languages": "Языки",
       "nearestSlots": "Ближайшие окна",
+      "unavailableTitle": "Профиль временно недоступен",
+      "unavailable": "Не удалось загрузить профиль специалиста. Попробуйте ещё раз.",
+      "slots": {
+        "empty": "На сегодня свободных окон нет",
+        "error": "Не удалось загрузить свободные окна.",
+        "rateLimited": "Слишком много запросов. Попробуйте чуть позже."
+      },
       "reviews": "Отзывы",
       "back": "Все специалисты"
     },
@@ -1312,6 +1319,10 @@
       "description": "{name}, {position} в студии The Body Mechanic в Дубае. Ближайшие свободные окна и онлайн-запись.",
       "ogTitle": "{name} · The Body Mechanic",
       "ogDescription": "{position}. Запишитесь онлайн на ближайшее свободное время."
+    },
+    "staffProfile": {
+      "title": "{title} · The Body Mechanic",
+      "ogTitle": "{title} · The Body Mechanic"
     },
     "account": {
       "title": "Мои записи · The Body Mechanic",

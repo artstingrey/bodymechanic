@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { isLocale } from '@/i18n/routing';
 import { articleSlugs, serviceSlugs, staffSlugs } from '@/lib/api';
 import { catalogServiceId } from '@/lib/catalog-service-slugs';
+import { catalogStaffId } from '@/lib/catalog-staff-slug';
 
 const pages = new Set([
   '', 'booking', 'contacts', 'journal', 'prices', 'privacy', 'services', 'team', 'terms',
@@ -19,7 +20,8 @@ export function proxy(request: NextRequest) {
   if (!isLocale(locale)) return NextResponse.next();
   const page = segments.join('/');
   const catalogService = segments.length === 2 && segments[0] === 'services' && catalogServiceId(segments[1]) !== undefined;
-  if (!pages.has(page) && !catalogService && !/^account\/record\/[^/]+\/[^/]+$/.test(page)) {
+  const catalogStaff = segments.length === 2 && segments[0] === 'team' && catalogStaffId(segments[1]) !== undefined;
+  if (!pages.has(page) && !catalogService && !catalogStaff && !/^account\/record\/[^/]+\/[^/]+$/.test(page)) {
     return NextResponse.next();
   }
 

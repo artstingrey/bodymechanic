@@ -1,11 +1,17 @@
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
+import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { pageLocale } from '@/lib/locale';
 import { pageMetadata } from '@/lib/seo';
 import { PageLd } from '@/components/seo/PageLd';
 import { getStaff, staffSlugs } from '@/lib/api';
-import { NearestSlots } from '@/components/team/NearestSlots';
+import { catalogStaffId, catalogStaffSlug } from '@/lib/catalog-staff-slug';
+import type { CatalogLocale } from '@/lib/contracts/catalog';
+import { getCatalogStaff } from '@/server/catalog/staff';
+import { NearestSlots, StaffTodaySlots } from '@/components/team/NearestSlots';
+import { HomeTeamPhoto } from '@/components/sections/HomeTeamPhoto';
 import { PageHead } from '@/components/sections/PageHead';
 import { BookingLink } from '@/components/booking/BookingLink';
 import { Badge } from '@/components/ui/Badge';
@@ -14,45 +20,91 @@ import { Todo } from '@/components/ui/Todo';
 import { ScopeMessages } from '@/components/i18n/ScopeMessages';
 import { pickMessages } from '@/lib/i18n/pickMessages';
 
-export const dynamicParams = false;
-export function generateStaticParams() {
-  return staffSlugs().map((slug) => ({ slug }));
-}
+const demoSlugs = new Set(staffSlugs());
 
-async function find(slug: string) {
-  return (await getStaff(await pageLocale())).find((s) => s.slug === slug);
-}
+const find = cache(async (locale: CatalogLocale, slug: string) => {
+  const id = catalogStaffId(slug);
+  if (id === undefined) {
+    if (!demoSlugs.has(slug)) return null;
+    const profile = (await getStaff(locale)).find((staff) => staff.slug === slug);
+    return profile ? { source: 'demo', profile } as const : null;
+  }
+
+  await connection();
+  const catalog = await getCatalogStaff(locale).catch(() => null);
+  if (!catalog) return { source: 'unavailable' } as const;
+  const staff = catalog.data.staff.find((member) => member.id === id);
+  return staff ? { source: 'altegio', profile: {
+    id, slug: catalogStaffSlug(id), name: staff.name, position: staff.position,
+    specialization: staff.specialization, avatarUrl: staff.imageUrl,
+  } } as const : null;
+});
 
 export async function generateMetadata({ params }: PageProps<'/[locale]/team/[slug]'>) {
   const { slug } = await params;
-  const s = await find(slug);
-  return pageMetadata(await pageLocale(), 'staff', `/team/${slug}`, { name: s?.name ?? '', position: s?.position ?? '' });
+  const locale = await pageLocale();
+  const detail = await find(locale, slug);
+  if (!detail) return {};
+  const path = `/team/${slug}`;
+  const t = await getTranslations({ locale });
+  if (detail.source === 'unavailable') {
+    return pageMetadata(locale, 'staffProfile', path, { title: t('team.profile.unavailableTitle') }, {
+      description: t('team.profile.unavailable'), ogFromDescription: true,
+    });
+  }
+  if (detail.source === 'demo') {
+    const { name, position } = detail.profile;
+    return pageMetadata(locale, 'staff', path, { name, position });
+  }
+
+  const { name, position, specialization } = detail.profile;
+  const title = position ? `${name}, ${position}` : name;
+  const description = [title, specialization !== position ? specialization : null].filter(Boolean).join(' · ');
+  return pageMetadata(locale, 'staffProfile', path, { title }, { description, ogFromDescription: true });
 }
 
 /** /team/[slug] (ТЗ §10, SHOULD): profile, nearest free slots (book_staff_seances), reviews, booking with this specialist. */
 export default async function StaffPage({ params }: PageProps<'/[locale]/team/[slug]'>) {
   const { slug } = await params;
-  const t = await getTranslations();
-  const s = await find(slug);
-  if (!s) notFound();
+  const locale = await pageLocale();
+  const t = await getTranslations({ locale });
+  const detail = await find(locale, slug);
+  if (!detail) notFound();
+  if (detail.source === 'unavailable') {
+    const title = t('team.profile.unavailableTitle');
+    return (
+      <article className="container page">
+        <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: title }]} title={title} up />
+        <p className="lead" role="alert">{t('team.profile.unavailable')}</p>
+        <a href={`/${locale}/team/${slug}/`} className="btn btn--secondary">{t('common.actions.retry')}</a>
+      </article>
+    );
+  }
+  const s = detail.profile;
+  const real = detail.source === 'altegio';
   return (
-    <ScopeMessages messages={await pickMessages(['booking.staff'])}>
+    <ScopeMessages messages={await pickMessages(real ? ['team.profile.slots'] : ['booking.staff'])}>
     <article className="container page">
-      <PageLd kind="staff" slug={slug} />
+      <PageLd kind="staff" profile={s} />
       {/* R-FINAL-2 D-03 (lead, option A), the same template as /services/[slug]: below 1024 — head, «Записаться к специалисту»,
           specialization, nearest slots, then the photo; ≥ 1024 looks as before (pages.css restores the order). */}
       <div className="profile">
-        <div className="profile__photo staff"><PhotoPlaceholder caption={t('placeholder.specialistPhoto')} num={staffNumber(s.name)} /></div>
+        <div className="profile__photo staff">
+          {real ? <HomeTeamPhoto key={s.avatarUrl} src={s.avatarUrl} alt={s.name} unavailable={t('home.team.photoUnavailable')} />
+            : <PhotoPlaceholder caption={t('placeholder.specialistPhoto')} num={staffNumber(s.name)} />}
+        </div>
         <div className="profile__text">
-          {/* «Демо» under the name, as in the team list (design audit F18) */}
-          <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: s.name }]} title={s.name} up><Badge className="page-head__badge">{t('prototype.demoBadge')}</Badge></PageHead>
-          {/* Ж-9: the specialist is handed over at the click, the address is the bare /booking/ (components/booking/BookingLink) */}
-          <BookingLink preset={{ staff: s.id }} className="btn btn--primary btn-book">{t('common.actions.bookWithSpecialist')}</BookingLink>
-          {/* «Специализация: Демо» read as a data error (F18): shown only once the position is real */}
-          {s.position !== t('prototype.demoBadge') ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${s.position}`}</p> : null}
+          <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: s.name }]} title={s.name} up eyebrow={real ? s.position : undefined}>
+            {real ? null : <Badge className="page-head__badge">{t('prototype.demoBadge')}</Badge>}
+          </PageHead>
+          {real ? <button type="button" className="btn btn--primary btn-book" disabled>{t('common.actions.bookWithSpecialist')}</button>
+            : <BookingLink preset={{ staff: s.id }} className="btn btn--primary btn-book">{t('common.actions.bookWithSpecialist')}</BookingLink>}
+          {detail.source === 'altegio' && detail.profile.specialization && detail.profile.specialization !== s.position
+            ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${detail.profile.specialization}`}</p> : null}
+          {!real && s.position !== t('prototype.demoBadge') ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${s.position}`}</p> : null}
           <section className="profile__slots">
             <h2 className="h3">{t('team.profile.nearestSlots')}</h2>
-            <NearestSlots staffId={s.id} />
+            {real ? <StaffTodaySlots key={`${locale}:${s.id}`} staffId={s.id} /> : <NearestSlots staffId={s.id} />}
           </section>
           <Link href="/team" className="btn btn--text">{t('team.profile.back')}</Link>
         </div>

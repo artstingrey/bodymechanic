@@ -65,8 +65,8 @@ function normalizeCatalog(data: unknown, currency: string | null): CatalogServic
   return { services, categories };
 }
 
-const getCachedServices = cachePublicCatalog('book-services-v2', async (locationId: number, currency: string | null, locale: CatalogLocale) => {
-  const data = await fetchBookServices(locationId, locale);
+const getCachedServices = cachePublicCatalog('book-services-v2', async (locationId: number, currency: string | null, locale: CatalogLocale, staffId?: number) => {
+  const data = await fetchBookServices(locationId, locale, staffId);
   try {
     return normalizeCatalog(data, currency);
   } catch (error) {
@@ -79,4 +79,10 @@ export async function getCatalogServices(locale: CatalogLocale): Promise<Catalog
   const { locationId, currency } = getAltegioConfig();
   const data = await getCachedServices(locationId, currency, locale);
   return { data, meta: { source: 'altegio', locale } };
+}
+
+export async function getCatalogStaffServices(locale: CatalogLocale, staffId: number) {
+  const { locationId, currency } = getAltegioConfig();
+  const { services } = await getCachedServices(locationId, currency, locale, staffId);
+  return services;
 }

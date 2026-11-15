@@ -1,10 +1,74 @@
 'use client';
 /** Nearest free slots of a specialist (computed in the browser: the static build must not freeze «today»). */
 import { useEffect, useState } from 'react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { getDates, getTimes } from '@/lib/api';
 import type { Slot } from '@/lib/api/types';
 import { BookingLink } from '@/components/booking/BookingLink';
+import { Button } from '@/components/ui/Button';
+
+type StaffSlotsState = { status: 'loading' } | { status: 'ready'; times: Slot[] }
+  | { status: 'error'; rateLimited: boolean; waiting: boolean };
+
+function retryDelay(header: string | null) {
+  if (header === null) return 60_000;
+  const ms = /^\d+$/.test(header) ? Number(header) * 1000 : Date.parse(header) - Date.now();
+  return Number.isFinite(ms) ? Math.max(0, Math.min(ms, 3_600_000)) : 60_000;
+}
+
+export function StaffTodaySlots({ staffId }: { staffId: number }) {
+  const locale = useLocale();
+  const t = useTranslations();
+  const f = useFormatter();
+  const [state, setState] = useState<StaffSlotsState>({ status: 'loading' });
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let unlock: ReturnType<typeof setTimeout> | undefined;
+    async function load() {
+      try {
+        const query = new URLSearchParams({ staffId: String(staffId), locale });
+        const response = await fetch(`/api/booking/staff-today?${query}`, { signal: controller.signal, cache: 'no-store' });
+        if (controller.signal.aborted) return;
+        if (response.status === 429) {
+          const wait = retryDelay(response.headers.get('Retry-After'));
+          setState({ status: 'error', rateLimited: true, waiting: wait > 0 });
+          if (wait > 0) unlock = setTimeout(() => setState({ status: 'error', rateLimited: true, waiting: false }), wait);
+          return;
+        }
+        if (!response.ok) throw new Error('Staff availability is unavailable');
+        const { data: { times } } = await response.json() as { data: { times: Slot[] } };
+        if (!controller.signal.aborted) setState({ status: 'ready', times });
+      } catch {
+        if (!controller.signal.aborted) setState({ status: 'error', rateLimited: false, waiting: false });
+      }
+    }
+    void load();
+    return () => { controller.abort(); clearTimeout(unlock); };
+  }, [attempt, locale, staffId]);
+
+  if (state.status === 'loading') return <p className="booking-loading" role="status">{t('a11y.loading')}</p>;
+  if (state.status === 'error') return (
+    <div>
+      <p role="alert">{state.rateLimited ? t('team.profile.slots.rateLimited') : t('team.profile.slots.error')}</p>
+      <Button variant="secondary" size="sm" disabled={state.waiting} onClick={() => {
+        setState({ status: 'loading' });
+        setAttempt((last) => last + 1);
+      }}>{t('common.actions.retry')}</Button>
+    </div>
+  );
+  if (!state.times.length) return <p role="status">{t('team.profile.slots.empty')}</p>;
+  return (
+    <ul>{state.times.map((slot) => (
+      <li key={slot.datetime}>
+        <time dateTime={slot.datetime}>
+          {f.dateTime(new Date(slot.datetime), { day: 'numeric', month: 'long', timeZone: 'Asia/Dubai' })}, {t('common.timeWithZone', { time: slot.time })}
+        </time>
+      </li>
+    ))}</ul>
+  );
+}
 
 export function NearestSlots({ staffId }: { staffId: number }) {
   const t = useTranslations();

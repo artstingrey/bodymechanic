@@ -880,6 +880,13 @@
       "certificates": "Certificates",
       "languages": "Languages",
       "nearestSlots": "Next available times",
+      "unavailableTitle": "Profile temporarily unavailable",
+      "unavailable": "We couldn’t load the specialist’s profile. Please try again.",
+      "slots": {
+        "empty": "No available times today",
+        "error": "We couldn’t load the available times.",
+        "rateLimited": "Too many requests. Please try again shortly."
+      },
       "reviews": "Reviews",
       "back": "All specialists"
     },
@@ -1312,6 +1319,10 @@
       "description": "{name}, {position} at The Body Mechanic in Dubai. Next available times and online booking.",
       "ogTitle": "{name} · The Body Mechanic",
       "ogDescription": "{position}. Book online for the next available time."
+    },
+    "staffProfile": {
+      "title": "{title} · The Body Mechanic",
+      "ogTitle": "{title} · The Body Mechanic"
     },
     "account": {
       "title": "My bookings · The Body Mechanic",

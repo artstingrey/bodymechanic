@@ -14,6 +14,7 @@ export class AltegioError extends Error {
     kind: keyof typeof failures,
     readonly retryAfter?: string,
     readonly upstreamRetryAfter?: string,
+    readonly upstreamStatus?: number,
   ) {
     super(failures[kind].message);
     this.name = 'AltegioError';

@@ -10,6 +10,13 @@ const dubaiTime = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Asia/Dubai', hourCycle: 'h23', hour: '2-digit', minute: '2-digit',
 });
 
+function bookingSlot(slot: unknown) {
+  const datetime = isRecord(slot) ? slot.datetime : null;
+  const instant = parseBookingDatetime(datetime);
+  if (typeof datetime !== 'string' || !instant) throw new AltegioError('invalidResponse');
+  return { datetime, instant };
+}
+
 export function isBookingDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith('0000')) return false;
   const date = new Date(value);
@@ -37,18 +44,29 @@ export async function getBookingDates(locale: CatalogLocale, serviceId: number, 
   return [...new Set<string>(data.booking_dates)].sort();
 }
 
-export async function getBookingTimes(locale: CatalogLocale, serviceId: number, staffId: number, date: string) {
+export async function getBookingTimes(locale: CatalogLocale, serviceId: number, staffId: number, date: string,
+  { ignoreOtherDates = false } = {}) {
   const { locationId } = getAltegioConfig();
   const query = new URLSearchParams({ 'service_ids[]': String(serviceId) });
   const data = await altegioGet('book_times', `book_times/${locationId}/${staffId}/${date}?${query}`, bookingLanguages[locale]);
   if (!Array.isArray(data)) throw new AltegioError('invalidResponse');
 
-  return data.map((slot: unknown) => {
-    const datetime = isRecord(slot) ? slot.datetime : null;
-    const instant = parseBookingDatetime(datetime);
-    if (typeof datetime !== 'string' || !instant || dubaiBookingDate(instant) !== date) {
+  return data.flatMap((slot: unknown) => {
+    const { datetime, instant } = bookingSlot(slot);
+    if (dubaiBookingDate(instant) !== date) {
+      if (ignoreOtherDates) return [];
       throw new AltegioError('invalidResponse');
     }
+    return [{ datetime, time: dubaiTime.format(instant) }];
+  });
+}
+
+export async function getNearestStaffTimes(locale: CatalogLocale, staffId: number) {
+  const { locationId } = getAltegioConfig();
+  const data = await altegioGet('book_staff_seances', `book_staff_seances/${locationId}/${staffId}`, bookingLanguages[locale]);
+  if (!isRecord(data) || !Array.isArray(data.seances)) throw new AltegioError('invalidResponse');
+  return data.seances.map((slot: unknown) => {
+    const { datetime, instant } = bookingSlot(slot);
     return { datetime, time: dubaiTime.format(instant) };
   });
 }

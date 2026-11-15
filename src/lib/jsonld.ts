@@ -5,7 +5,7 @@
  * (MedicalBusiness / MedicalClinic / Physiotherapy / MedicalOrganization are banned, as are the forbidden words of the deck).
  */
 import type { Locale } from '../i18n/routing';
-import type { JournalArticle, Service, Staff } from './api/types';
+import type { JournalArticle, Service } from './api/types';
 import { STUDIO } from './config';
 import { pageUrl, SITE_URL } from './site';
 
@@ -81,18 +81,23 @@ export function catalogServiceJsonLd(locale: Locale, s: PublicServiceLd, brand: 
   };
 }
 
-/**
- * DECISION (lead allowed either way): no Person for the demo cards «Специалист студии N» — structured data about a person
- * that does not exist would mislead search engines. The builder is ready for real staff (Altegio + CMS «staff»):
- * `placeholder: false` → Person is emitted.
- */
-export function personJsonLd(locale: Locale, s: Staff, brand: string): Node | null {
+export interface PublicStaffLd {
+  slug: string;
+  name: string;
+  position?: string | null;
+  specialization?: string | null;
+  avatarUrl?: string | null;
+  placeholder?: boolean;
+}
+
+export function personJsonLd(locale: Locale, s: PublicStaffLd, brand: string): Node | null {
   if (s.placeholder) return null;
   return {
     '@context': CTX,
     '@type': 'Person',
     name: s.name,
-    jobTitle: s.position,
+    ...(s.position ? { jobTitle: s.position } : {}),
+    ...(s.specialization ? { knowsAbout: s.specialization } : {}),
     url: pageUrl(locale, `/team/${s.slug}`),
     ...(s.avatarUrl ? { image: s.avatarUrl.startsWith('http') ? s.avatarUrl : `${SITE_URL}${s.avatarUrl}` } : {}),
     worksFor: businessRef(locale, brand),
