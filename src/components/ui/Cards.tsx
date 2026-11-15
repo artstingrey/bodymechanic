@@ -13,7 +13,7 @@ export type CardTone = 'lav' | 'sand' | 'sky';
  * the photo never moves inside its mask (no parallax, README п.15).
  */
 export function ServiceCard({ href, index, title, description, price, duration, priceLabel, durationLabel, tone = 'sand', photo, photoCaption, linkLabel, badge, titleAs: H = 'h3' }: {
-  index?: number; title: string; description?: string; price: ReactNode; duration?: ReactNode; priceLabel: string; durationLabel: string;
+  index?: number; title: string; description?: string; price?: ReactNode; duration?: ReactNode; priceLabel?: string; durationLabel?: string;
   tone?: CardTone; photo?: ReactNode; photoCaption?: string; badge?: ReactNode; titleAs?: 'h2' | 'h3';
 } & ({ href: Href; linkLabel: string } | { href?: undefined; linkLabel?: never })) {
   // the arrow sits in the photo's top-right corner, so the title takes the card's full width (design audit F10: «Спортивный /
@@ -40,10 +40,12 @@ export function ServiceCard({ href, index, title, description, price, duration, 
         </div>
         {badge}
         {description ? <p className="d">{description}</p> : null}
-        <dl className="data">
-          <div><dt>{priceLabel}</dt><dd>{price}</dd></div>
-          {duration ? <div><dt>{durationLabel}</dt><dd>{duration}</dd></div> : null}
-        </dl>
+        {priceLabel || duration ? (
+          <dl className="data">
+            {priceLabel ? <div><dt>{priceLabel}</dt><dd>{price}</dd></div> : null}
+            {duration ? <div><dt>{durationLabel}</dt><dd>{duration}</dd></div> : null}
+          </dl>
+        ) : null}
       </div>
     </article>
   );

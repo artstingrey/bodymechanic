@@ -17,6 +17,7 @@
     "test:home-services": "node scripts/check-home-services.mjs",
     "test:home-team": "node scripts/check-home-team.mjs",
     "test:service-details": "node scripts/check-service-details.mjs",
+    "test:services-list": "node scripts/check-services-list.mjs",
     "test:service-staff": "node scripts/check-service-staff.mjs",
     "test:staff-profile": "node scripts/check-staff-profile.mjs",
     "test:booking-services": "node scripts/check-booking-services.mjs",

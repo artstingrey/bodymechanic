@@ -15,8 +15,8 @@ type Href = Parameters<typeof Link>[0]['href'];
  * terms, account pages) passes `up` too, so phones show «← Главная» on one line everywhere — «Главная / Политика
  * конфиденциальности» took two lines on 320. From 600 px, and on second-level pages without `up` (article), the full trail.
  */
-export async function PageHead({ crumbs = [], eyebrow, title, lead, children, split = true, up = false }: {
-  crumbs?: { href?: Href; label: string }[]; eyebrow?: ReactNode; title: string; lead?: ReactNode; children?: ReactNode; split?: boolean; up?: boolean;
+export async function PageHead({ crumbs = [], eyebrow, title, titleId, lead, children, split = true, up = false }: {
+  crumbs?: { href?: Href; label: string }[]; eyebrow?: ReactNode; title: string; titleId?: string; lead?: ReactNode; children?: ReactNode; split?: boolean; up?: boolean;
 }) {
   const t = await getTranslations();
   // a section page without explicit crumbs is «Главная / <title>» — the current page is the last item (aria-current), the
@@ -43,7 +43,7 @@ export async function PageHead({ crumbs = [], eyebrow, title, lead, children, sp
       {eyebrow ? <p className="lbl-u eyebrow">{eyebrow}</p> : null}
       {/* data-long: titles over 32 characters (lead, F11) — a service H1 drops to 26 px on phones (pages.css); --tail: the
           last-line unit in em, the size goes lower still where 26 px would hang the last word (320–359 px, RC-2) */}
-      <h1 className="h1" data-split={split ? '' : undefined} data-long={long ? '' : undefined} data-word={word ? '' : undefined} style={tail || word ? (vars as CSSProperties) : undefined}>{noWidow(title, 14)}</h1>
+      <h1 id={titleId} tabIndex={titleId ? -1 : undefined} className="h1" data-split={split ? '' : undefined} data-long={long ? '' : undefined} data-word={word ? '' : undefined} style={tail || word ? (vars as CSSProperties) : undefined}>{noWidow(title, 14)}</h1>
       {lead ? <p className="lead">{lead}</p> : null}
       {children}
     </header>

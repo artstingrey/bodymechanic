@@ -187,12 +187,29 @@ globalThis.fetch = async (input, init) => {
     { id: 13982355, title: 'Спортивный массаж' },
     { id: 91206, title: 'Новая услуга', comment: 'Описание новой услуги из каталога.' },
   ] } });
-  if (scenario === 'home-slow') {
+  if (scenario === 'home-slow' || scenario === 'catalog-list-slow') {
     const release = `${scenarioFile}.release`;
     while (!(await fs.stat(release).catch(() => null))) {
       const signal = init?.signal ?? input.signal;
       await delay(30, undefined, { signal });
     }
+  }
+  if (scenario === 'catalog-list-slow') {
+    assert.equal(staff, false);
+    const ru = language === 'ru-RU';
+    return Response.json({ success: true, data: {
+      category: [
+        { id: 30, title: ru ? 'Массаж' : 'Massage' },
+        { id: 20, title: ru ? 'Пустая категория' : 'Empty category' },
+        { id: 10, title: ru ? 'Восстановление' : 'Recovery' },
+      ],
+      services: [
+        { id: 93004, title: ru ? 'Первый массаж' : 'First massage', category_id: 30 },
+        { id: 93003, title: ru ? 'Без категории' : 'Uncategorized' },
+        { id: 93002, title: ru ? 'Второй массаж' : 'Second massage', category_id: 30 },
+        { id: 93001, title: ru ? 'Исчезнувшая категория' : 'Missing category', category_id: 99 },
+      ],
+    } });
   }
   if (staff) {
     const profiles = [
