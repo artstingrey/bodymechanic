@@ -14,13 +14,14 @@ const cacheFiles = new Set();
 const names = ['Александра с очень длинным именем для проверки переноса строк', 'Taylor Example',
   'Sam Example', 'Robin Example', 'Casey Example', 'Jamie Example'];
 const ids = [91216, 91214, 91212, 91211, 91213, 91215];
+const portraitUrl = 'https://images.example.test/portrait.webp';
 const locales = {
   ru: { lang: 'ru-RU', title: 'Команда', loading: 'Загружаем команду…', retry: 'Повторить',
     error: 'Не удалось загрузить команду.', empty: 'Профили специалистов пока не опубликованы.',
-    photoUnavailable: 'Фото недоступно', specialization: 'Восстановительный массаж' },
+    photoUnavailable: 'Фото недоступно', specialization: 'Восстановительный массаж', back: 'Все специалисты' },
   en: { lang: 'en-US', title: 'Team', loading: 'Loading the team…', retry: 'Try again',
     error: 'We couldn’t load the team.', empty: 'No specialist profiles are currently listed.',
-    photoUnavailable: 'Photo unavailable', specialization: 'Recovery massage' },
+    photoUnavailable: 'Photo unavailable', specialization: 'Recovery massage', back: 'All specialists' },
 };
 
 function run(check) {
@@ -55,7 +56,23 @@ try {
   await page.route('**/api/booking/staff-today?*', (route) => route.fulfill({ json: { data: { times: [] } } }));
   const grid = page.locator('main .card-grid.card-grid--4');
   const cards = grid.locator(':scope > li > .staff');
+  const links = cards.locator('b a');
   const status = page.locator('main [role="status"]');
+
+  async function expectProfile(origin, locale) {
+    const pathname = `/${locale}/team/staff-${ids[0]}/`;
+    await expect(page).toHaveURL(origin + pathname);
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page.getByRole('heading', { level: 1, name: names[0] })).toBeVisible();
+    await expect(page.locator('.profile__photo img')).toHaveAttribute('src', portraitUrl);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', new RegExp(`${pathname}$`));
+  }
+
+  async function switchLanguage(locale, pathname) {
+    const switcher = page.locator(`header a[hreflang="${locale}"]`).first();
+    await expect(switcher).toHaveAttribute('href', pathname);
+    await switcher.click();
+  }
 
   await fs.writeFile(scenario, 'home-slow');
   await run(async (origin) => {
@@ -89,7 +106,6 @@ try {
       await expect(retry).toHaveAttribute('aria-disabled', 'true');
       const brokenResponse = page.waitForResponse('https://images.example.test/broken.webp');
       await fs.writeFile(release, '');
-      const links = cards.locator('b a');
       await expect(links).toHaveText(names);
       await expect(heading).toBeFocused();
       await expect(page.locator('main .page-head .badge')).toHaveCount(0);
@@ -101,7 +117,7 @@ try {
 
       const portrait = cards.first().getByRole('img', { name: names[0], exact: true });
       await portrait.scrollIntoViewIfNeeded();
-      await expect(portrait).toHaveAttribute('src', 'https://images.example.test/portrait.webp');
+      await expect(portrait).toHaveAttribute('src', portraitUrl);
       await expect.poll(() => portrait.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
       await cards.nth(1).scrollIntoViewIfNeeded();
       assert.equal((await brokenResponse).status(), 404);
@@ -124,10 +140,25 @@ try {
       assert.deepEqual((await api.json()).data.staff.map(({ name }) => name), names);
 
       await links.first().click();
-      await expect(page).toHaveURL(`${origin}/${locale}/team/staff-${ids[0]}/`);
-      await expect(page.getByRole('heading', { level: 1, name: names[0] })).toBeVisible();
-      await expect(page.locator('.profile__photo img')).toHaveAttribute('src', 'https://images.example.test/portrait.webp');
+      await expectProfile(origin, locale);
+      const back = page.locator('.profile').getByRole('link', { name: copy.back, exact: true });
+      await expect(back).toHaveAttribute('href', `/${locale}/team/`);
+      await back.click();
+      await expect(page).toHaveURL(`${origin}/${locale}/team/`);
+      await expect(links).toHaveText(names);
     }
+
+    await switchLanguage('ru', '/ru/team/');
+    await expect(page).toHaveURL(`${origin}/ru/team/`);
+    await expect(page.getByRole('heading', { level: 1, name: locales.ru.title })).toBeVisible();
+    await expect(links.first()).toHaveAttribute('href', `/ru/team/staff-${ids[0]}/`);
+    await links.first().click();
+    await expectProfile(origin, 'ru');
+    for (const locale of ['en', 'ru']) {
+      await switchLanguage(locale, `/${locale}/team/staff-${ids[0]}/`);
+      await expectProfile(origin, locale);
+    }
+
     assert.deepEqual(logs().match(/\[staff-fixture\] [^\r\n]+/g), Object.values(locales).flatMap(({ lang }) => [
       `[staff-fixture] 500 ${lang}`, `[staff-fixture] team-list-slow ${lang}`,
     ]));
@@ -144,7 +175,7 @@ try {
   });
 
   assert.deepEqual(unexpected, []);
-  console.log('Team list: RU/EN, states, publication order, cache, grid, notes, photos and profile links: OK');
+  console.log('Team list: RU/EN, catalog states, cards, canonical profile round trips and language switching: OK');
 } finally {
   await browser?.close();
   await Promise.all([...cacheFiles].map((file) => fs.rm(path.join('.next/cache/fetch-cache', file), { force: true })));
