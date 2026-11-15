@@ -187,7 +187,7 @@ globalThis.fetch = async (input, init) => {
     { id: 13982355, title: 'Спортивный массаж' },
     { id: 91206, title: 'Новая услуга', comment: 'Описание новой услуги из каталога.' },
   ] } });
-  if (scenario === 'home-slow' || scenario === 'catalog-list-slow') {
+  if (['home-slow', 'catalog-list-slow', 'team-list-slow'].includes(scenario)) {
     const release = `${scenarioFile}.release`;
     while (!(await fs.stat(release).catch(() => null))) {
       const signal = init?.signal ?? input.signal;
@@ -222,7 +222,8 @@ globalThis.fetch = async (input, init) => {
         api_id: 'fixture raw upstream detail', user_id: 123, seances: [{ time: 'fixture raw upstream detail' }] },
       { id: 91214, name: 'Taylor Example', position: { title: ' Therapist ' },
         avatar_big: 'https://app.alteg.io/images/no-master.png', avatar: 'https://images.example.test/broken.webp' },
-      { id: 91212, name: 'Sam Example', specialization: ' ', position: [],
+      { id: 91212, name: 'Sam Example', specialization: scenario === 'team-list-slow'
+        ? (language === 'ru-RU' ? 'Восстановительный массаж' : 'Recovery massage') : ' ', position: [],
         avatar_big: 'https://user:password@images.example.test/portrait.webp', avatar: '/relative.webp' },
       { id: 91211, name: 'Robin Example', position: {}, avatar: 'https://app.alteg.io/images/no-master.png' },
       { id: 91213, name: 'Casey Example', avatar: 'https://images.example.test/no-master.png' },
@@ -240,7 +241,7 @@ globalThis.fetch = async (input, init) => {
       'duplicate-id': profiles[0],
     };
     if (Object.hasOwn(invalid, scenario)) return Response.json({ success: true, data: [profiles[0], invalid[scenario]] });
-    assert.ok(['success', 'home-slow', 'home-single'].includes(scenario), scenario);
+    assert.ok(['success', 'home-slow', 'home-single', 'team-list-slow'].includes(scenario), scenario);
     return Response.json({ success: true, data: scenario === 'home-single' ? profiles.slice(0, 1) : profiles });
   }
   if (scenario === 'home' || scenario === 'home-slow' || scenario === 'home-single') {

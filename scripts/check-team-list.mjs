@@ -13,11 +13,14 @@ const release = `${scenario}.release`;
 const cacheFiles = new Set();
 const names = ['Александра с очень длинным именем для проверки переноса строк', 'Taylor Example',
   'Sam Example', 'Robin Example', 'Casey Example', 'Jamie Example'];
+const ids = [91216, 91214, 91212, 91211, 91213, 91215];
 const locales = {
   ru: { lang: 'ru-RU', title: 'Команда', loading: 'Загружаем команду…', retry: 'Повторить',
-    error: 'Не удалось загрузить команду.', empty: 'Профили специалистов пока не опубликованы.' },
+    error: 'Не удалось загрузить команду.', empty: 'Профили специалистов пока не опубликованы.',
+    photoUnavailable: 'Фото недоступно', specialization: 'Восстановительный массаж' },
   en: { lang: 'en-US', title: 'Team', loading: 'Loading the team…', retry: 'Try again',
-    error: 'We couldn’t load the team.', empty: 'No specialist profiles are currently listed.' },
+    error: 'We couldn’t load the team.', empty: 'No specialist profiles are currently listed.',
+    photoUnavailable: 'Photo unavailable', specialization: 'Recovery massage' },
 };
 
 function run(check) {
@@ -37,7 +40,7 @@ function run(check) {
 let browser;
 try {
   browser = await chromium.launch({ channel: 'chrome' });
-  const page = await browser.newPage();
+  const page = await browser.newPage({ reducedMotion: 'reduce' });
   await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({
     necessary: true, analytics: false, marketing: false, at: 'gate',
   })));
@@ -47,7 +50,11 @@ try {
     if (url.hostname === 'api.alteg.io' || url.pathname.startsWith('/api/catalog/')) unexpected.push(request.url());
   });
   page.on('pageerror', (error) => unexpected.push(error.message));
-  const cards = page.locator('main .card-grid.card-grid--4 > li > .staff');
+  await page.route('https://images.example.test/**', (route) => route.request().url().endsWith('/broken.webp')
+    ? route.fulfill({ status: 404 }) : route.fulfill({ path: 'public/photos/services/sports-640.webp' }));
+  await page.route('**/api/booking/staff-today?*', (route) => route.fulfill({ json: { data: { times: [] } } }));
+  const grid = page.locator('main .card-grid.card-grid--4');
+  const cards = grid.locator(':scope > li > .staff');
   const status = page.locator('main [role="status"]');
 
   await fs.writeFile(scenario, 'home-slow');
@@ -65,7 +72,7 @@ try {
     for (const [locale, copy] of Object.entries(locales)) {
       await fs.rm(release, { force: true });
       await fs.writeFile(scenario, '500');
-      await page.setViewportSize({ width: locale === 'ru' ? 390 : 1280, height: 850 });
+      await page.setViewportSize({ width: 320, height: 850 });
       const response = await page.goto(`${origin}/${locale}/team/`);
       assert.equal(response.status(), 200);
       assert.doesNotMatch(await response.text(), /fixture-partner-token|fixture raw upstream detail/);
@@ -75,23 +82,54 @@ try {
       await expect(cards).toHaveCount(0);
 
       const retry = page.getByRole('button', { name: copy.retry });
-      await fs.writeFile(scenario, 'home-slow');
+      await fs.writeFile(scenario, 'team-list-slow');
       await retry.press('Enter');
       await expect(status).toHaveText(copy.loading);
       await expect(heading).toBeVisible();
       await expect(retry).toHaveAttribute('aria-disabled', 'true');
+      const brokenResponse = page.waitForResponse('https://images.example.test/broken.webp');
       await fs.writeFile(release, '');
-      await expect(cards.locator('b')).toHaveText(names);
+      const links = cards.locator('b a');
+      await expect(links).toHaveText(names);
       await expect(heading).toBeFocused();
-      await expect(cards.locator('a')).toHaveCount(0);
+      await expect(page.locator('main .page-head .badge')).toHaveCount(0);
+      for (const [index, id] of ids.entries()) {
+        await expect(links.nth(index)).toHaveAttribute('href', `/${locale}/team/staff-${id}/`);
+      }
+      await expect(cards.locator('.cap')).toHaveText(['Job title', 'Therapist', copy.specialization]);
+      await expect(cards.nth(3).locator('.cap')).toHaveCount(0);
+
+      const portrait = cards.first().getByRole('img', { name: names[0], exact: true });
+      await portrait.scrollIntoViewIfNeeded();
+      await expect(portrait).toHaveAttribute('src', 'https://images.example.test/portrait.webp');
+      await expect.poll(() => portrait.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+      await cards.nth(1).scrollIntoViewIfNeeded();
+      assert.equal((await brokenResponse).status(), 404);
+      await expect(cards.nth(1).getByRole('img', { name: copy.photoUnavailable })).toBeVisible();
+      await expect(cards.nth(3).getByRole('img', { name: copy.photoUnavailable })).toBeVisible();
+
+      for (const [width, columns] of [[320, 1], [1280, 4]]) {
+        await page.setViewportSize({ width, height: 850 });
+        await expect.poll(() => grid.evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(columns);
+        assert.ok(await links.first().evaluate((link) => {
+          const name = link.parentElement;
+          const card = link.closest('article').getBoundingClientRect();
+          return name.scrollWidth <= name.clientWidth && card.left >= 0 && card.right <= window.innerWidth;
+        }), `long name and card should fit at ${width}px (${locale})`);
+      }
 
       // Same cache entry serves the page and the public API without a third upstream request.
       const api = await fetch(`${origin}/api/catalog/staff?locale=${locale}`);
       assert.equal(api.status, 200);
       assert.deepEqual((await api.json()).data.staff.map(({ name }) => name), names);
+
+      await links.first().click();
+      await expect(page).toHaveURL(`${origin}/${locale}/team/staff-${ids[0]}/`);
+      await expect(page.getByRole('heading', { level: 1, name: names[0] })).toBeVisible();
+      await expect(page.locator('.profile__photo img')).toHaveAttribute('src', 'https://images.example.test/portrait.webp');
     }
     assert.deepEqual(logs().match(/\[staff-fixture\] [^\r\n]+/g), Object.values(locales).flatMap(({ lang }) => [
-      `[staff-fixture] 500 ${lang}`, `[staff-fixture] home-slow ${lang}`,
+      `[staff-fixture] 500 ${lang}`, `[staff-fixture] team-list-slow ${lang}`,
     ]));
   });
 
@@ -106,7 +144,7 @@ try {
   });
 
   assert.deepEqual(unexpected, []);
-  console.log('Team list: RU/EN, publication order, shared cache, loading, empty, error and retry: OK');
+  console.log('Team list: RU/EN, states, publication order, cache, grid, notes, photos and profile links: OK');
 } finally {
   await browser?.close();
   await Promise.all([...cacheFiles].map((file) => fs.rm(path.join('.next/cache/fetch-cache', file), { force: true })));

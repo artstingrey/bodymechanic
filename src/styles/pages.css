@@ -33,6 +33,7 @@
 @media (min-width: 768px) { .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; } }
 @media (min-width: 1024px) { .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } .card-grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (min-width: 2560px) { .card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .card-grid--4 { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.team-grid .staff { overflow-wrap: anywhere; }
 .link-list { margin: 0; padding: 0; list-style: none; display: grid; }
 .link-list li { border-top: 1px solid var(--line); }
 .link-list li:last-child { border-bottom: 1px solid var(--line); }
