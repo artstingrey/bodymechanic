@@ -16,6 +16,7 @@
     "test:catalog": "node scripts/check-catalog.mjs",
     "test:home-services": "node scripts/check-home-services.mjs",
     "test:home-team": "node scripts/check-home-team.mjs",
+    "test:team-list": "node scripts/check-team-list.mjs",
     "test:service-details": "node scripts/check-service-details.mjs",
     "test:services-list": "node scripts/check-services-list.mjs",
     "test:service-staff": "node scripts/check-service-staff.mjs",

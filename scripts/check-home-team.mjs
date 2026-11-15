@@ -347,13 +347,17 @@ try {
       await expect(block.locator('.staff')).toHaveCount(names.length);
     });
     assert.equal(staffCalls(logs).length, 1, 'cold API and Server Component should share one request');
-    for (const route of ['team/', 'team/specialist-1/', 'services/manual/', 'services/service-42/', 'lp/a/', 'lp/b/', 'booking/']) {
+    const team = await fetch(`${origin}/en/team/`);
+    assert.equal(team.status, 200);
+    const teamHtml = await team.text();
+    assert.ok(names.every((name) => teamHtml.includes(name)), 'team list should use the same catalog');
+    for (const route of ['team/specialist-1/', 'services/manual/', 'services/service-42/', 'lp/a/', 'lp/b/', 'booking/']) {
       const response = await fetch(`${origin}/en/${route}`);
       assert.equal(response.status, 200, route);
       const html = await response.text();
       assert.ok(names.every((name) => !html.includes(name)), route);
     }
-    assert.equal(staffCalls(logs).length, 1, 'other routes should not load staff');
+    assert.equal(staffCalls(logs).length, 1, 'the team list should reuse the cache and other routes should not load staff');
   });
   console.log('Staff cache: 14400 seconds, separate locales and resources, shared cold requests and stale recovery: OK');
 
