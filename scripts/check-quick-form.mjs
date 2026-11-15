@@ -70,14 +70,14 @@ try {
     const page = await browser.newPage();
     try {
       const form = page.locator('.qform');
-      const status = form.locator('#qf-services-status');
+      const status = form.locator('#qf-services-status:visible');
       await page.goto(`${origin}/en/`, { waitUntil: 'commit' });
       await expect(page.locator('#hero-title')).toBeVisible();
       await expect(status).toHaveText(messages.en.home.form.availability.services.loading);
       await expect(form.locator('select')).toHaveCount(4);
       await form.locator('#qf-name').fill('During catalog load');
       await fs.writeFile(release, '');
-      await expect(form.locator('#qf-service')).toBeEnabled();
+      await expect(form.locator('#qf-service:visible')).toBeEnabled();
       await expect(form.locator('#qf-name')).toHaveValue('During catalog load');
     } finally {
       await page.close();
@@ -90,12 +90,12 @@ try {
     try {
       await page.goto(`${origin}/en/`);
       const form = page.locator('.qform');
-      await expect(form.locator('#qf-services-status')).toHaveText(messages.en.home.form.availability.services.error);
-      await expect(form.locator('#qf-service option')).toHaveCount(1);
+      await expect(form.locator('#qf-services-status:visible')).toHaveText(messages.en.home.form.availability.services.error);
+      await expect(form.locator('#qf-service:visible option')).toHaveCount(1);
       await form.locator('#qf-email').fill('contact@example.test');
       await fs.writeFile(catalog, 'service-detail');
       await form.getByRole('button', { name: messages.en.home.form.retry }).click();
-      await expect(form.locator('#qf-service')).toBeEnabled();
+      await expect(form.locator('#qf-service:visible')).toBeEnabled();
       await expect(form.locator('#qf-email')).toHaveValue('contact@example.test');
     } finally {
       await page.close();
@@ -107,9 +107,10 @@ try {
     const page = await browser.newPage();
     try {
       await page.goto(`${origin}/ru/`);
-      await expect(page.locator('#qf-services-status')).toHaveText(messages.ru.home.form.availability.services.empty);
-      await expect(page.locator('#qf-service')).toBeDisabled();
-      await expect(page.locator('#qf-service option')).toHaveCount(1);
+      // Suspense can temporarily keep streamed content in a hidden container.
+      await expect(page.locator('#qf-services-status:visible')).toHaveText(messages.ru.home.form.availability.services.empty);
+      await expect(page.locator('#qf-service:visible')).toBeDisabled();
+      await expect(page.locator('#qf-service:visible option')).toHaveCount(1);
     } finally {
       await page.close();
     }
@@ -129,10 +130,10 @@ try {
         if (url.pathname.startsWith('/api/booking/') || url.hostname === 'api.alteg.io') requests.push([request.method(), url]);
       });
       const form = page.locator('.qform');
-      const service = form.locator('#qf-service');
-      const specialist = form.locator('#qf-staff');
-      const date = form.locator('#qf-date');
-      const time = form.locator('#qf-time');
+      const service = form.locator('#qf-service:visible');
+      const specialist = form.locator('#qf-staff:visible');
+      const date = form.locator('#qf-date:visible');
+      const time = form.locator('#qf-time:visible');
       const status = (resource) => form.locator(`#qf-${resource}-status`);
       const retry = (resource) => form.locator(`button[aria-describedby="qf-${resource}-status"]`);
       try {

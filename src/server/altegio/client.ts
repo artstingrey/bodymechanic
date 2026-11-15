@@ -24,7 +24,8 @@ function retryAfter(value: string | null) {
 }
 
 /** path and operation are supplied by server code only. */
-export async function altegioGet(operation: string, path: string, language: string): Promise<unknown> {
+async function requestAltegio<T>(operation: string, path: string, language: string,
+  decode: (response: Response) => Promise<T>, body?: object): Promise<T> {
   const started = Date.now();
   let status: number | undefined;
   const signal = AbortSignal.timeout(TIMEOUT_MS);
@@ -32,6 +33,7 @@ export async function altegioGet(operation: string, path: string, language: stri
   try {
     const { partnerToken } = getAltegioConfig();
     const response = await fetch(`${API_BASE}${path}`, {
+      ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
       headers: {
         Accept: 'application/vnd.api.v2+json',
         'Accept-Language': language,
@@ -44,7 +46,7 @@ export async function altegioGet(operation: string, path: string, language: stri
     });
 
     status = response.status;
-    if (!response.ok) {
+    if (status === 429 || (!response.ok && (body === undefined || status >= 500))) {
       // Release the response stream without letting a cleanup failure mask the HTTP error.
       void response.body?.cancel().catch(() => {});
       const header = response.headers.get('Retry-After');
@@ -54,12 +56,7 @@ export async function altegioGet(operation: string, path: string, language: stri
       throw new AltegioError('unavailable', undefined, upstreamRetryAfter);
     }
 
-    const payload: unknown = await response.json();
-    if (!isRecord(payload) || payload.success !== true || !('data' in payload)) {
-      throw new AltegioError('invalidResponse');
-    }
-
-    return payload.data;
+    return await decode(response);
   } catch (cause) {
     const error = cause instanceof AltegioError ? cause : new AltegioError(
       signal.aborted ? 'timeout' : cause instanceof SyntaxError ? 'invalidResponse' : 'unavailable',
@@ -67,4 +64,30 @@ export async function altegioGet(operation: string, path: string, language: stri
     console.warn('[altegio]', { operation, status, durationMs: Date.now() - started, code: error.response.code });
     throw error;
   }
+}
+
+export function altegioGet(operation: string, path: string, language: string, allowBareRecord = false): Promise<unknown> {
+  return requestAltegio(operation, path, language, async (response) => {
+    const payload: unknown = await response.json();
+    if (allowBareRecord && isRecord(payload) && !('success' in payload)) return payload;
+    if (!isRecord(payload) || payload.success !== true || !('data' in payload)) {
+      throw new AltegioError('invalidResponse');
+    }
+    return payload.data;
+  });
+}
+
+export function altegioPost(operation: 'book_check' | 'book_record', locationId: number, language: string, body: object) {
+  return requestAltegio(operation, `${operation}/${locationId}`, language, async (response) => {
+    const text = await response.text();
+    let payload: unknown = null;
+    if (text.trim()) {
+      try {
+        payload = JSON.parse(text) as unknown;
+      } catch (error) {
+        if (response.ok) throw error;
+      }
+    }
+    return { status: response.status, payload, empty: !text.trim() };
+  }, body);
 }

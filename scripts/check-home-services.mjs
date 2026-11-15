@@ -186,6 +186,7 @@ try {
         await next.focus();
         await next.press('Enter');
         await expect.poll(() => track.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+        await expect(prev).toBeEnabled();
         await prev.press('Space');
         await expect.poll(() => track.evaluate((el) => el.scrollLeft)).toBe(0);
         if (width === 390) {

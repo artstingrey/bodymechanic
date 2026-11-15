@@ -16,6 +16,17 @@ export function isBookingDate(value: unknown): value is string {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
+export function parseBookingDatetime(value: unknown): Date | null {
+  if (typeof value !== 'string' || !isBookingDate(value.slice(0, 10)) ||
+    !/^T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(value.slice(10))) return null;
+  const instant = new Date(value);
+  return Number.isFinite(instant.getTime()) ? instant : null;
+}
+
+export function dubaiBookingDate(instant: Date) {
+  return dubaiDate.format(instant);
+}
+
 export async function getBookingDates(locale: CatalogLocale, serviceId: number, staffId: number) {
   const { locationId } = getAltegioConfig();
   const query = new URLSearchParams({ 'service_ids[]': String(serviceId), staff_id: String(staffId) });
@@ -34,12 +45,8 @@ export async function getBookingTimes(locale: CatalogLocale, serviceId: number, 
 
   return data.map((slot: unknown) => {
     const datetime = isRecord(slot) ? slot.datetime : null;
-    if (typeof datetime !== 'string' || !isBookingDate(datetime.slice(0, 10)) ||
-      !/^T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(datetime.slice(10))) {
-      throw new AltegioError('invalidResponse');
-    }
-    const instant = new Date(datetime);
-    if (!Number.isFinite(instant.getTime()) || dubaiDate.format(instant) !== date) {
+    const instant = parseBookingDatetime(datetime);
+    if (typeof datetime !== 'string' || !instant || dubaiBookingDate(instant) !== date) {
       throw new AltegioError('invalidResponse');
     }
     return { datetime, time: dubaiTime.format(instant) };
