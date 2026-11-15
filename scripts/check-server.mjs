@@ -11,10 +11,11 @@ export async function withProductionServer(check, { env = {}, preload, cwd = pro
   const { port } = socket.address();
   await new Promise((resolve, reject) => socket.close((error) => error ? reject(error) : resolve()));
   const origin = `http://127.0.0.1:${port}`;
+  const environment = typeof env === 'function' ? env(origin) : env;
   const child = spawn(process.execPath, [
     ...(preload ? ['--import', preload] : []),
     'node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '--port', String(port),
-  ], { cwd, env: { ...process.env, NODE_ENV: 'production', ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+  ], { cwd, env: { ...process.env, NODE_ENV: 'production', ...environment }, stdio: ['ignore', 'pipe', 'pipe'] });
   const exited = once(child, 'exit');
   let logs = '';
   child.stdout.on('data', (chunk) => { logs += chunk; });

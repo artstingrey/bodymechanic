@@ -469,6 +469,19 @@
       "timeLabel": "Time in Dubai",
       "timePlaceholder": "Choose a time",
       "submitUnavailable": "You can check availability here. Online booking through this form is temporarily unavailable.",
+      "contactStudio": "Contact the studio",
+      "feedback": {
+        "slotTaken": "That time is no longer available. Choose another time from the updated list.",
+        "staffUnavailable": "That specialist is no longer available for this booking. Choose a specialist and time again.",
+        "serviceUnavailable": "This service is no longer available for online booking. Choose another service.",
+        "prepayment": "This service requires prepayment. Contact the studio to book or choose another service.",
+        "sms": "This location requires SMS confirmation. Contact the studio to arrange your booking.",
+        "rateLimited": "Too many booking attempts. Please wait before trying again.",
+        "invalidFields": "Check the contact details and booking options, then try again.",
+        "unavailable": "We couldn’t accept your booking. Try again later.",
+        "unknown": "We couldn’t confirm whether your booking was created.",
+        "processing": "Your booking is still being processed."
+      },
       "retry": "Try again",
       "availability": {
         "services": { "loading": "Loading services…", "empty": "There are no services available for online booking.", "error": "We couldn’t load the services." },

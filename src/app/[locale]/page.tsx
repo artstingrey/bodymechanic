@@ -34,7 +34,7 @@ export default async function HomePage() {
   const title = t('home.hero.title');
   const [titleA, titleB] = splitTitle(title);
   return (
-    <ScopeMessages messages={await pickMessages(['body3d', 'home.hero', 'home.form', 'forms', 'booking.review'])}>
+    <ScopeMessages messages={await pickMessages(['body3d', 'home.hero', 'home.form', 'forms', 'booking.review', 'booking.done'])}>
     <>
       <PageLd kind="home" />
       {/* 1 Hero A «Анатомический атлас» (site/design/hifi/hifi-hero.html) */}

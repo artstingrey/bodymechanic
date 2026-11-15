@@ -308,6 +308,8 @@
 .qform__choice select { width: 100%; min-width: 0; }
 .qform__option-status:not(:empty) { margin: 6px 0; }
 .qform__option-status:empty { margin: 0; }
+.qform__receipt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 8px 16px; margin: 0; }
+.qform__receipt dd { margin: 0; overflow-wrap: anywhere; }
 
 /* ---------- RC-8: the approved home page (review/skill-bakeoff/variant-final.html), values shared components take only here ----------
    .svc, .staff, .review, .acc and .btn also live on other pages, which must not change: .home-sec = the home page's sections below the hero.

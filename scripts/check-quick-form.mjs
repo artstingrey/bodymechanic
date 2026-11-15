@@ -31,6 +31,7 @@ function run(check) {
       for (const [, key] of logs().matchAll(/\[catalog-cache-write\] ([\w-]+)/g)) cacheKeys.add(key);
     }
   }, { preload, env: {
+    BOOKING_QUICK_FORM_ENABLED: '',
     ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
     ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
     ALTEGIO_CURRENCY: 'AED',

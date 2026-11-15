@@ -21,6 +21,7 @@
     "test:booking-availability": "node scripts/check-booking-availability.mjs",
     "test:booking-record": "node scripts/check-booking-record.mjs",
     "test:quick-form": "node scripts/check-quick-form.mjs",
+    "test:quick-form-submit": "node scripts/check-quick-form-submit.mjs",
     "test:server": "node scripts/check-server.mjs",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",

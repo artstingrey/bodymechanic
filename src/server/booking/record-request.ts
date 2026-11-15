@@ -12,16 +12,20 @@ const MAX_BODY_BYTES = 4096;
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
 const uuidV4 = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
 
-export function requestSource(request: Request) {
-  const expectedOrigin = process.env.BOOKING_ORIGIN;
+export function requestSource(request: Request, expectedOrigin: string, localDevelopment: boolean) {
   const fetchSite = request.headers.get('sec-fetch-site');
-  if (!expectedOrigin || request.headers.get('origin') !== expectedOrigin ||
+  if (request.headers.get('origin') !== expectedOrigin ||
+    (localDevelopment && fetchSite !== 'same-origin') ||
     (fetchSite !== null && fetchSite !== 'same-origin')) return null;
   if (!URL.canParse(expectedOrigin)) return null;
   const origin = new URL(expectedOrigin);
   if (origin.origin !== expectedOrigin) return null;
   const local = loopback.has(origin.hostname) && loopback.has(new URL(request.url).hostname);
   if (!local && origin.protocol !== 'https:') return null;
+  if (localDevelopment) {
+    const peer = request.headers.get('x-forwarded-for');
+    return local && (peer === '127.0.0.1' || peer === '::1' || peer === '::ffff:127.0.0.1') ? '127.0.0.1' : null;
+  }
 
   // The configured ingress must overwrite this header with one address.
   const ipHeader = process.env.BOOKING_CLIENT_IP_HEADER;

@@ -1,5 +1,6 @@
 import { getAltegioConfig } from '@/server/config';
 import { createBookingRecord } from '@/server/booking/create-record';
+import { localBookingOrigin } from '@/server/booking/local-origin';
 import { parseRecordRequest, requestSource } from '@/server/booking/record-request';
 import { recordResponse, unavailable } from '@/server/booking/record-result';
 import { claimRecord } from '@/server/booking/record-store';
@@ -7,8 +8,10 @@ import { claimRecord } from '@/server/booking/record-store';
 export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  if (!process.env.BOOKING_ORIGIN) return recordResponse(unavailable, 'en');
-  const ip = requestSource(request);
+  const localOrigin = localBookingOrigin(request.headers.get('host'), new URL(request.url).protocol);
+  const origin = localOrigin ?? process.env.BOOKING_ORIGIN;
+  if (!origin) return recordResponse(unavailable, 'en');
+  const ip = requestSource(request, origin, Boolean(localOrigin));
   if (!ip) return recordResponse({ status: 403, code: 'INVALID_ORIGIN' }, 'en');
   const parsed = await parseRecordRequest(request);
   if ('error' in parsed) return recordResponse(parsed.error, parsed.locale ?? 'en');

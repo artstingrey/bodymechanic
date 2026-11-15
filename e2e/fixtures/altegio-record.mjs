@@ -45,8 +45,13 @@ globalThis.fetch = async (input, init) => {
     }
     if (resource === 'book_staff') {
       assert.deepEqual(rest, []);
-      assert.equal(url.search, '?service_ids%5B%5D=13982355');
+      assert.ok(url.search === '' || url.search === '?service_ids%5B%5D=13982355');
       return success([{ id: 91601, name: 'Example specialist', bookable: false }]);
+    }
+    if (resource === 'book_dates') {
+      assert.deepEqual(rest, []);
+      assert.match(url.search, /^\?service_ids%5B%5D=13982355&staff_id=(0|91601)$/);
+      return success({ booking_dates: [date] });
     }
     if (resource === 'book_times') {
       assert.equal(rest[1], date);

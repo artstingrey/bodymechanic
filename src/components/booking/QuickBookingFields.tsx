@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/Field';
 import { dubaiToday } from '@/lib/api/dubai';
 import type { CatalogLocale, CatalogService, CatalogStaffMember } from '@/lib/contracts/catalog';
+import { QuickFormContext, type AvailabilityConflict } from './quick-form-context';
 
 type Service = Pick<CatalogService, 'id' | 'title'>;
 type Options = {
@@ -22,6 +23,7 @@ function bookingUrl(resource: keyof Options, params: Record<string, string>) {
 
 function useBookingOptions<K extends keyof Options>(resource: K, url: string | null) {
   const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
   const request = useMemo(() => ({ url, attempt }), [url, attempt]);
   const [response, setResponse] = useState<{ request: typeof request; items: Options[K][] | null }>();
 
@@ -46,7 +48,7 @@ function useBookingOptions<K extends keyof Options>(resource: K, url: string | n
 
   const items = response?.request === request ? response.items : undefined;
   const status: Status = !url ? 'idle' : items === undefined ? 'loading' : items === null ? 'error' : items.length ? 'ready' : 'empty';
-  return { items: items ?? [], status, retry: () => setAttempt((value) => value + 1) };
+  return { items: items ?? [], status, retry };
 }
 
 function OptionStatus({ id, status, copy, retry, retryLabel, pending }: {
@@ -75,6 +77,7 @@ export function QuickBookingFields({ locale, services, loading = false }: {
   loading?: boolean;
 }) {
   const t = useTranslations();
+  const form = useContext(QuickFormContext);
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const restoreFocus = useRef(false);
@@ -88,6 +91,30 @@ export function QuickBookingFields({ locale, services, loading = false }: {
   const times = useBookingOptions('times', serviceId && dates.items.includes(date)
     ? bookingUrl('times', { serviceId, staffId, date, locale }) : null);
   const serviceStatus: Status = loading ? 'loading' : services === null ? 'error' : services.length ? 'ready' : 'empty';
+  const registerRefresh = form?.registerRefresh;
+  const { retry: retryStaff } = staff;
+  const { retry: retryDates } = dates;
+  const { retry: retryTimes } = times;
+
+  useEffect(() => {
+    if (!registerRefresh) return;
+    return registerRefresh((reason: AvailabilityConflict) => {
+      setDatetime('');
+      if (reason === 'SLOT_TAKEN') {
+        retryTimes();
+        return;
+      }
+      setDate('');
+      setStaffId('0');
+      if (reason === 'SERVICE_NOT_FOUND') {
+        setService('');
+        router.refresh();
+      } else {
+        retryStaff();
+        retryDates();
+      }
+    });
+  }, [registerRefresh, retryDates, retryStaff, retryTimes, router]);
 
   useEffect(() => {
     if (serviceStatus === 'ready' && restoreFocus.current) {
@@ -105,14 +132,24 @@ export function QuickBookingFields({ locale, services, loading = false }: {
     }} />
   );
   const resetDate = () => { setDate(''); setDatetime(''); };
+  const error = (id: string) => {
+    const code = form?.errors[id];
+    return code ? t(`forms.error.${code}`) : undefined;
+  };
+  const description = (id: string, resource: keyof Options | 'services') =>
+    `${error(id) ? `${id}-err ` : ''}qf-${resource}-status`;
+  const clearTime = () => {
+    form?.clearError('qf-date');
+    form?.clearError('qf-time');
+  };
 
   return (
     <>
       <div className="row2">
         <div className="qform__choice">
           <SelectField label={t('forms.field.service')} required name="service" id="qf-service" value={serviceId}
-            disabled={serviceStatus !== 'ready'} aria-describedby="qf-services-status"
-            onChange={(event) => { setService(event.target.value); setStaffId('0'); resetDate(); }}>
+            disabled={form?.locked || serviceStatus !== 'ready'} error={error('qf-service')} aria-describedby={description('qf-service', 'services')}
+            onChange={(event) => { setService(event.target.value); setStaffId('0'); resetDate(); form?.clearError('qf-service'); clearTime(); }}>
             <option value="">{t('forms.field.servicePlaceholder')}</option>
             {services?.map(({ id, title }) => <option key={id} value={id}>{title}</option>)}
           </SelectField>
@@ -127,8 +164,8 @@ export function QuickBookingFields({ locale, services, loading = false }: {
         </div>
         <div className="qform__choice">
           <SelectField label={t('forms.field.staff')} id="qf-staff" name="staff" value={staffId}
-            disabled={staff.status !== 'ready'} aria-describedby="qf-staff-status"
-            onChange={(event) => { setStaffId(event.target.value); resetDate(); }}>
+            disabled={form?.locked || staff.status !== 'ready'} aria-describedby="qf-staff-status"
+            onChange={(event) => { setStaffId(event.target.value); resetDate(); clearTime(); }}>
             <option value="0">{t('home.form.anyStaffOption')}</option>
             {staff.items.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
           </SelectField>
@@ -137,9 +174,9 @@ export function QuickBookingFields({ locale, services, loading = false }: {
       </div>
       <div className="row2">
         <div className="qform__choice">
-          <SelectField label={t('forms.field.datetime')} required id="qf-date" value={dates.items.includes(date) ? date : ''}
-            disabled={dates.status !== 'ready'} aria-describedby="qf-dates-status"
-            onChange={(event) => { setDate(event.target.value); setDatetime(''); }}>
+          <SelectField label={t('forms.field.datetime')} required id="qf-date" name="date" value={dates.items.includes(date) ? date : ''}
+            disabled={form?.locked || dates.status !== 'ready'} error={error('qf-date')} aria-describedby={description('qf-date', 'dates')}
+            onChange={(event) => { setDate(event.target.value); setDatetime(''); clearTime(); }}>
             <option value="">{t('forms.field.datetimePlaceholder')}</option>
             {dates.items.map((day) => <option key={day} value={day}>{day === dubaiToday() ? `${day} · ${t('common.dubaiTime')}` : day}</option>)}
           </SelectField>
@@ -148,8 +185,8 @@ export function QuickBookingFields({ locale, services, loading = false }: {
         <div className="qform__choice">
           <SelectField label={t('home.form.timeLabel')} hideLabel className="field--nolabel" name="datetime" required id="qf-time"
             value={times.items.some((slot) => slot.datetime === datetime) ? datetime : ''}
-            disabled={times.status !== 'ready'} aria-describedby="qf-times-status"
-            onChange={(event) => setDatetime(event.target.value)}>
+            disabled={form?.locked || times.status !== 'ready'} error={error('qf-time')} aria-describedby={description('qf-time', 'times')}
+            onChange={(event) => { setDatetime(event.target.value); form?.clearError('qf-time'); }}>
             <option value="">{t('home.form.timePlaceholder')}</option>
             {times.items.map((slot) => <option key={slot.datetime} value={slot.datetime}>{t('common.timeWithZone', { time: slot.time })}</option>)}
           </SelectField>
