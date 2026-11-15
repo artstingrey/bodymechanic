@@ -771,6 +771,7 @@
       "title": "Booking confirmed",
       "lead": "We look forward to seeing you. Your booking details are below.",
       "reference": "Booking reference",
+      "references": "Booking references",
       "date": "Date and time",
       "specialist": "Specialist",
       "address": "Address",

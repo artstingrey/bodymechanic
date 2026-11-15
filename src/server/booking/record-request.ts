@@ -8,7 +8,7 @@ import { isRecord } from '../altegio/client';
 import { parseBookingDatetime } from './availability';
 import type { RecordOutcome } from './record-result';
 
-const MAX_BODY_BYTES = 4096;
+const MAX_BODY_BYTES = 8192;
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
 const uuidV4 = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
 
@@ -79,9 +79,10 @@ export function validId(value: unknown, minimum = 1): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum;
 }
 
-function boundedText(value: unknown, max: number) {
+function boundedText(value: unknown, max: number, multiline = false) {
   return typeof value === 'string' && value.length <= max &&
-    !Array.from(value).some((character) => character < ' ' || character === '\x7f') ? value.trim() : '';
+    !Array.from(value).some((character) => character === '\x7f' || (character < ' ' &&
+      !(multiline && '\r\n\t'.includes(character)))) ? value.trim() : null;
 }
 
 export async function parseRecordRequest(request: Request): Promise<ParsedRequest> {
@@ -89,7 +90,7 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
   if ('error' in read) return read;
   if (!isRecord(read.value)) return { error: { status: 400, code: 'INVALID_BODY' } };
 
-  const { serviceId, staffId, datetime, locale, contact, consent, idempotencyKey } = read.value;
+  const { serviceId, staffId, datetime, locale, contact, consent, idempotencyKey, age } = read.value;
   const fields: BookingRecordField[] = [];
   const invalid = (): ParsedRequest => ({
     error: { status: 400, code: 'INVALID_FIELDS', fields }, locale: locale === 'ru' ? 'ru' : 'en',
@@ -105,12 +106,15 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
     fields.push('contact');
     return invalid();
   }
-  const fullname = boundedText(contact.fullname, 100);
-  const phone = boundedText(contact.phone, 32);
-  const email = boundedText(contact.email, 254);
+  const fullname = boundedText(contact.fullname, 100) ?? '';
+  const phone = boundedText(contact.phone, 32) ?? '';
+  const email = boundedText(contact.email, 254) ?? '';
+  const condition = read.value.condition === undefined ? '' : boundedText(read.value.condition, 1000, true);
   if (rules.name(fullname)) fields.push('fullname');
   if (rules.phone(phone)) fields.push('phone');
   if (!email || rules.email(email)) fields.push('email');
+  if (age !== undefined && (typeof age !== 'number' || rules.age(age))) fields.push('age');
+  if (condition === null) fields.push('condition');
   if (fields.length || !instant) return invalid();
 
   return { instant, data: {
@@ -119,6 +123,8 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
     datetime: datetime as string,
     locale: locale as CatalogLocale,
     contact: { fullname, phone: normalizePhone(phone), email },
+    ...(typeof age === 'number' ? { age } : {}),
+    ...(condition ? { condition: condition.replace(/\r\n?/g, '\n') } : {}),
     consent: true,
     idempotencyKey: (idempotencyKey as string).toLowerCase(),
   } };

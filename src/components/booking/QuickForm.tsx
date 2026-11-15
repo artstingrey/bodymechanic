@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, useSyncExternalStore, type ChangeEvent, type FocusEvent, type ReactNode, type SubmitEvent } from 'react';
+import { Fragment, useCallback, useRef, useState, useSyncExternalStore, type ChangeEvent, type FocusEvent, type ReactNode, type SubmitEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Badge } from '@/components/ui/Badge';
@@ -82,9 +82,13 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
       return;
     }
     const staffId = Number(str('staff'));
+    const email = str('email').trim();
+    const condition = str('condition').trim();
     const input: BookingRecordRequest = {
       serviceId, staffId, datetime, locale, consent: true, idempotencyKey,
-      contact: { fullname: str('name').trim(), phone: normalizePhone(str('phone')), email: str('email').trim() },
+      contact: { fullname: str('name').trim(), phone: normalizePhone(str('phone')), email },
+      ...(age.value ? { age: Number(age.value) } : {}),
+      ...(condition ? { condition } : {}),
     };
     const service = form.elements.namedItem('service') as HTMLSelectElement;
     const serviceTitle = service.selectedOptions[0]?.label ?? '';
@@ -113,17 +117,34 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
 
   if (created) {
     const { data, serviceTitle } = created;
-    const dateTime = new Intl.DateTimeFormat(locale, {
+    const format = new Intl.DateTimeFormat(locale, {
       timeZone: 'Asia/Dubai', dateStyle: 'long', timeStyle: 'short', hourCycle: 'h23',
-    }).format(new Date(data.datetime));
+    });
+    const dateTime = format.format(new Date(data.datetime));
     return (
       <div className="qform" role="status">
         <h3 className="h3">{t('booking.done.title')}</h3>
         <dl className="qform__receipt">
-          <dt>{t('booking.done.reference')}</dt><dd>{data.recordId}</dd>
+          <dt>{data.parts ? t('booking.done.references') : t('booking.done.reference')}</dt>
+          <dd>{data.parts ? data.parts.map(({ recordId }) => recordId).join(', ') : data.recordId}</dd>
           <dt>{labels['qf-service']}</dt><dd>{serviceTitle}</dd>
           <dt>{t('booking.done.date')}</dt><dd>{t('common.timeWithZone', { time: dateTime })}</dd>
-          {data.staff ? <><dt>{t('booking.done.specialist')}</dt><dd>{data.staff.name}</dd></> : null}
+          {data.staff && !data.parts ? <><dt>{t('booking.done.specialist')}</dt><dd>{data.staff.name}</dd></> : null}
+          {data.parts?.map((part) => {
+            const start = new Date(part.datetime);
+            const time = part.durationSeconds
+              ? format.formatRange(start, new Date(start.getTime() + part.durationSeconds * 1000))
+              : format.format(start);
+            return (
+              <Fragment key={part.recordId}>
+                <dt>{part.title}</dt>
+                <dd>
+                  {t('common.timeWithZone', { time })}
+                  {part.staff ? <div>{part.staff.name}</div> : null}
+                </dd>
+              </Fragment>
+            );
+          })}
         </dl>
       </div>
     );

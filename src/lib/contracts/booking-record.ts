@@ -6,16 +6,33 @@ export interface BookingRecordRequest {
   datetime: string;
   locale: CatalogLocale;
   contact: { fullname: string; phone: string; email: string };
+  age?: number;
+  condition?: string;
   consent: true;
   idempotencyKey: string;
 }
 
+export interface BookingRecordPart {
+  recordId: number;
+  title: string;
+  datetime: string;
+  durationSeconds?: number;
+  staff?: { id: number; name: string };
+}
+
 export type BookingRecordData =
   | { status: 'processing' | 'unknown' }
-  | { status: 'created'; recordId: number; serviceId: number; datetime: string; staff?: { id: number; name: string } };
+  | {
+    status: 'created';
+    recordId: number;
+    serviceId: number;
+    datetime: string;
+    staff?: { id: number; name: string };
+    parts?: BookingRecordPart[];
+  };
 
 export type BookingRecordField = 'serviceId' | 'staffId' | 'datetime' | 'locale' | 'contact'
-  | 'fullname' | 'phone' | 'email' | 'consent' | 'idempotencyKey';
+  | 'fullname' | 'phone' | 'email' | 'age' | 'condition' | 'consent' | 'idempotencyKey';
 
 export type BookingRecordErrorCode =
   | 'INVALID_BODY' | 'PAYLOAD_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ORIGIN'

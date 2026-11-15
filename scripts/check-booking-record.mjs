@@ -11,6 +11,7 @@ const scenarioFile = path.join(dir, 'scenario');
 const journal = `${scenarioFile}.journal`;
 const marker = `${scenarioFile}.created`;
 const release = `${scenarioFile}.release`;
+const comments = `${scenarioFile}.comments`;
 const preload = new URL('../e2e/fixtures/altegio-record.mjs', import.meta.url).href;
 const day = 86_400_000;
 const date = new Date(Date.now() + 7 * day).toISOString().slice(0, 10);
@@ -41,7 +42,7 @@ function request(overrides = {}) {
 }
 
 async function scenario(name) {
-  for (const file of [marker, release]) await fs.rm(file, { force: true });
+  for (const file of [marker, release, comments]) await fs.rm(file, { force: true });
   await fs.writeFile(journal, '');
   await fs.writeFile(scenarioFile, name);
 }
@@ -103,27 +104,42 @@ try {
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', headers: { 'Sec-Fetch-Site': 'cross-site' } });
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', ip: '192.0.2.1, 127.0.0.1' });
     await post(origin, request(), { status: 415, code: 'UNSUPPORTED_MEDIA_TYPE', headers: { 'Content-Type': 'text/plain' } });
-    await post(origin, request(), { status: 413, code: 'PAYLOAD_TOO_LARGE', raw: 'x'.repeat(5000) });
+    await post(origin, request(), { status: 413, code: 'PAYLOAD_TOO_LARGE', raw: 'x'.repeat(9000) });
     await post(origin, null, { status: 400, code: 'INVALID_BODY' });
-    for (const email of ['', 'invalid-email', undefined]) {
+    for (const email of ['', undefined, 'invalid-email', null, 'a'.repeat(255)]) {
       const input = request();
       input.contact.email = email;
       const result = await post(origin, input, { status: 400, code: 'INVALID_FIELDS' });
       assert.deepEqual(result.error.fields, ['email']);
     }
-    const invalid = await post(origin, request({ consent: false, datetime: '2026-02-31T10:00:00+04:00' }), {
+    const invalid = await post(origin, request({ consent: false, datetime: '2026-02-31T10:00:00+04:00', age: 121, condition: 'x'.repeat(1001) }), {
       status: 400, code: 'INVALID_FIELDS',
     });
-    assert.deepEqual(invalid.error.fields, ['datetime', 'consent']);
+    assert.deepEqual(invalid.error.fields, ['datetime', 'consent', 'age', 'condition']);
     assert.deepEqual(await history(), []);
 
     const successful = request();
-    const created = await post(origin, { ...successful, age: 33, condition: 'fixture-private-note' }, { status: 201 });
+    const created = await post(origin, successful, { status: 201 });
     assert.deepEqual(created.data, confirmed);
     assert.deepEqual(await history(), ['GET book_services', 'GET book_times', checkCall, createCall, 'GET book_record']);
     assert.deepEqual((await post(origin, successful, { status: 201 })).data, confirmed);
     await post(origin, { ...successful, locale: 'ru' }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
     assert.equal((await history()).filter((call) => call === createCall).length, 1);
+
+    await scenario('empty-201');
+    const details = request({ age: 33, condition: 'fixture-private-note ' + '😀x'.repeat(325) });
+    const saved = await post(origin, details, { status: 201 });
+    assert.deepEqual(saved.data, confirmed);
+    const comment = JSON.parse(await fs.readFile(comments, 'utf8'));
+    assert.ok(comment.length <= 1000);
+    assert.ok(comment.isWellFormed());
+    assert.ok(comment.startsWith('[Сайт/форма] Age: 33\nCondition: fixture-private-note '));
+    assert.ok(comment.endsWith('…'));
+    const afterComment = ['GET book_services', 'GET book_times', checkCall, createCall, 'GET book_record'];
+    assert.deepEqual(await history(), afterComment);
+    assert.deepEqual((await post(origin, details, { status: 201 })).data, saved.data);
+    await post(origin, { ...details, age: 34 }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
+    assert.deepEqual(await history(), afterComment);
 
     await scenario('checked-json');
     assert.deepEqual((await post(origin, request({ locale: 'ru', staffId: 91601 }), { status: 201 })).data, confirmed);
@@ -132,6 +148,37 @@ try {
     await scenario('no-details');
     const optional = await post(origin, request({ serviceId: 91201 }), { status: 201 });
     assert.deepEqual(optional.data, { status: 'created', recordId: 12345, serviceId: 91201, datetime });
+
+    await scenario('package-confirmed');
+    const packageRequest = request({ serviceId: 13982379, staffId: 91601 });
+    const bookingPackage = await post(origin, packageRequest, { status: 201 });
+    assert.deepEqual(bookingPackage.data, {
+      ...confirmed, serviceId: 13982379,
+      parts: [
+        { recordId: 12345, title: 'Sports massage', datetime: `${date}T00:20:00.123+04:00`, durationSeconds: 2700, staff: confirmed.staff },
+        { recordId: 12346, title: 'Infrared capsule', datetime: `${date}T01:05:00.123+04:00`, durationSeconds: 2700, staff: { id: 91602, name: 'Capsule operator' } },
+      ],
+    });
+    assert.deepEqual((await post(origin, packageRequest, { status: 201 })).data, bookingPackage.data);
+    assert.equal((await history()).filter((call) => call === createCall).length, 1);
+    assert.equal((await history()).filter((call) => call === 'GET book_record').length, 2);
+
+    await scenario('package-grouped');
+    const grouped = await post(origin, request({ serviceId: 13982379 }), { status: 201 });
+    assert.deepEqual(grouped.data, { ...confirmed, serviceId: 13982379 });
+
+    for (const [mode, lookups] of [
+      ['package-partial', 1], ['package-duplicate', 0], ['package-unreadable', 2], ['package-deleted', 2],
+      ['package-wrong-start', 2], ['unexpected-multiple', 0],
+    ]) {
+      await scenario(mode);
+      const input = request({ serviceId: mode === 'unexpected-multiple' ? 13982355 : 13982380 });
+      for (let attempt = 0; attempt < 2; attempt++) {
+        assert.equal((await post(origin, input, { status: 202 })).data.status, 'unknown');
+      }
+      assert.equal((await history()).filter((call) => call === createCall).length, 1);
+      assert.equal((await history()).filter((call) => call === 'GET book_record').length, lookups);
+    }
 
     for (const locale of ['en', 'ru']) {
       await scenario('empty-201');
@@ -209,8 +256,8 @@ try {
     assert.equal((await history()).length, 10);
   });
 
-  console.log('Booking record: validation, prepayment, conflicts, SMS, limits, unknown outcomes and same-instance retries OK');
+  console.log('Booking record: validation, composite confirmations, conflicts, limits, unknown outcomes and same-instance retries OK');
 } finally {
-  for (const file of [journal, marker, release, scenarioFile]) await fs.rm(file, { force: true });
+  for (const file of [journal, marker, release, comments, scenarioFile]) await fs.rm(file, { force: true });
   await fs.rmdir(dir);
 }

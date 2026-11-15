@@ -1,11 +1,12 @@
 import 'server-only';
 
-import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
+import { formatComment } from '@/lib/altegio/formatComment';
+import type { BookingRecordPart, BookingRecordRequest } from '@/lib/contracts/booking-record';
 import { altegioGet, altegioPost, bookingLanguages, isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
 import { fetchBookServices } from '../altegio/services';
 import { getCatalogServiceStaff } from '../catalog/staff';
-import { dubaiBookingDate, getBookingTimes } from './availability';
+import { dubaiBookingDate, getBookingTimes, parseBookingDatetime } from './availability';
 import { validId } from './record-request';
 import { unavailable, unknown, type RecordOutcome } from './record-result';
 
@@ -46,24 +47,75 @@ function upstreamFailure(error: unknown, sending: boolean): RecordOutcome {
   return sending ? unknown : unavailable;
 }
 
-async function confirmedStaff(locationId: number, input: BookingRecordRequest, recordId: number, hash: string, instant: Date) {
+type Receipt = { recordId: number; hash: string };
+
+function parseReceipts(payload: unknown, composite: boolean): Receipt[] {
+  if (!isRecord(payload) || payload.success !== true || !Array.isArray(payload.data) ||
+    payload.data.length === 0 || payload.data.length > (composite ? 10 : 1)) return [];
+
+  const result = new Map<number, Receipt>();
+  for (const record of payload.data as unknown[]) {
+    if (!isRecord(record) || record.id !== correlationId || !validId(record.record_id) ||
+      typeof record.record_hash !== 'string' || !/^[a-z\d_-]{1,128}$/i.test(record.record_hash) ||
+      result.has(record.record_id)) return [];
+    result.set(record.record_id, { recordId: record.record_id, hash: record.record_hash });
+  }
+  return [...result.values()];
+}
+
+async function readCreatedRecord(locationId: number, locale: BookingRecordRequest['locale'], { recordId, hash }: Receipt) {
   try {
     const record = await altegioGet('read_booking_record',
-      `book_record/${locationId}/${recordId}/${encodeURIComponent(hash)}`, bookingLanguages[input.locale], true);
+      `book_record/${locationId}/${recordId}/${encodeURIComponent(hash)}`, bookingLanguages[locale], true);
     if (!isRecord(record) || record.id !== recordId || record.deleted !== false ||
-      typeof record.datetime !== 'string' || Date.parse(record.datetime) !== instant.getTime() ||
-      !Array.isArray(record.services) || !record.services.some((service: unknown) => isRecord(service) && service.id === input.serviceId) ||
-      !isRecord(record.staff) || !validId(record.staff.id) || (input.staffId !== 0 && record.staff.id !== input.staffId) ||
-      typeof record.staff.name !== 'string' || !record.staff.name.trim() || record.staff.name.length > 200) return undefined;
-    return { id: record.staff.id, name: record.staff.name.trim() };
+      typeof record.datetime !== 'string' || !Array.isArray(record.services)) return null;
+    // The public detail endpoint also returns offsets such as +0400.
+    const datetime = record.datetime.replace(/([+-]\d{2})(\d{2})$/, '$1:$2');
+    const instant = parseBookingDatetime(datetime);
+    if (!instant) return null;
+    const member = record.staff;
+    const staff = isRecord(member) && validId(member.id) && typeof member.name === 'string' &&
+      member.name.trim() && member.name.length <= 200 ? { id: member.id, name: member.name.trim() } : undefined;
+    return {
+      recordId, datetime, instant: instant.getTime(), staff, services: record.services as unknown[],
+      durationSeconds: validId(record.length) && record.length <= 2_147_483_647 ? record.length : undefined,
+    };
   } catch {
-    // The documented creation receipt is sufficient. Details may require separate permissions.
-    return undefined;
+    return null;
   }
 }
 
+async function confirmCreation(locationId: number, input: BookingRecordRequest, instant: Date, receipts: Receipt[], composite: boolean): Promise<RecordOutcome> {
+  const base = { status: 'created' as const, serviceId: input.serviceId, datetime: input.datetime };
+  const details = await Promise.all(receipts.map((receipt) => readCreatedRecord(locationId, input.locale, receipt)));
+  if (receipts.length === 1) {
+    const record = details[0];
+    const matchesSelection = record?.instant === instant.getTime() &&
+      record.services.some((service) => isRecord(service) && service.id === input.serviceId);
+    const staff = matchesSelection && (input.staffId === 0 || record.staff?.id === input.staffId) ? record.staff : undefined;
+    // A single component cannot confirm that a split package was booked.
+    if (composite && (!matchesSelection || (input.staffId !== 0 && !staff))) return unknown;
+    return { status: 201, data: { ...base, recordId: receipts[0].recordId, ...(staff ? { staff } : {}) } };
+  }
+
+  const records = details.filter((record) => record !== null).sort((a, b) => a.instant - b.instant);
+  if (records.length !== receipts.length || records[0].instant !== instant.getTime()) return unknown;
+  const staff = input.staffId === 0 ? records[0].staff : records.find((record) => record.staff?.id === input.staffId)?.staff;
+  if (input.staffId !== 0 && !staff) return unknown;
+
+  const parts: BookingRecordPart[] = [];
+  for (const record of records) {
+    const titles = record.services.flatMap((service) => isRecord(service) && validId(service.id) &&
+      typeof service.title === 'string' && service.title.trim() && service.title.length <= 300 ? [service.title.trim()] : []);
+    if (!titles.length || titles.length !== record.services.length) return unknown;
+    const { recordId, datetime, durationSeconds, staff } = record;
+    parts.push({ recordId, datetime, title: titles.join(' + '), durationSeconds, staff });
+  }
+  return { status: 201, data: { ...base, recordId: parts[0].recordId, parts, ...(staff ? { staff } : {}) } };
+}
+
 export async function createBookingRecord(locationId: number, input: BookingRecordRequest, instant: Date): Promise<RecordOutcome> {
-  const { locale, serviceId, staffId, datetime, contact } = input;
+  const { locale, serviceId, staffId, datetime, contact, age, condition } = input;
   const language = bookingLanguages[locale];
   const appointments = [{ id: correlationId, services: [serviceId], staff_id: staffId, datetime }];
   let sending = false;
@@ -85,19 +137,18 @@ export async function createBookingRecord(locationId: number, input: BookingReco
     if (!check.empty && !(isRecord(check.payload) && check.payload.success === true &&
       (!('data' in check.payload) || check.payload.data === null))) return unavailable;
 
+    const comment = age !== undefined || condition
+      ? formatComment({ source: 'form', age, generalNote: condition }, locale)
+      : undefined;
     sending = true;
-    const result = await altegioPost('book_record', locationId, language, { ...contact, appointments });
+    const result = await altegioPost('book_record', locationId, language, {
+      ...contact, appointments, ...(comment ? { comment } : {}),
+    });
     if (result.status !== 201) return rejected(result.status, result.payload, sending);
-    if (!isRecord(result.payload) || result.payload.success !== true ||
-      !Array.isArray(result.payload.data) || result.payload.data.length !== 1) return unknown;
-    const record: unknown = result.payload.data[0];
-    if (!isRecord(record) || record.id !== correlationId || !validId(record.record_id) ||
-      typeof record.record_hash !== 'string' || !/^[a-z\d_-]{1,128}$/i.test(record.record_hash)) return unknown;
-
-    const staff = await confirmedStaff(locationId, input, record.record_id, record.record_hash, instant);
-    return { status: 201, data: {
-      status: 'created', recordId: record.record_id, serviceId, datetime, ...(staff ? { staff } : {}),
-    } };
+    const composite = service.is_composite === true;
+    const receipts = parseReceipts(result.payload, composite);
+    if (!receipts.length) return unknown;
+    return await confirmCreation(locationId, input, instant, receipts, composite);
   } catch (error) {
     return upstreamFailure(error, sending);
   }

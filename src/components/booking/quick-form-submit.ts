@@ -14,6 +14,24 @@ const definiteRejections: Readonly<Record<string, number>> = {
   RATE_LIMITED: 429, UPSTREAM_RATE_LIMITED: 429, UPSTREAM_TIMEOUT: 504,
 };
 
+function validStaff(staff: CreatedBooking['staff']) {
+  return staff === undefined || (staff && Number.isSafeInteger(staff.id) && staff.id > 0 &&
+    typeof staff.name === 'string' && staff.name.trim());
+}
+
+function validParts(data: CreatedBooking) {
+  if (data.parts === undefined) return true;
+  if (!Array.isArray(data.parts) || data.parts.length < 2 || data.parts[0]?.recordId !== data.recordId) return false;
+  const start = Date.parse(data.datetime);
+  return new Set(data.parts.map((part) => part?.recordId)).size === data.parts.length &&
+    Date.parse(data.parts[0].datetime) === start &&
+    data.parts.every((part) => part && Number.isSafeInteger(part.recordId) && part.recordId > 0 &&
+      typeof part.title === 'string' && part.title.trim() && typeof part.datetime === 'string' &&
+      Date.parse(part.datetime) >= start && validStaff(part.staff) &&
+      (part.durationSeconds === undefined || (Number.isSafeInteger(part.durationSeconds) &&
+        part.durationSeconds > 0 && Number.isFinite(new Date(Date.parse(part.datetime) + part.durationSeconds * 1000).getTime()))));
+}
+
 export async function sendQuickBooking(input: BookingRecordRequest): Promise<Submission> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 70_000);
@@ -29,9 +47,8 @@ export async function sendQuickBooking(input: BookingRecordRequest): Promise<Sub
       if (response.status === 201 && data.status === 'created' &&
         Number.isSafeInteger(data.recordId) && data.recordId > 0 &&
         data.serviceId === input.serviceId && data.datetime === input.datetime &&
-        (data.staff === undefined || (Number.isSafeInteger(data.staff.id) && data.staff.id > 0 &&
-          (input.staffId === 0 || input.staffId === data.staff.id) &&
-          typeof data.staff.name === 'string' && data.staff.name.trim()))) return { status: 'created', data };
+        validStaff(data.staff) && (data.staff === undefined || input.staffId === 0 || input.staffId === data.staff.id) &&
+        validParts(data)) return { status: 'created', data };
       if (response.status === 202 && data.status === 'processing') return { status: 'processing' };
     } else if ('error' in body) {
       const { error } = body;

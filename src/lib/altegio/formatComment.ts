@@ -99,7 +99,7 @@ export function formatComment(i: CommentInput, lang: CommentLanguage = DEFAULT_C
     free = free.map((t) => {
       if (!t) return t;
       const n = Math.floor(t.length * ratio);
-      return n >= t.length ? t : n > 0 ? `${t.slice(0, n).trimEnd()}…` : undefined;
+      return n >= t.length ? t : n > 0 ? `${t.slice(0, n).replace(/[\uD800-\uDBFF]$/, '').trimEnd()}…` : undefined;
     });
     out = build(free[0], free.slice(1));
   }

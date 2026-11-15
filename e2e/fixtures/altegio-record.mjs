@@ -8,6 +8,11 @@ const date = process.env.RECORD_FIXTURE_DATE;
 const scenarioFile = process.env.RECORD_FIXTURE_SCENARIO;
 const journal = `${scenarioFile}.journal`;
 const receiptHash = 'fixture-record-hash-secret';
+const packageIds = [13982379, 13982380];
+const packageParts = [
+  { id: 12345, datetime: `${date}T00:20:00.123+0400`, length: 2700, staff: { id: 91601, name: 'Example specialist' } },
+  { id: 12346, datetime: `${date}T01:05:00.123+0400`, length: 2700, staff: { id: 91602, name: 'Capsule operator' } },
+];
 const success = (data, status = 200) => Response.json({ success: true, data }, { status });
 const reject = (code) => Response.json({
   success: false, meta: { errors: [{ code, message: 'fixture-private-upstream-error' }] },
@@ -29,8 +34,8 @@ globalThis.fetch = async (input, init) => {
   assert.equal(headers.get('accept'), 'application/vnd.api.v2+json');
   assert.equal(headers.get('content-type'), 'application/json');
   assert.match(headers.get('accept-language'), /^(en-US|ru-RU)$/);
-  appendFileSync(journal, `${method} ${resource}\n`);
   const scenario = readFileSync(scenarioFile, 'utf8');
+  appendFileSync(journal, `${method} ${resource}\n`);
 
   if (method === 'GET') {
     if (resource === 'book_services') {
@@ -41,25 +46,46 @@ globalThis.fetch = async (input, init) => {
         { id: 13983057, title: 'Mobility', prepaid: 'required' },
         { id: 91201, title: 'Optional prepayment', prepaid: 'allowed' },
         { id: 91202, title: 'Unknown prepayment' },
+        { id: 13982379, title: 'Sports massage + Infrared capsule', prepaid: 'forbidden', is_composite: true },
+        { id: 13982380, title: 'Classic massage + Infrared capsule', prepaid: 'forbidden', is_composite: true },
       ] });
     }
     if (resource === 'book_staff') {
       assert.deepEqual(rest, []);
-      assert.ok(url.search === '' || url.search === '?service_ids%5B%5D=13982355');
+      assert.match(url.search, /^(|\?service_ids%5B%5D=(13982355|13982379|13982380))$/);
       return success([{ id: 91601, name: 'Example specialist', bookable: false }]);
     }
     if (resource === 'book_dates') {
       assert.deepEqual(rest, []);
-      assert.match(url.search, /^\?service_ids%5B%5D=13982355&staff_id=(0|91601)$/);
+      assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380)&staff_id=(0|91601)$/);
       return success({ booking_dates: [date] });
     }
     if (resource === 'book_times') {
       assert.equal(rest[1], date);
       assert.ok(['0', '91601'].includes(rest[0]));
-      assert.match(url.search, /^\?service_ids%5B%5D=(13982355|91201)$/);
+      assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380|91201)$/);
       return success(scenario === 'empty-time' ? [] : [{ datetime, time: '23:20' }]);
     }
     assert.equal(resource, 'book_record');
+    if (scenario.startsWith('package-')) {
+      const part = packageParts.find(({ id }) => String(id) === rest[0]);
+      assert.ok(part);
+      assert.deepEqual(rest, [String(part.id), `${receiptHash}-${part.id}`]);
+      assert.equal(url.search, '');
+      if (scenario === 'package-unreadable' && part.id === 12346) return new Response(null, { status: 403 });
+      const first = part.id === 12345;
+      const massage = scenario === 'package-classic'
+        ? { id: 13982356, title: 'Classic massage' }
+        : { id: 13982355, title: 'Sports massage' };
+      return Response.json({
+        ...part,
+        ...(scenario === 'package-wrong-start' && first ? { datetime: `${date}T00:25:00.123+0400` } : {}),
+        deleted: scenario === 'package-deleted' && !first,
+        services: scenario === 'package-grouped' ? [{ id: 13982379, title: 'Sports massage + Infrared capsule' }]
+          : [first ? massage : { id: 91203, title: 'Infrared capsule' }],
+        record_hash: `${receiptHash}-${part.id}`,
+      });
+    }
     assert.deepEqual(rest, ['12345', receiptHash]);
     assert.equal(url.search, '');
     if (scenario === 'no-details') return new Response(null, { status: 403 });
@@ -79,7 +105,7 @@ globalThis.fetch = async (input, init) => {
   const appointment = appointments[0];
   assert.ok([0, 91601].includes(appointment.staff_id));
   assert.equal(appointment.services.length, 1);
-  assert.ok([13982355, 91201].includes(appointment.services[0]));
+  assert.ok([13982355, 91201, ...packageIds].includes(appointment.services[0]));
   assert.deepEqual(appointment, { id: 1, staff_id: appointment.staff_id, services: appointment.services, datetime });
 
   if (resource === 'book_check') {
@@ -96,10 +122,14 @@ globalThis.fetch = async (input, init) => {
   }
 
   assert.equal(resource, 'book_record');
-  assert.deepEqual(Object.keys(payload).sort(), ['appointments', 'email', 'fullname', 'phone']);
+  assert.deepEqual(Object.keys(payload).sort(), ['appointments', ...('comment' in payload ? ['comment'] : []), 'email', 'fullname', 'phone']);
   assert.match(payload.email, /^visitor\d*@example\.test$/);
   assert.match(payload.phone, /^\+97150\d{7}$/);
   assert.equal(payload.fullname, 'fixture-private-fullname');
+  if ('comment' in payload) {
+    assert.ok(typeof payload.comment === 'string' && payload.comment.length <= 1000);
+    appendFileSync(`${scenarioFile}.comments`, JSON.stringify(payload.comment) + '\n');
+  }
   if (scenario === 'record-sms') return reject(432);
   if (scenario === 'record-429') return new Response(null, { status: 429, headers: { 'Retry-After': 'Tue, 01 Jan 2030 00:00:00 GMT' } });
   if (scenario === 'bad-receipt') return success([{ id: 2, record_id: 12345, record_hash: receiptHash }], 201);
@@ -115,5 +145,11 @@ globalThis.fetch = async (input, init) => {
     }
   }
   if (scenario === 'record-timeout') await delay(50_000, undefined, { signal });
+  if (scenario.startsWith('package-') || scenario === 'unexpected-multiple') {
+    const receipts = packageParts.map(({ id }) => ({ id: 1, record_id: id, record_hash: `${receiptHash}-${id}` }));
+    if (scenario === 'package-partial' || scenario === 'package-grouped') return success(receipts.slice(0, 1), 201);
+    if (scenario === 'package-duplicate') return success([receipts[0], receipts[0]], 201);
+    return success(receipts.reverse(), 201);
+  }
   return success([{ id: 1, record_id: 12345, record_hash: receiptHash }], 201);
 };
