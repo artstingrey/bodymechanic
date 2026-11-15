@@ -9,6 +9,7 @@ import { withProductionServer } from './check-server.mjs';
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bm-booking-services-'));
 const scenarioFile = path.join(dir, 'catalog');
 const staffFixture = path.join(dir, 'staff');
+const availabilityFixture = path.join(dir, 'availability');
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
 const sports = 13982355;
 const classic = 13982356;
@@ -26,11 +27,11 @@ async function checkStaff(page, booking, messages) {
   const staffUrl = (id) => (url) => url.pathname === '/api/booking/staff' && url.searchParams.get('serviceId') === String(id);
   const slotPreset = '&date=2026-11-30&time=12:00';
 
-  await page.goto(`${booking}?step=7&service=${sports}&staff=91602${slotPreset}&utm_source=fixture#st3`);
+  await page.goto(`${booking}?step=3&service=${sports}&staff=91602${slotPreset}&utm_source=fixture#st3`);
   await expect(page).toHaveURL(`${booking}?step=3&utm_source=fixture#st3`);
   await expect(staff(91602)).toBeChecked();
   await expect(summary).toContainText('Sam Example');
-  await expect(page.getByRole('button', { name: next })).toBeDisabled();
+  await expect(page.getByRole('button', { name: next })).toBeEnabled();
   await expect(page.locator('#st4, #st7')).toHaveCount(0);
   assert.equal((await draft()).wantTime, '12:00');
   await page.evaluate(() => {
@@ -96,15 +97,123 @@ async function checkStaff(page, booking, messages) {
   await expect(page.locator('input[name="service"]:checked')).toHaveCount(0);
 }
 
+async function checkAvailability(page, booking, messages) {
+  const { next, back, retry } = messages.common.actions;
+  const { time } = messages.booking;
+  const button = (name) => page.getByRole('button', { name, exact: true });
+  const availableDays = page.locator('.dates button[data-available]');
+  const draft = () => page.evaluate(() => JSON.parse(sessionStorage.getItem('bm.bookingSteps')));
+  const first = '2026-11-30';
+  const second = '2026-12-01';
+  const later = '2026-12-20';
+  const midnight = '2026-11-30T23:20:00.123+03:00';
+  const datesUrl = (url) => url.pathname === '/api/booking/dates';
+  const timesUrl = (day) => (url) => url.pathname === '/api/booking/times' && url.searchParams.get('date') === day;
+  const fail = (route) => route.fulfill({ status: 503, json: { error: { code: 'CATALOG_UNAVAILABLE' } } });
+
+  await page.clock.setFixedTime(new Date('2026-11-15T00:00:00Z'));
+  await page.route(datesUrl, fail, { times: 1 });
+  await page.goto(`${booking}?step=3&service=${sports}`);
+  await expect(page.locator('input[name="staff"][value="0"]')).toBeChecked();
+  await button(next).click();
+  await expect(page.locator('#st4')).toBeVisible();
+  await expect(page.locator('.booking-error')).toBeVisible();
+  await button(retry).click();
+  await expect(availableDays).toHaveCount(2);
+  await expect(page.locator('.dates button')).toHaveCount(30);
+  await expect(availableDays.nth(1).locator('small')).toBeVisible();
+
+  let pending = false;
+  const release = Promise.withResolvers();
+  const finished = Promise.withResolvers();
+  await page.route(timesUrl(first), async (route) => {
+    try {
+      const response = await route.fetch();
+      pending = true;
+      await release.promise;
+      await route.fulfill({ response }).catch(() => {});
+    } finally {
+      finished.resolve();
+    }
+  }, { times: 1 });
+  try {
+    await availableDays.first().click();
+    await expect(page.getByText(time.searching, { exact: true })).toBeVisible();
+    await expect.poll(() => pending).toBe(true);
+    await availableDays.nth(1).click();
+    await expect(button('00:20')).toBeVisible();
+    release.resolve();
+    await finished.promise;
+    await expect(button('09:30')).toHaveCount(0);
+  } finally {
+    release.resolve();
+  }
+
+  await button('00:20').click();
+  await expect(page.locator('.bk-picked')).toContainText('00:20');
+  assert.equal((await draft()).date, second);
+  assert.equal((await draft()).datetime, midnight);
+  await expect(button(next)).toBeDisabled();
+  await page.reload();
+  await expect(button('00:20')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.route(timesUrl(second), fail, { times: 1 });
+  await page.reload();
+  await expect(page.locator('.booking-error')).toBeVisible();
+  await expect(page.locator('.bk-picked')).toHaveCount(0);
+  assert.equal((await draft()).datetime, midnight);
+  await page.route(timesUrl(second), async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    json.data.times = [];
+    await route.fulfill({ response, json });
+  }, { times: 1 });
+  await button(retry).click();
+  await expect(page.getByText(time.noTimes, { exact: true })).toBeVisible();
+  await expect.poll(async () => (await draft()).datetime).toBeNull();
+  await expect(availableDays.nth(1)).toHaveAttribute('aria-pressed', 'true');
+
+  await button(back).click();
+  await page.locator('input[name="staff"][value="91601"]').check();
+  await button(next).click();
+  await expect(availableDays).toHaveCount(1);
+  await expect(page.locator('.dates button[aria-pressed="true"]')).toHaveCount(0);
+  assert.equal((await draft()).date, null);
+
+  await page.goto(`${booking}?step=7&service=${sports}&staff=91602&date=${second}&time=00:20&utm_source=fixture#st4`);
+  await expect(page).toHaveURL(`${booking}?step=4&utm_source=fixture#st4`);
+  await expect(button('00:20')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await draft()).datetime).toBe(midnight);
+  await expect(page.locator('#st5, #st7')).toHaveCount(0);
+
+  await page.goto(`${booking}?step=4&service=${sports}&staff=91602&date=${second}&time=12:00`);
+  await expect(page.getByTestId('slot-unfit')).toBeVisible();
+  await expect(button('00:20')).toHaveAttribute('aria-pressed', 'false');
+
+  await page.route(datesUrl, async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    json.data.dates.push(later);
+    await route.fulfill({ response, json });
+  }, { times: 1 });
+  await page.reload();
+  await expect(page.locator('.dates button')).toHaveCount(36);
+  await expect(availableDays.last()).toHaveText('20');
+
+  await page.goto(`${booking}?step=4&service=91204`);
+  await expect(page.getByText(time.noDates, { exact: true })).toBeVisible();
+}
+
 try {
   await fs.writeFile(scenarioFile, 'service-detail');
   await fs.writeFile(staffFixture, 'success');
+  await fs.writeFile(availabilityFixture, 'success');
   browser = await chromium.launch({ channel: 'chrome', args: ['--disable-3d-apis'] });
   await withProductionServer(async (origin, logs) => {
     try {
       for (const [locale, width] of [['ru', 390], ['en', 1280]]) {
         const messages = JSON.parse(await fs.readFile(new URL(`../messages/${locale}.json`, import.meta.url), 'utf8'));
-        const page = await browser.newPage({ viewport: { width, height: 850 } });
+        const page = await browser.newPage({ viewport: { width, height: 850 }, timezoneId: 'America/Los_Angeles' });
         const booking = `${origin}/${locale}/booking/`;
         const copy = messages.booking.service;
         const rows = page.locator('input[name="service"]');
@@ -211,6 +320,11 @@ try {
           await checkStaff(page, booking, messages);
           assert.ok(requests.length > 0);
           assert.ok(requests.every(([method, pathname, lang]) => method === 'GET' && pathname === '/api/booking/staff' && lang === locale));
+          await checkAvailability(page, booking, messages);
+          assert.ok(requests.some(([, pathname]) => pathname === '/api/booking/dates'));
+          assert.ok(requests.some(([, pathname]) => pathname === '/api/booking/times'));
+          assert.ok(requests.every(([method, pathname, lang]) => method === 'GET' &&
+            ['staff', 'dates', 'times'].some((resource) => pathname === `/api/booking/${resource}`) && lang === locale));
         } finally {
           release.resolve();
           await page.close();
@@ -220,7 +334,7 @@ try {
       assert.match(logs(), /\[catalog-fixture\] service-detail en-US/);
       assert.match(logs(), /\[service-staff-fixture\] success ru-RU 13982355/);
       assert.match(logs(), /\[service-staff-fixture\] success en-US 13982355/);
-      console.log('3D booking: services, staff, retry, drafts, presets and staged boundary passed in RU and EN');
+      console.log('3D booking: services, staff, Dubai availability, retries, drafts, presets and staged boundary passed in RU and EN');
     } finally {
       for (const [, key] of logs().matchAll(/\[catalog-cache-write\] ([\w-]+)/g)) cacheKeys.add(key);
     }
@@ -230,11 +344,13 @@ try {
     ALTEGIO_CURRENCY: 'AED',
     CATALOG_TEST_SCENARIO: scenarioFile,
     SERVICE_STAFF_TEST_SCENARIO: staffFixture,
+    AVAILABILITY_TEST_SCENARIO: availabilityFixture,
   } });
 } finally {
   await browser?.close();
   await fs.unlink(scenarioFile).catch(() => {});
   await fs.unlink(staffFixture).catch(() => {});
+  await fs.unlink(availabilityFixture).catch(() => {});
   await fs.rmdir(dir);
   for (const key of cacheKeys) await fs.unlink(path.join('.next', 'cache', 'fetch-cache', key)).catch(() => {});
 }

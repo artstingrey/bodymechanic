@@ -1,6 +1,5 @@
 'use client';
 /** Step 3 shows the specialists assigned to the selected service. */
-import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/Button';
 import { Silhouette } from '@/components/ui/Cards';
 import { StateCard } from '@/components/ui/Misc';
@@ -9,7 +8,7 @@ import { Summary } from './Summary';
 import type { Flow } from '../useBookingFlow';
 
 export function StepSpecialist({ flow }: { flow: Flow }) {
-  const { t, sel, selectStaff, go, staffQ, catalogQ, staffName, canAdvanceFromStaff } = flow;
+  const { t, sel, selectStaff, go, staffQ, catalogQ, staffName } = flow;
   const staffReady = staffQ.status === 'ready';
   return (
     <section aria-labelledby="st3" className="bk-step bk-grid">
@@ -44,12 +43,8 @@ export function StepSpecialist({ flow }: { flow: Flow }) {
         </ul>
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(2)}>{t('common.actions.back')}</Button>
-          <Button disabled={!canAdvanceFromStaff || !staffReady || (sel.staffId !== 0 && !staffName)}
-            aria-describedby={canAdvanceFromStaff ? undefined : 'booking-staff-next'} onClick={() => go(4)}>{t('common.actions.next')}</Button>
+          <Button disabled={!staffReady || (sel.staffId !== 0 && !staffName)} onClick={() => go(4)}>{t('common.actions.next')}</Button>
         </div>
-        {!canAdvanceFromStaff && <p className="hint" id="booking-staff-next">
-          {t.rich('booking.staff.nextUnavailable', { form: (label) => <Link href={{ pathname: '/', hash: 'form-title' }}>{label}</Link> })}
-        </p>}
       </div>
     </section>
   );

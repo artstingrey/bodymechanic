@@ -728,7 +728,7 @@
     },
     "time": {
       "heading": "Choose a date and time",
-      "calendarLabel": "30-day calendar",
+      "calendarLabel": "Booking calendar",
       "dateUnavailable": "No availability",
       "partMorning": "Morning",
       "partDay": "Afternoon",
@@ -738,7 +738,8 @@
       "searching": "Looking for available times…",
       "noTimes": "There’s no availability on this date. Please choose another.",
       "slotUnfit": "This time doesn’t fit the selected service. Please choose another",
-      "noDates": "The next 30 days are fully booked. Message us on WhatsApp and we’ll suggest options."
+      "noDates": "There are no available dates yet. Message us on WhatsApp and we’ll suggest options.",
+      "nextUnavailable": "To complete your booking, use the <form>form on the home page</form>."
     },
     "contacts": {
       "heading": "Your contact details",

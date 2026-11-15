@@ -18,9 +18,10 @@ import { useSearchParams } from 'next/navigation';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
-import { errorKind, getDates, getTimes, postCheck, postCode, postRecord, recommendServices } from '@/lib/api';
+import { errorKind, postCheck, postCode, postRecord, recommendServices } from '@/lib/api';
+import { dubaiToday } from '@/lib/api/dubai';
 import type { ApiErrorKind } from '@/lib/api/errors';
-import type { Service, Slot } from '@/lib/api/types';
+import type { Service } from '@/lib/api/types';
 import { body, useBody } from '@/lib/body3d/store';
 import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
 import { BOOKING_SMS_REQUIRED } from '@/lib/config';
@@ -30,6 +31,7 @@ import { collect, messageArgs, normalizePhone, rules, type ErrorCode } from '@/l
 import { clearResult, loadResult, saveResult, type BookingResult } from '@/lib/booking/result';
 import { PRESET_PARAMS, absorbPresetFromUrl, entryBroughtService, takePreset, type HandOver } from '@/lib/booking/preset';
 import type { Locale } from '@/i18n/routing';
+import { getAvailableDates, getAvailableTimes } from './booking-availability';
 import { getBookingStaff } from './booking-staff';
 import { confirmedCatalogId, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
 import { useBookingSelection } from './useBookingSelection';
@@ -41,14 +43,16 @@ const NO_PARAMS: Pick<URLSearchParams, 'get'> = new URLSearchParams();
 
 export const STEPS = ['zones', 'service', 'specialist', 'time', 'contacts', 'review', 'done'] as const;
 // During the staged rollout, live services stop at the last connected step.
-const LAST_AVAILABLE_STEP = 3;
+const LAST_AVAILABLE_STEP = 4;
 export type BookingError = ApiErrorKind | 'slotTaken';
 
 /** Async data with loading / error / retry, without setState in the effect body (state is keyed by the request). */
-export function useAsync<T>(enabled: boolean, load: (signal: AbortSignal) => Promise<T>, key: unknown[]) {
+export function useAsync<T>(enabled: boolean, load: (signal: AbortSignal) => Promise<T>, key: unknown[], refreshOnEntry = false) {
   const [nonce, setNonce] = useState(0);
-  const k = JSON.stringify([...key, nonce]);
-  const [res, setRes] = useState<{ k: string; data?: T; error?: ApiErrorKind }>({ k: '' });
+  const serialized = JSON.stringify([...key, nonce]);
+  const identity = useMemo(() => ({ serialized, enabled }), [serialized, enabled]);
+  const k = refreshOnEntry ? identity : serialized;
+  const [res, setRes] = useState<{ k: typeof k; data?: T; error?: ApiErrorKind }>({ k: '' });
   useEffect(() => {
     if (!enabled) return;
     const request = new AbortController();
@@ -178,24 +182,39 @@ export function useBookingFlow(demoServices: Service[]) {
     if (staffUnavailable) selectStaff(0);
   }, [staffUnavailable, selectStaff]);
 
-  // ---- legacy steps: a live service must never enter the demo cascade or submit a demo record
+  const availabilityEnabled = step === 4 && catalogServiceId !== undefined && staffQ.status === 'ready' && !staffUnavailable;
+  const availabilitySelection = { serviceId: catalogServiceId!, staffId: sel.staffId, locale };
+  const datesQ = useAsync(availabilityEnabled, (signal) => getAvailableDates(availabilitySelection, signal),
+    ['dates', locale, catalogServiceId, sel.staffId], true);
+  const today = dubaiToday();
+  const availableDates = datesQ.status === 'ready' ? datesQ.data!.filter((date) => date >= today) : [];
+  const preferredDate = sel.date ?? sel.wantDate ?? null;
+  const selectedDate = preferredDate && availableDates.includes(preferredDate) ? preferredDate : null;
+  const [takenSeq, setTakenSeq] = useState(0); // refresh after a slot conflict when record creation is connected
+  const timesQ = useAsync(availabilityEnabled && selectedDate !== null,
+    (signal) => getAvailableTimes(availabilitySelection, selectedDate!, signal),
+    ['times', locale, catalogServiceId, sel.staffId, selectedDate, takenSeq], true);
+  const slots = timesQ.status === 'ready' ? timesQ.data : undefined;
+  const savedSlot = slots?.find(({ datetime }) => datetime === sel.datetime);
+  const wantedSlot = !sel.datetime && selectedDate === sel.wantDate
+    ? slots?.find(({ time }) => time === sel.wantTime) : undefined;
+  const selectedDatetime = (savedSlot ?? wantedSlot)?.datetime ?? null;
+  useEffect(() => {
+    if (datesQ.status === 'ready' && sel.date && !selectedDate) update({ date: null, datetime: null });
+    else if (slots && sel.datetime && !savedSlot) update({ datetime: null });
+    else if (wantedSlot && selectedDate) update({ date: selectedDate, datetime: wantedSlot.datetime, wantTime: null });
+  }, [datesQ.status, sel.date, sel.datetime, selectedDate, slots, savedSlot, wantedSlot, update]);
+  const slotUnfit = !!sel.wantTime && !selectedDatetime && (
+    (datesQ.status === 'ready' && !selectedDate)
+    || (!!slots && selectedDate === sel.wantDate && !wantedSlot));
+
+  // Later steps still contain the legacy confirmation and never receive a live service.
   const service = demoServices.find((s) => s.id === sel.serviceId) ?? null;
-  const [takenSeq, setTakenSeq] = useState(0); // a slot_taken answer refreshes the times (the taken slot disappears)
-  const datesQ = useAsync<string[]>(step === 4 && !!service, () => getDates(service!.id, sel.staffId), ['dates', service?.id, sel.staffId]);
-  // the day in effect: picked by the visitor, else the preferred day of the link when it is free for this service / specialist
-  const day0 = sel.date ?? (sel.wantDate && datesQ.data?.includes(sel.wantDate) ? sel.wantDate : null);
-  const timesQ = useAsync<Slot[]>(step === 4 && !!service && !!day0, () => getTimes(service!.id, sel.staffId, day0!), ['times', service?.id, sel.staffId, day0, takenSeq]);
-  // A slot preset is applied only after its specialist and time have been verified.
-  const wantedSlot = step === 4 && sel.wantTime && day0 === sel.wantDate ? timesQ.data?.find((s) => s.time === sel.wantTime) ?? null : null;
-  useEffect(() => { if (wantedSlot && !sel.datetime) update({ date: wantedSlot.datetime.slice(0, 10), datetime: wantedSlot.datetime, wantTime: null }); }, [wantedSlot, sel.datetime, update]);
-  const slotUnfit = step === 4 && !!sel.wantTime && !sel.datetime && (
-    (datesQ.status === 'ready' && !!sel.wantDate && !datesQ.data?.includes(sel.wantDate))
-    || (timesQ.status === 'ready' && day0 === sel.wantDate && !wantedSlot));
 
   // ---- formatting (Dubai time, ТЗ §07)
-  const time = useCallback((iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' }), [f]);
+  const time = useCallback((iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Dubai' }), [f]);
   const day = useCallback((ymd: string) => f.dateTime(new Date(`${ymd}T12:00:00+04:00`), { day: 'numeric', month: 'long', weekday: 'short', timeZone: 'Asia/Dubai' }), [f]);
-  const when = useCallback((iso: string) => `${day(iso.slice(0, 10))}, ${t('common.timeWithZone', { time: time(iso) })}`, [day, time, t]);
+  const when = useCallback((iso: string) => `${day(dubaiToday(new Date(iso)))}, ${t('common.timeWithZone', { time: time(iso) })}`, [day, time, t]);
 
   // ---- step 1 → 2 rule (ТЗ §07 step 1): a marker or a general note
   const canLeaveZones = markers.length > 0 || generalNote.trim().length > 0;
@@ -276,8 +295,9 @@ export function useBookingFlow(demoServices: Service[]) {
   }, [clear, go]);
 
   return {
-    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel: day0 === sel.date ? sel : { ...sel, date: day0 }, update, updateContact, services: demoServices, ordered, recommended, service, staffName,
-    catalogQ, catalogService, selectService, selectStaff, canAdvanceFromStaff: LAST_AVAILABLE_STEP > 3,
+    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, services: demoServices, ordered, recommended, service, staffName,
+    catalogQ, catalogService, selectService, selectStaff, canAdvanceFromTime: LAST_AVAILABLE_STEP > 4,
+    today, availableDates, selectedDate, selectedDatetime,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,
     contactErrors: contactV.errors, contactAttempt: contactV.attempt, contactMsg, contactField, submitContacts,
     captchaToken, code, setCode, codeSent, busy, error, setError, confirm, result, startOver,
