@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { GLTFLoader, type GLTFLoaderPlugin, type GLTFParser } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
+import { acceleratedRaycast, computeBoundsTree } from 'three-mesh-bvh';
 import assets from '@/lib/body3d/assets.json';
 import zoneColours from '@/lib/body3d/zone-colours.json';
 import { createZoneOverlay, MASK_N } from './overlay';
@@ -15,12 +15,6 @@ import type { Gender } from '@/lib/body3d/store';
 import { isLod1 } from '@/lib/body3d/lod';
 
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
-THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
-THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
-
-declare module 'three' {
-  interface BufferGeometry { computeBoundsTree: typeof computeBoundsTree; disposeBoundsTree: typeof disposeBoundsTree }
-}
 
 /** Same framing as the prototype: body height in scene units and the group's Y offset. */
 export const FRAMING: Record<Gender, { height: number; y: number }> = {
@@ -186,7 +180,7 @@ async function buildBvh(entry: ModelEntry) {
   await yieldToMain();
   let t0 = performance.now();
   for (const m of entry.meshes) {
-    if (!m.geometry.boundsTree) m.geometry.computeBoundsTree();
+    if (!m.geometry.boundsTree) computeBoundsTree.call(m.geometry);
     if (performance.now() - t0 > 30) { await yieldToMain(); t0 = performance.now(); }
   }
 }

@@ -9,6 +9,170 @@
 import { test, expect, type Browser, type Page, type TestInfo } from '@playwright/test';
 import { seedConsent, guard, expectClean, settle3D } from './helpers';
 
+const readView = (page: Page) => page.evaluate(() => window.__bm3d!.view!());
+const yawGap = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+const distance = ({ camera, target }: Awaited<ReturnType<typeof readView>>) => Math.hypot(...camera.map((n, i) => n - target[i]));
+const viewGap = (a: Awaited<ReturnType<typeof readView>>, b: typeof a) =>
+  Math.max(yawGap(a.yaw, b.yaw), Math.abs(a.zoom - b.zoom),
+    ...a.camera.map((n, i) => Math.abs(n - b.camera[i])), ...a.target.map((n, i) => Math.abs(n - b.target[i])));
+
+async function liveCanvas(page: Page, mode: 'hero' | 'booking') {
+  const slot = page.locator(`.b3d-slot[data-mode="${mode}"]`);
+  await expect(slot).toHaveAttribute('data-status', 'ready', { timeout: 30_000 });
+  const canvas = slot.locator('canvas');
+  await canvas.scrollIntoViewIfNeeded();
+  await expect.poll(() => page.evaluate(() => !!window.__bm3d?.view && !!window.__bm3d.anchors?.get().zones.length)).toBe(true);
+  await expect(canvas).toBeVisible();
+  const box = (await canvas.boundingBox())!;
+  return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) };
+}
+
+test('stage 11: desktop hero mouse gestures and the shared booking camera', async ({ browser, baseURL }, ti) => {
+  test.skip(ti.project.name !== 'A-pixel-7', 'one Chromium project with a desktop context');
+  const page = await browser.newPage({ baseURL, viewport: { width: 1280, height: 800 } });
+  try {
+    await seedConsent(page);
+    await page.goto('/ru/');
+    let { x, y } = await liveCanvas(page, 'hero');
+    const pause = page.getByTestId('b3d-rotation');
+    await expect.poll(async () => Math.abs((await readView(page)).yaw)).toBeGreaterThan(0.05);
+    await pause.click();
+    await expect(pause).toHaveAttribute('aria-pressed', 'true');
+    const front = await readView(page);
+    const drag = async (dx: number, dy: number) => {
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x + dx, y + dy, { steps: 8 });
+    };
+    await drag(0, -90);
+    expect(await readView(page)).toEqual(front);
+    await page.mouse.up();
+    await drag(92, -65);
+    const turned = await readView(page);
+    expect(yawGap(turned.yaw, front.yaw)).toBeGreaterThan(0.4);
+    expect({ ...turned, yaw: front.yaw }).toEqual(front);
+    await page.mouse.up();
+    const returning = (await readView(page)).yaw;
+    expect(yawGap(returning, front.yaw)).toBeGreaterThan(0.2);
+    // Reverse the drag while the return is running: it must continue from the in-flight pose.
+    await page.mouse.down();
+    await page.mouse.move(x + 74, y - 65);
+    const interrupted = (await readView(page)).yaw;
+    expect(yawGap(interrupted, front.yaw)).toBeGreaterThan(0.15);
+    expect(yawGap(interrupted, returning)).toBeLessThan(0.5);
+    await page.mouse.up();
+    await expect.poll(async () => yawGap((await readView(page)).yaw, front.yaw)).toBeLessThan(0.001);
+    await pause.click();
+    await expect(pause).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(async () => yawGap((await readView(page)).yaw, front.yaw)).toBeGreaterThan(0.035);
+    await pause.click();
+    const paused = await readView(page);
+    const restAnchors = () => page.evaluate(() => window.__bm3d!.anchors!.get().zones.map(({ zoneId, restX, restY }) => [zoneId, restX, restY]));
+    const male = await restAnchors();
+    const femaleButton = page.locator('.atlas').getByRole('button', { name: 'Женщина', exact: true });
+    await femaleButton.click();
+    await expect(femaleButton).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(restAnchors).not.toEqual(male);
+    await expect(page.locator('.atlas-line[data-visible="1"]').first()).toBeAttached();
+    expect(await readView(page)).toEqual(paused);
+
+    await page.mouse.move(x, y);
+    const scroll = await page.evaluate(() => scrollY);
+    await page.mouse.wheel(0, 180);
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(scroll + 60);
+    expect(await readView(page)).toEqual(paused);
+
+    const contextId = await page.evaluate(() => window.__bm3d!.contextId);
+    const book = () => page.locator('a.btn-book:visible').first().click();
+    await book();
+    await page.waitForURL(/\/booking\//);
+    ({ x, y } = await liveCanvas(page, 'booking'));
+    const reset = page.locator('.b3d-reset');
+    const rotate = page.getByRole('button', { name: 'Поворот', exact: true });
+    const zoom = page.getByRole('button', { name: 'Масштаб', exact: true });
+    await rotate.click();
+    const bookingFront = { camera: front.camera, target: front.target, zoom: 1, yaw: 0 };
+    await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
+    await drag(80, -60);
+    await page.mouse.up();
+    await expect.poll(async () => Math.abs((await readView(page)).camera[0])).toBeGreaterThan(0.5);
+    await reset.click();
+    await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
+    await zoom.click();
+    await drag(0, -80);
+    await page.mouse.up();
+    await expect.poll(async () => distance(await readView(page))).toBeLessThan(distance(bookingFront) - 0.4);
+    // Return to hero while Zoom is still selected, then return to booking on the same WebGL context.
+    await page.goBack();
+    ({ x, y } = await liveCanvas(page, 'hero'));
+    expect(await page.evaluate(() => window.__bm3d!.contextId)).toBe(contextId);
+    const heroAgain = await readView(page);
+    await drag(82, -70);
+    const turnedAgain = await readView(page);
+    expect(yawGap(turnedAgain.yaw, heroAgain.yaw)).toBeGreaterThan(0.4);
+    expect({ ...turnedAgain, yaw: heroAgain.yaw }).toEqual(heroAgain);
+    await page.mouse.up();
+    await book();
+    await page.waitForURL(/\/booking\//);
+    ({ x, y } = await liveCanvas(page, 'booking'));
+    expect(await page.evaluate(() => window.__bm3d!.contextId)).toBe(contextId);
+    await expect(zoom).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
+    const point = await page.evaluate(({ x, y }) => {
+      for (let dy = -40; dy <= 60; dy += 5) {
+        if (window.__bm3d!.pick!(x, y + dy)) return { x, y: y + dy };
+      }
+      return null;
+    }, { x, y });
+    expect(point).not.toBeNull();
+    await page.mouse.click(point!.x, point!.y);
+    await expect(page.getByTestId('b3d-marker')).toHaveCount(1);
+  } finally {
+    await page.close();
+  }
+});
+
+test('stage 11: touch swipes, pinch and cancellation in the hero', async ({ page, context }, ti) => {
+  test.skip(ti.project.name !== 'A-pixel-7', 'Chromium touch input through CDP');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await seedConsent(page);
+  await page.goto('/ru/');
+  const { x, y } = await liveCanvas(page, 'hero');
+  const cdp = await context.newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel', ...touchPoints: { x: number; y: number; id?: number }[]) =>
+    cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+  const front = await readView(page);
+  expect(front.yaw).toBe(0);
+  await touch('touchStart', { x, y });
+  for (let i = 1; i <= 7; i++) await touch('touchMove', { x: x + i * 10, y: y - i * 2 });
+  const turned = await readView(page);
+  expect(yawGap(turned.yaw, front.yaw)).toBeGreaterThan(0.4);
+  expect({ ...turned, yaw: front.yaw }).toEqual(front);
+  await touch('touchCancel');
+  await expect.poll(() => readView(page)).toEqual(front);
+
+  const scroll = await page.evaluate(() => scrollY);
+  await touch('touchStart', { x, y });
+  for (let i = 1; i <= 8; i++) await touch('touchMove', { x, y: y - i * 12 });
+  await touch('touchEnd');
+  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(scroll + 45);
+  expect(await readView(page)).toEqual(front);
+
+  // Scroll back before the next gesture, which must work after both native scroll and explicit touch cancellation.
+  await page.evaluate((top) => scrollTo({ top, behavior: 'instant' }), scroll);
+  await touch('touchStart', { x, y });
+  for (let i = 1; i <= 5; i++) await touch('touchMove', { x: x + i * 11, y });
+  expect(yawGap((await readView(page)).yaw, front.yaw)).toBeGreaterThan(0.35);
+  await touch('touchEnd');
+  await expect.poll(() => readView(page)).toEqual(front);
+
+  await touch('touchStart', { x: x - 20, y, id: 0 }, { x: x + 20, y, id: 1 });
+  for (let i = 1; i <= 8; i++) await touch('touchMove', { x: x - 20 - i * 6, y, id: 0 }, { x: x + 20 + i * 6, y, id: 1 });
+  expect(await readView(page)).toEqual(front);
+  await touch('touchEnd');
+  expect(await readView(page)).toEqual(front);
+});
+
 const FIG_CENTRE = 0.5013; // the drawn (red) centre of the figure in the slot — sections.css; the pixel test checks the drawing itself
 
 /** the figure centre vs the reference centre, each label's box, and the leader lines vs their labels */

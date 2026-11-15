@@ -3,7 +3,7 @@
  * Body scene inside the persistent canvas. Lights, camera limits and material look = the prototype (see spike report §4).
  * Input is handled on the canvas element (tap vs drag, double tap → reset, delayed marker placement, one-finger zoom tool).
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -18,13 +18,15 @@ import { bodyAnchors } from '@/lib/body3d/anchors';
 import type { SlotMode } from '../Body3DProvider';
 import { LAND_PHONE_MQ } from '@/lib/ui/media';
 import { heroReveal } from '@/lib/body3d/heroIntro';
+import { bindHeroDrag } from './heroDrag';
 
 const CAM = { pos: new THREE.Vector3(0, 0.9, 2.9), target: new THREE.Vector3(0, 0.5, 0), minDist: 1.6, maxDist: 5.5, minPolar: 0.08 * Math.PI, maxPolar: 0.78 * Math.PI };
 // DECISION (lead + art director, hi-fi hero): instead of a full turn the hero model sways ±20° around the front view
 // (sine, 9 s) — the index call-outs keep their anchors; the pause button stops the sway (WCAG 2.2.2); reduced motion → still.
 const SWAY = { amp: THREE.MathUtils.degToRad(20), period: 9, easeIn: 0.6 };
-// after a drag in the hero the camera returns to the front view: 500 ms, cubic-bezier(.65,0,.35,1); reduced motion → instant
+// After a drag the hero model returns to its resting yaw: reduced motion → instant.
 const RETURN_MS = 500;
+const TURN = 2 * Math.PI;
 // RC-4 (lead; FB + AD): short landscape phones (LAND_PHONE_MQ: SE 667×325, Moto G4 640×300), booking step 1 — the canvas
 // is only 230–270 px high (AD's layout: the step row in the right column, the gender switch in the tools column, the model
 // from 12 px), and at the default framing the body takes ≈ 72 % of it (105–123 px on main 6b101c5 with the old layout).
@@ -158,6 +160,12 @@ export function Scene({ slot }: { slot: Slot }) {
     if (window.__bm3d && !window.__bm3d.outline) { // gate probes
       window.__bm3d.outline = () => modeRef.current;
       window.__bm3d.anchors = { get: bodyAnchors.get, watch: () => { bodyAnchors.subscribe(() => {}); } };
+      window.__bm3d.view = () => ({
+        camera: cam.position.toArray(),
+        target: (controls.current?.target ?? CAM.target).toArray(),
+        zoom: (cam as THREE.PerspectiveCamera).zoom,
+        yaw: pivot.current?.rotation.y ?? 0,
+      });
       // zone under a client point and a fixed yaw of the model (front 0, back π) — M-01 checks of the marker numbers
       const pickRay = new THREE.Raycaster() as THREE.Raycaster & { firstHitOnly?: boolean };
       pickRay.firstHitOnly = true;
@@ -187,33 +195,50 @@ export function Scene({ slot }: { slot: Slot }) {
     return () => { io?.disconnect(); document.removeEventListener('visibilitychange', apply); };
   }, [slot, mode2d, setFrameloop]);
 
-  // ---- reset view (double tap / button)
-  const swayT = useRef(0); // hero sway clock (s)
-  const interacting = useRef(false); // a drag is in progress → no sway
+  // ---- booking reset (double tap / button / entry from the hero)
   type Anim = { t0: number; dur: number; ease: (k: number) => number; from: THREE.Vector3; fromT: THREE.Vector3; rotFrom: number; rotTo: number };
   const resetAnim = useRef<Anim | null>(null);
-  const startAnim = (dur: number, ease: (k: number) => number, rotTo?: number) => {
+  const startAnim = useCallback((rotTo?: number) => {
     if (!controls.current || !pivot.current) return;
     const r = pivot.current.rotation.y;
-    resetAnim.current = { t0: performance.now(), dur, ease, from: camera.position.clone(), fromT: controls.current.target.clone(), rotFrom: r, rotTo: rotTo ?? Math.round(r / (2 * Math.PI)) * 2 * Math.PI };
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- startAnim only reads refs
-  useEffect(() => { if (resetSeq) startAnim(450, easeReset); }, [resetSeq, camera]);
+    resetAnim.current = { t0: performance.now(), dur: 450, ease: easeReset, from: camera.position.clone(), fromT: controls.current.target.clone(), rotFrom: r, rotTo: rotTo ?? Math.round(r / TURN) * TURN };
+  }, [camera]);
+  useEffect(() => { if (editable && resetSeq) startAnim(); }, [editable, resetSeq, startAnim]);
   // the booking starts from the front view (the hero may have left the model mid-sway)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- startAnim only reads refs
-  useEffect(() => { if (mode === 'booking') startAnim(450, easeReset, 0); if (mode === 'hero') swayT.current = 0; }, [mode]);
+  useEffect(() => {
+    if (editable) startAnim(0);
+    return () => { resetAnim.current = null; };
+  }, [editable, startAnim]);
 
-  // ---- hero: sway, drag suspends it, release → camera back to the front view
-  const onControlsStart = () => { if (mode === 'hero') { interacting.current = true; resetAnim.current = null; } };
-  const onControlsEnd = () => {
-    if (mode !== 'hero') return;
-    interacting.current = false;
-    const rot = pivot.current?.rotation.y ?? 0; // the sway angle stays — only the camera comes back
-    startAnim(reducedMotion() ? 0 : RETURN_MS, easeReturn, rot);
-  };
+  // ---- hero: the camera stays at the front; drag and sway share the model's vertical pivot.
+  const hero = mode === 'hero' && !mode2d;
+  const swayT = useRef(0);
+  const dragYaw = useRef(0);
+  const returning = useRef<{ t0: number; from: number } | null>(null);
+  const dragging = useRef(false);
+  useLayoutEffect(() => {
+    if (!hero) return;
+    camera.position.copy(CAM.pos);
+    camera.lookAt(CAM.target);
+    if (pivot.current) pivot.current.rotation.y = 0;
+    swayT.current = 0;
+    dragYaw.current = 0;
+    returning.current = null;
+    dragging.current = false;
+    return bindHeroDrag(gl.domElement, (dx) => {
+      dragging.current = true;
+      returning.current = null; // continue from the yaw drawn in the most recent frame
+      dragYaw.current -= TURN * dx / Math.max(1, gl.domElement.clientHeight);
+    }, () => {
+      dragging.current = false;
+      if (reducedMotion()) dragYaw.current = 0;
+      else returning.current = { t0: performance.now(), from: dragYaw.current - Math.round(dragYaw.current / TURN) * TURN };
+    });
+  }, [hero, camera, gl]);
 
   // ---- input on the canvas: taps, double tap, marker placement, one-finger zoom tool
   useEffect(() => {
+    if (!editable) return;
     const el = gl.domElement;
     const raycaster = new THREE.Raycaster() as THREE.Raycaster & { firstHitOnly?: boolean };
     raycaster.firstHitOnly = true;
@@ -250,7 +275,7 @@ export function Scene({ slot }: { slot: Slot }) {
       lastTap = { t: now, x: e.clientX, y: e.clientY };
       // DECISION: a tap places the marker after 230 ms, so a double tap resets the view instead of adding a marker.
       // R-FINAL F-04 (lead): in ANY tool — the hints say «tap the model»; drags rotate (or zoom), a tap without a move marks
-      if (editable) { const { clientX: x, clientY: y } = e; pending = window.setTimeout(() => place(x, y), 230); }
+      const { clientX: x, clientY: y } = e; pending = window.setTimeout(() => place(x, y), 230);
     };
     const noDbl = (e: MouseEvent) => e.preventDefault();
     el.addEventListener('pointerdown', onDown); el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('dblclick', noDbl);
@@ -266,13 +291,21 @@ export function Scene({ slot }: { slot: Slot }) {
 
   useFrame((_, dt) => {
     const p = pivot.current;
-    if (p && mode === 'hero' && autorotate && !interacting.current && !resetAnim.current) {
+    if (p && hero) {
       // RC-5 (lead): the sway clock runs from the reveal (lib/body3d/heroIntro — the model waits in the front pose under the
       // poster until the index intro is done), its amplitude eased in over SWAY.easeIn s (a sine starts at full speed,
       // 14°/s: the dots slid 2.4–3.4 px in the first frames after the swap)
-      if (heroReveal.isShown()) swayT.current += Math.min(dt, 0.1); else swayT.current = 0;
+      if (autorotate && !dragging.current && !returning.current) {
+        if (heroReveal.isShown()) swayT.current += Math.min(dt, 0.1); else swayT.current = 0;
+      }
+      const motion = returning.current;
+      if (motion) {
+        const progress = Math.min(1, (performance.now() - motion.t0) / RETURN_MS);
+        dragYaw.current = motion.from * (1 - easeReturn(progress));
+        if (progress === 1) { dragYaw.current = 0; returning.current = null; }
+      }
       const k = Math.min(1, swayT.current / SWAY.easeIn);
-      p.rotation.y = SWAY.amp * k * k * (3 - 2 * k) * Math.sin((2 * Math.PI * swayT.current) / SWAY.period);
+      p.rotation.y = dragYaw.current + SWAY.amp * k * k * (3 - 2 * k) * Math.sin(TURN * swayT.current / SWAY.period);
     }
     const ra = resetAnim.current;
     if (ra && controls.current && p) {
@@ -304,9 +337,9 @@ export function Scene({ slot }: { slot: Slot }) {
       <ambientLight intensity={0.9} />
       <hemisphereLight args={['#ffffff', '#f1f3f5', 1.4]} position={[0, 2, 0]} />
       {lights.map((l, k) => <directionalLight key={k} position={l.p} intensity={l.i} color={l.c} />)}
-      <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'} onStart={onControlsStart} onEnd={onControlsEnd}
+      {editable && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'}
         minDistance={CAM.minDist} maxDistance={CAM.maxDist} minPolarAngle={CAM.minPolar} maxPolarAngle={CAM.maxPolar} target={CAM.target}
-        touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }} />
+        touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }} />}
       <group ref={pivot}>
         {editable && markers.filter((m) => m.normal).map((m) => <Pin key={m.id} m={m} meshes={entry?.meshes} />)}
       </group>
@@ -350,5 +383,5 @@ function Pin({ m, meshes }: { m: Marker; meshes?: THREE.Mesh[] }) {
   );
 }
 
-declare global { interface Window { __bm3d?: { contextId: string; frames: number; model: () => string | null; url: (g: 'male' | 'female') => string; quality: () => string; dpr: () => number; outline?: () => string; anchors?: { get: typeof bodyAnchors.get; watch: () => void }; pick?: (x: number, y: number) => string | null; yaw?: (rad: number) => void; zoneColours?: (g: 'male' | 'female', url: string) => Promise<number[]> } } }
+declare global { interface Window { __bm3d?: { contextId: string; frames: number; model: () => string | null; url: (g: 'male' | 'female') => string; quality: () => string; dpr: () => number; outline?: () => string; anchors?: { get: typeof bodyAnchors.get; watch: () => void }; view?: () => { camera: number[]; target: number[]; zoom: number; yaw: number }; pick?: (x: number, y: number) => string | null; yaw?: (rad: number) => void; zoneColours?: (g: 'male' | 'female', url: string) => Promise<number[]> } } }
 export { modelUrl };
