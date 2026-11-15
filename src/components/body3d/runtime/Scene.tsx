@@ -27,6 +27,8 @@ const SWAY = { amp: THREE.MathUtils.degToRad(20), period: 9, easeIn: 0.6 };
 // After a drag the hero model returns to its resting yaw: reduced motion → instant.
 const RETURN_MS = 500;
 const TURN = 2 * Math.PI;
+// A swipe from the centre can reach the back before the finger reaches the edge.
+const TOUCH_HALF_TURN_WIDTH = 0.4;
 // RC-4 (lead; FB + AD): short landscape phones (LAND_PHONE_MQ: SE 667×325, Moto G4 640×300), booking step 1 — the canvas
 // is only 230–270 px high (AD's layout: the step row in the right column, the gender switch in the tools column, the model
 // from 12 px), and at the default framing the body takes ≈ 72 % of it (105–123 px on main 6b101c5 with the old layout).
@@ -225,10 +227,12 @@ export function Scene({ slot }: { slot: Slot }) {
     dragYaw.current = 0;
     returning.current = null;
     dragging.current = false;
-    return bindHeroDrag(gl.domElement, (dx) => {
+    const canvas = gl.domElement;
+    return bindHeroDrag(canvas, (dx, isTouch) => {
       dragging.current = true;
       returning.current = null; // continue from the yaw drawn in the most recent frame
-      dragYaw.current += TURN * dx / Math.max(1, gl.domElement.clientHeight);
+      const halfTurnDistance = isTouch ? canvas.clientWidth * TOUCH_HALF_TURN_WIDTH : canvas.clientHeight / 2;
+      dragYaw.current += Math.PI * dx / Math.max(1, halfTurnDistance);
     }, () => {
       dragging.current = false;
       if (reducedMotion()) dragYaw.current = 0;

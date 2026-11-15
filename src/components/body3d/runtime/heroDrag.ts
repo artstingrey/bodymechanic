@@ -1,7 +1,7 @@
 const DRAG_THRESHOLD = 6;
 
 /** Keep the browser in charge of vertical scrolling and pinch zoom. */
-export function bindHeroDrag(canvas: HTMLCanvasElement, rotate: (dx: number) => void, end: () => void) {
+export function bindHeroDrag(canvas: HTMLCanvasElement, rotate: (dx: number, isTouch: boolean) => void, end: () => void) {
   let pointer: { id: number; x: number; y: number; dragging: boolean } | null = null;
 
   const finish = () => {
@@ -22,9 +22,10 @@ export function bindHeroDrag(canvas: HTMLCanvasElement, rotate: (dx: number) => 
   const onMove = (e: PointerEvent) => {
     if (!pointer || e.pointerId !== pointer.id) return;
     const dx = e.clientX - pointer.x;
+    const isTouch = e.pointerType === 'touch';
     if (!pointer.dragging) {
       const dy = Math.abs(e.clientY - pointer.y);
-      if (e.pointerType === 'touch' && dy >= DRAG_THRESHOLD && dy >= Math.abs(dx)) {
+      if (isTouch && dy >= DRAG_THRESHOLD && dy >= Math.abs(dx)) {
         finish();
         return;
       }
@@ -32,7 +33,7 @@ export function bindHeroDrag(canvas: HTMLCanvasElement, rotate: (dx: number) => 
       pointer.dragging = true;
     }
     pointer.x = e.clientX;
-    rotate(dx);
+    rotate(dx, isTouch);
   };
   const onEnd = (e: PointerEvent) => { if (e.pointerId === pointer?.id) finish(); };
 
