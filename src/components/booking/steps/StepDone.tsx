@@ -57,7 +57,7 @@ export function StepDone({ flow }: { flow: Flow }) {
             </div>
           );
         })}
-        <div><dt>{t('booking.done.address')}</dt><dd>{STUDIO.streetAddress || t('booking.done.addressUnavailable')}</dd></div>
+        <div><dt>{t('booking.done.address')}</dt><dd>{STUDIO.streetAddress}</dd></div>
       </dl>
       <div className="booking-done__actions">
         <p className="lbl-u">{t('booking.done.calendar')}</p>

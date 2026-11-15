@@ -18,6 +18,7 @@ const date = new Date(Date.now() + 7 * day).toISOString().slice(0, 10);
 const datetime = `${new Date(Date.now() + 6 * day).toISOString().slice(0, 10)}T23:20:00.123+03:00`;
 const secrets = /fixture-partner-token|fixture-record-hash-secret|fixture-private-|visitor\d+@example\.test|\+97150\d{7}/;
 const recordPath = '/api/booking/record';
+const studioAddress = 'Dubai, Al Thanyah Fifth, Jumeirah Lakes Towers, HDS Tower Cluster F, 16 floor, 1606';
 let browser;
 
 async function scenario(name) {
@@ -43,6 +44,12 @@ function run(check) {
     ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token', ALTEGIO_CURRENCY: 'AED',
     RECORD_FIXTURE_SCENARIO: fixture, RECORD_FIXTURE_DATE: date, RECORD_FIXTURE_DATETIME: datetime,
   }) });
+}
+
+function addressRow(page, copy) {
+  return page.locator('.booking-done .bk-review > div').filter({
+    has: page.getByText(copy.address, { exact: true }),
+  }).locator('dd');
 }
 
 async function openReview(origin, locale, staffId, contactIndex, serviceId = 13982355) {
@@ -80,6 +87,7 @@ async function checkReceipt(page, messages, booking, composite = false) {
   const details = done.locator('.bk-review');
   await expect(page).toHaveURL(`${booking}?step=7`);
   await expect(page.locator('#st7')).toHaveText(copy.title);
+  await expect(addressRow(page, copy)).toHaveText(studioAddress);
   await expect(details).toContainText(composite ? '12345, 12346' : '12345');
   await expect(details).toContainText('00:20');
   await expect(details).toContainText('Example specialist');
@@ -100,6 +108,7 @@ async function checkReceipt(page, messages, booking, composite = false) {
   const download = await file;
   assert.equal(download.suggestedFilename(), 'bodymechanic-booking.ics');
   const ics = await fs.readFile(await download.path(), 'utf8');
+  assert.ok(ics.replace(/\r\n[ \t]/g, '').split('\r\n').includes(`LOCATION:${studioAddress.replaceAll(',', '\\,')}`));
   const start = new Date(datetime).toISOString().replace(/[-:]|\.\d{3}/g, '');
   assert.ok(ics.includes(`DTSTART:${start}`));
   if (composite) assert.match(ics, /DTEND:\d{8}T215000Z/);
@@ -119,6 +128,7 @@ async function checkReceipt(page, messages, booking, composite = false) {
   await done.getByRole('button', { name: copy.pdf }).click();
   const [googleUrl, whatsappUrl, print] = await page.evaluate(() => window.fixtureActions);
   assert.equal(new URL(googleUrl).searchParams.get('dates').split('/')[0], start);
+  assert.equal(new URL(googleUrl).searchParams.get('location'), studioAddress);
   assert.match(new URL(whatsappUrl).searchParams.get('text'), /12345/);
   assert.doesNotMatch(decodeURIComponent(googleUrl + whatsappUrl), secrets);
   assert.equal(print, 'print');
@@ -175,10 +185,11 @@ try {
       assert.deepEqual(replay, { status: 202, body: { data: { status: 'processing' } } });
       assert.equal(await creates(), 1);
       await fs.writeFile(release, '');
-      await checkReceipt(page, messages, booking);
+      await expect(page).toHaveURL(`${booking}?step=7`);
+      await expect(addressRow(page, messages.booking.done)).toHaveText(studioAddress);
       assert.match(JSON.parse(await fs.readFile(comments, 'utf8')), /^\[Сайт\/3D\][\s\S]+fixture-private-marker/);
       await page.reload();
-      await expect(page.locator('#st7')).toHaveText(messages.booking.done.title);
+      await checkReceipt(page, messages, booking);
       assert.equal(await creates(), 1);
       await page.getByRole('button', { name: messages.booking.draft.startOver }).click();
       await expect(page).toHaveURL(booking);
@@ -219,20 +230,23 @@ try {
       await page.close();
     }
   });
-  await scenario('package-confirmed');
-  await run(async (origin) => {
-    const { page, messages, booking, confirm } = await openReview(origin, 'en', 91601, 3, 13982379);
-    try {
-      await confirm.click();
-      await checkReceipt(page, messages, booking, true);
-      await page.reload();
-      await expect(page.locator('#st7')).toHaveText(messages.booking.done.title);
-      await expect(page.locator('.booking-done .bk-review')).toContainText('12345, 12346');
-      assert.equal(await creates(), 1);
-    } finally {
-      await page.close();
-    }
-  });
+  for (const [locale, contactIndex, composite] of [['en', 3, true], ['ru', 4, true], ['en', 5, false]]) {
+    await scenario(composite ? 'package-confirmed' : 'record-confirmed');
+    await run(async (origin) => {
+      const serviceId = composite ? 13982379 : 13982355;
+      const { page, messages, booking, confirm } = await openReview(origin, locale, 91601, contactIndex, serviceId);
+      try {
+        await confirm.click();
+        await expect(page).toHaveURL(`${booking}?step=7`);
+        await expect(addressRow(page, messages.booking.done)).toHaveText(studioAddress);
+        await page.reload();
+        await checkReceipt(page, messages, booking, composite);
+        assert.equal(await creates(), 1);
+      } finally {
+        await page.close();
+      }
+    });
+  }
   console.log('3D booking: review and confirmed receipt, composite parts, calendar, print, restart and unknown outcome OK');
 } finally {
   await browser?.close();

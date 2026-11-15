@@ -8,6 +8,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect, type APIRequestContext } from '@playwright/test';
 import { LOCALES, matrixPages, isShotPage, shotName, guard, settle3D, drawOffscreen3D, domChecks, internalLinks, expectClean, expectNoDemoLabels, seedConsent } from './helpers';
+import { STUDIO, STUDIO_MAP } from '../src/lib/config';
+import en from '../messages/en.json';
+import ru from '../messages/ru.json';
 
 const SHOTS = process.env.GATE_SHOTS !== '0';
 const linkCache = new Map<string, string | null>(); // url → problem (null = ok), per worker
@@ -28,6 +31,58 @@ async function checkLink(request: APIRequestContext, href: string): Promise<stri
 }
 
 for (const locale of LOCALES) {
+  test(`/${locale}/contacts/ loads the studio map on request`, async ({ page }) => {
+    const { contacts, footer } = locale === 'ru' ? ru : en;
+    const mapRequests: string[] = [];
+    await page.route((url) => url.hostname === 'www.google.com' && url.pathname === '/maps/embed', async (route) => {
+      mapRequests.push(route.request().url());
+      await route.abort();
+    });
+    await seedConsent(page);
+    await page.goto(`/${locale}/contacts/`, { waitUntil: 'networkidle' });
+
+    const list = page.locator('.contacts__list');
+    const contactColumn = page.locator('.site-footer__cols > div').filter({ has: page.getByRole('heading', { name: footer.col.contacts, exact: true }) });
+    await expect(list.locator('dd').first()).toHaveText(STUDIO.streetAddress);
+    await expect(contactColumn.getByText(STUDIO.streetAddress, { exact: true })).toBeVisible();
+    await expect(contactColumn.getByRole('link', { name: footer.links.address })).toHaveAttribute('href', `/${locale}/contacts/`);
+    await expect(contactColumn.getByRole('link', { name: contacts.openMap })).toHaveAttribute('href', STUDIO_MAP.url);
+    await expect(page.getByText(contacts.pending, { exact: true })).toHaveCount(0);
+
+    const map = page.getByRole('figure', { name: contacts.mapLabel });
+    const iframe = map.locator('iframe');
+    const fallback = page.locator('main').getByRole('link', { name: contacts.openMap });
+    await expect(fallback).toHaveAttribute('href', STUDIO_MAP.url);
+    await expect(iframe).toHaveCount(0);
+    expect(mapRequests).toEqual([]);
+
+    const request = page.waitForEvent('requestfailed', (req) => req.url() === STUDIO_MAP.embedUrl);
+    await map.getByRole('button', { name: contacts.mapFacade.button }).click();
+    await expect(iframe).toHaveAttribute('title', contacts.mapLabel);
+    await expect(iframe).toHaveAttribute('src', STUDIO_MAP.embedUrl);
+    await expect(iframe).toHaveAttribute('loading', 'lazy');
+    await expect(iframe).toHaveAttribute('allowfullscreen', '');
+    await expect(iframe).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    await request;
+    expect(mapRequests).toEqual([STUDIO_MAP.embedUrl]);
+    await expect(fallback).toBeVisible();
+
+    const mapBox = (await map.boundingBox())!;
+    const listBox = (await list.boundingBox())!;
+    const viewportWidth = page.viewportSize()!.width;
+    expect(await iframe.boundingBox()).toEqual(mapBox);
+    expect(mapBox.width).toBeGreaterThan(0);
+    expect(mapBox.x + mapBox.width).toBeLessThanOrEqual(viewportWidth);
+    if (viewportWidth < 1024) {
+      expect(mapBox.x).toBe(listBox.x);
+      expect(mapBox.width).toBe(listBox.width);
+      expect(mapBox.y).toBeGreaterThan(listBox.y + listBox.height);
+    } else {
+      expect(mapBox.y).toBe(listBox.y);
+      expect(mapBox.x).toBeGreaterThan(listBox.x + listBox.width);
+    }
+  });
+
   for (const p of matrixPages(locale)) {
     const url = `/${locale}/${p}`;
     test(`${url}`, async ({ page, baseURL }, info) => {

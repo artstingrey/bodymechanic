@@ -45,18 +45,18 @@
 
 | Раздел | Ключи | Что нужно |
 |---|---|---|
-| Контакты | `contacts.value.address`, `.directions`, `.parking`, `.hours`, `.whatsapp`, `.phone`, `.email` | Адрес, как добраться, парковка, часы, WhatsApp, телефон, почта |
+| Контакты | `contacts.value.directions`, `.parking`, `.hours`, `.whatsapp`, `.phone`, `.email` | Как добраться, парковка, часы, WhatsApp, телефон, почта |
 | Подвал | `footer.legalEntity`, `footer.socialLinks` | Юридическое название, ссылки на соцсети |
 | Главная | `home.team.people`, `home.reviews.items`, `home.space.photos`, `home.space.description`, `home.todo.studioPhotos` | Команда, отзывы, фото и текст о студии |
 | Вопросы и ответы | `home.faq.duration.todo`, `home.faq.prepare.todo`, `home.faq.reschedule.todo` | Длительность, подготовка, правила переноса |
-| Запись | `booking.review.paymentTodo`, `booking.done.addressTodo`, `body3d.todo.zoneRules`, `contraindications.todo`, `forms.todo.ageBounds` | Условия оплаты, адрес, правила подбора услуги, противопоказания, политика по возрасту |
+| Запись | `booking.review.paymentTodo`, `body3d.todo.zoneRules`, `contraindications.todo`, `forms.todo.ageBounds` | Условия оплаты, правила подбора услуги, противопоказания, политика по возрасту |
 | Услуги и команда | `service.todo.body`, `team.todo.bio`, `mock.todo.pricesDurations` | Тексты страниц услуг, биографии, подтверждение цен и длительности |
 | Кабинет | `account.cancel.rules` | Правила отмены |
 | Журнал | `journal.todo.articles` | Рубрики и статьи |
 | Документы | `docs.todo.privacy`, `docs.todo.terms` | Тексты политики и условий |
 | Лендинги | `lp.offer.terms`, `lp.directions.district`, `.building`, `.mapLink`, `lp.todo.responseSla`, `lp.todo.whatsapp` | Условия акции, адрес, график ответа, номер WhatsApp |
 
-Через переменные окружения (не заданы, см. `CONFIG-DEPLOY.md`): `NEXT_PUBLIC_STUDIO_WHATSAPP`, `NEXT_PUBLIC_STUDIO_ADDRESS`, `NEXT_PUBLIC_STUDIO_PHONE`, `NEXT_PUBLIC_STUDIO_HOURS`.
+Через переменные окружения (не заданы, см. `CONFIG-DEPLOY.md`): `NEXT_PUBLIC_STUDIO_WHATSAPP`, `NEXT_PUBLIC_STUDIO_PHONE`, `NEXT_PUBLIC_STUDIO_HOURS`.
 
 ## 4. Открытые решения клиента и юристов
 

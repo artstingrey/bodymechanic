@@ -195,7 +195,7 @@ dialog.burger-dialog[open] .meta { transition: opacity 220ms var(--e-out) 190ms,
 .site-footer__cols a { min-height: 44px; display: inline-flex; align-items: center; }
 @media (hover: hover) { .site-footer a:hover { text-decoration: underline; text-underline-offset: 4px; } }
 .site-footer .ct { flex-direction: row; justify-content: flex-start; align-items: center; gap: 10px; }
-.site-footer .ct--pending { padding-block: 8px; color: var(--muted-on-dark); line-height: 1.35; }
+.site-footer .ct--address { padding-block: 8px; line-height: 1.35; }
 .site-footer .lang-switch a { color: var(--muted-on-dark); padding-left: 0; }
 .site-footer .lang-switch [aria-current="true"] { color: var(--bg); }
 .site-footer .lang-switch--long a, .site-footer .lang-switch--long [aria-current] { font-size: var(--fs-body); font-weight: 400; }

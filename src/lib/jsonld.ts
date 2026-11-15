@@ -31,7 +31,7 @@ export function businessJsonLd(locale: Locale, p: { name: string; description: s
     image: ogImage(locale),
     address: {
       '@type': 'PostalAddress',
-      ...(STUDIO.streetAddress ? { streetAddress: STUDIO.streetAddress } : {}), // TODO(content): street address
+      streetAddress: STUDIO.streetAddress,
       addressLocality: STUDIO.locality,
       addressCountry: STUDIO.country,
     },

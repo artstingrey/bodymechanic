@@ -13,7 +13,7 @@
 | `NEXT_PUBLIC_SITE_URL` | Адрес сайта в canonical, hreflang, Open Graph, `sitemap.xml`, строке `Sitemap:` в `robots.txt` и в разметке JSON-LD. Косая черта в конце отбрасывается. | `https://bodymechanic.example` | `src/lib/site.ts` |
 | `NEXT_PUBLIC_GTM_ID` | Идентификатор контейнера Google Tag Manager вида `GTM-XXXXXXX`. Контейнер грузится только после согласия посетителя на «Аналитику» или «Маркетинг». Значение другого вида игнорируется. **Задавать только на выпуске RC-10 или новее**: в RC-9 номер услуги попадал в адрес страницы записи, а пиксель Meta, тег Google и GA4 сами отправляют адрес страницы (`KNOWN-ISSUES.md`, раздел 5, пункт 20). | пусто: GTM не грузится, события остаются в `window.dataLayer` | `src/lib/config.ts`, `src/lib/analytics/gtm.ts` |
 | `NEXT_PUBLIC_STUDIO_WHATSAPP` | Номер WhatsApp студии для всех ссылок `wa.me` (лендинг, шаги записи, «Мои записи»). Из значения берутся только цифры. | пусто: ссылка `https://wa.me/` без номера, WhatsApp предложит выбрать чат | `src/lib/config.ts` |
-| `NEXT_PUBLIC_STUDIO_ADDRESS` | Улица и дом студии в разметке JSON-LD. | пусто: поле в разметку не попадает | `src/lib/config.ts`, `src/lib/jsonld.ts` |
+| `NEXT_PUBLIC_STUDIO_ADDRESS` | Переопределяет адрес в футере, контактах, подтверждении записи, календаре и JSON-LD. При переезде обновите также обе ссылки на точку в Google Maps. | Адрес HDS Tower из задания этапа 10 | `src/lib/config.ts` |
 | `NEXT_PUBLIC_STUDIO_PHONE` | Телефон студии в JSON-LD, формат `+971…`. | пусто: поле не попадает | там же |
 | `NEXT_PUBLIC_STUDIO_HOURS` | Часы работы в JSON-LD в формате schema.org, несколько значений через `;`. Пример: `Mo-Sa 09:00-21:00`. | пусто: поле не попадает | там же |
 | `NEXT_PUBLIC_BOOKING_SMS_REQUIRED` | Значение `true` включает на шаге 6 записи ввод кода из SMS. Сам код сейчас не отправляется: сервера нет. | выключено | `src/lib/config.ts`, `src/components/booking/useBookingFlow.ts`, `src/components/booking/steps/StepReview.tsx` |
@@ -214,7 +214,7 @@ npm run test:matrix
 
 - **Демо-страницы попадут в индекс.** В `sitemap.xml` входят страницы четырёх демо-специалистов и трёх демо-статей (`src/app/sitemap.ts`, `src/lib/api/mock-data.ts`).
 - **Плашка «Демо»** показывается на каждой странице сайта (`src/app/[locale]/layout.tsx`).
-- **Данные студии в JSON-LD** пусты, пока не заданы `NEXT_PUBLIC_STUDIO_ADDRESS`, `NEXT_PUBLIC_STUDIO_PHONE`, `NEXT_PUBLIC_STUDIO_HOURS`.
+- **Телефон и часы работы в JSON-LD** появятся, когда заданы `NEXT_PUBLIC_STUDIO_PHONE` и `NEXT_PUBLIC_STUDIO_HOURS`. Адрес HDS Tower задан в конфигурации студии.
 - **`NEXT_PUBLIC_SITE_URL`** должен быть настоящим доменом.
 - **Запись и заявки** работают на заглушках (см. `BACKEND-CONTRACT.md`). Посетитель из поиска сможет «записаться», но запись никуда не попадёт.
 - **Описание страницы записи** обещает «Запись сразу попадает в расписание студии» (`meta.booking.description`).
