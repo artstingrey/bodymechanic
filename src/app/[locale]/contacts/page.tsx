@@ -4,6 +4,7 @@ import { pageMetadata } from '@/lib/seo';
 import { PageLd } from '@/components/seo/PageLd';
 import { PageHead } from '@/components/sections/PageHead';
 import { isTodo } from '@/components/ui/Todo';
+import { StudioMapFrame } from '@/components/ui/StudioMapFrame';
 import { STUDIO, STUDIO_MAP } from '@/lib/config';
 
 export async function generateMetadata() {
@@ -28,15 +29,7 @@ export default async function ContactsPage() {
           ))}
         </dl>
         <div className="contacts__map">
-          <figure className="contacts__map-frame" aria-label={mapTitle}>
-            <iframe
-              src={STUDIO_MAP.embedUrl}
-              title={mapTitle}
-              allowFullScreen
-              loading="eager"
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          </figure>
+          <StudioMapFrame className="contacts__map-frame" title={mapTitle} />
           <a className="btn btn--text" href={STUDIO_MAP.url} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}</a>
         </div>
       </div>

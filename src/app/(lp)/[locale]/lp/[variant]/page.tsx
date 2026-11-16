@@ -7,7 +7,7 @@ import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import { isLocale, type Locale } from '@/i18n/routing';
 import { pageUrl, SITE_URL } from '@/lib/site';
-import { whatsappUrl } from '@/lib/config';
+import { STUDIO, whatsappUrl } from '@/lib/config';
 import CFG from '@/lib/lp/config.json';
 import HERO from '@/lib/lp/hero.json';
 import { Photo } from '@/components/ui/Photo';
@@ -21,6 +21,7 @@ import { LpTracking } from '@/components/lp/LpTracking';
 import { LpConsent } from '@/components/lp/LpConsent';
 import { LandingCatalogCards } from '@/components/lp/LandingCatalogCards';
 import { chooseLandingOffer, LandingCatalogOffer } from '@/components/lp/LandingCatalogOffer';
+import { StudioMapFrame } from '@/components/ui/StudioMapFrame';
 import { getCatalogServices } from '@/server/catalog/services';
 
 /**
@@ -251,13 +252,22 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
           <div className="w lp-two">
             <div className="fhead"><h2 id="lp-dir">{t(CFG.directions.titleKey)}</h2></div>
             <div className="lp-dirs">
-              <div className="map" aria-hidden="true"><span className="pin" /></div>
-              {isTodo(district) && isTodo(building) && isTodo(mapLink) && t.has('lp.directions.pending')
-                ? <p className="pending">{t('lp.directions.pending')}</p> : null}
-              {!isTodo(district) || !isTodo(building) ? (
-                <address>{[district, building].map((s, i) => isTodo(s) ? null : <span key={i}>{s}</span>)}</address>
-              ) : null}
-              {isTodo(mapLink) ? null : <a className="btn btn--wa" href={mapLink} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}<Icon name="arrow-up-right" /></a>}
+              {variant === 'a' ? (
+                <>
+                  <StudioMapFrame className="map map--live" title={t('contacts.mapLabel')} />
+                  <address>{STUDIO.streetAddress}</address>
+                </>
+              ) : (
+                <>
+                  <div className="map" aria-hidden="true"><span className="pin" /></div>
+                  {isTodo(district) && isTodo(building) && isTodo(mapLink) && t.has('lp.directions.pending')
+                    ? <p className="pending">{t('lp.directions.pending')}</p> : null}
+                  {!isTodo(district) || !isTodo(building) ? (
+                    <address>{[district, building].map((s, i) => isTodo(s) ? null : <span key={i}>{s}</span>)}</address>
+                  ) : null}
+                  {isTodo(mapLink) ? null : <a className="btn btn--wa" href={mapLink} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}<Icon name="arrow-up-right" /></a>}
+                </>
+              )}
             </div>
           </div>
         </section>

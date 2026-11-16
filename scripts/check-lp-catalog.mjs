@@ -57,6 +57,10 @@ let browser;
 try {
   browser = await chromium.launch({ channel: 'chrome' });
   const page = await browser.newPage({ reducedMotion: 'reduce', hasTouch: true });
+  await page.route(/^https:\/\/www\.google\.com\/maps\/embed\?pb=/, (route) => route.fulfill({
+    contentType: 'text/html',
+    body: '<!doctype html><title>HDS Tower</title><p>HDS Tower</p>',
+  }));
   const browserRequests = [];
   page.on('request', (request) => {
     const url = new URL(request.url());

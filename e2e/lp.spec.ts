@@ -17,9 +17,11 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
-import { expectNoDemoLabels, testHook } from './helpers';
+import { STUDIO_MAP } from '../src/lib/config';
+import { expectNoDemoLabels, seedConsent, stubStudioMap, testHook } from './helpers';
 
 const PAGES = ['/ru/lp/a/', '/ru/lp/b/', '/en/lp/a/', '/en/lp/b/'];
+test.beforeEach(async ({ context }) => stubStudioMap(context));
 // RC-9 (T-1): the list lives IN the repository (a copy of the deck's lexicon-denylist.json, kept by `npm run sync` and the
 // drift check of `npm run i18n`). It used to be read from ../copy next to the app and the check was silently skipped where
 // that folder does not exist — in a clean checkout and for anyone who clones the repository. A missing file now fails.
@@ -212,6 +214,53 @@ for (const url of PAGES) {
  * 86e41f6). The low-priority preloads (LP root layout) are ready from the HTTP cache before the first frame.
  * Chromium (the drawing font comes from CDP CSS.getPlatformFontsForNode): 3 rounds × visits 2 and 3, 390 Android and 1280.
  */
+for (const [locale, { contacts }] of [['ru', ru], ['en', en]] as const) {
+  test(`15.4 / ${locale}: the landing map loads HDS Tower immediately`, async ({ page }, ti) => {
+    test.skip(ti.project.name !== 'A-pixel-7', 'one Chromium project with mobile and desktop viewports');
+    await seedConsent(page);
+    const mapRequests: string[] = [];
+    page.on('request', (request) => {
+      if (request.url().startsWith('https://www.google.com/maps')) mapRequests.push(request.url());
+    });
+    await page.goto(`/${locale}/contacts/`, { waitUntil: 'networkidle' });
+    const address = await page.locator('.contacts__list dd').first().textContent();
+    const contactsLink = await page.getByRole('link', { name: contacts.openMap, exact: true }).getAttribute('href');
+    const contactsEmbed = await page.locator('.contacts__map-frame iframe').getAttribute('src');
+    expect(contactsLink).toBe(STUDIO_MAP.url);
+    expect(contactsEmbed).toBe(STUDIO_MAP.embedUrl);
+    expect(address).toContain('HDS Tower');
+
+    for (const width of [320, 1280]) {
+      await page.setViewportSize({ width, height: 850 });
+      mapRequests.length = 0;
+      const [request] = await Promise.all([
+        page.waitForRequest(STUDIO_MAP.embedUrl),
+        page.goto(`/${locale}/lp/a/`, { waitUntil: 'networkidle' }),
+      ]);
+      expect(request.isNavigationRequest()).toBe(true);
+      const section = page.locator('#lp-directions');
+      await section.scrollIntoViewIfNeeded();
+      const map = section.getByRole('figure', { name: contacts.mapLabel });
+      const frame = map.locator('iframe');
+      await expect(section.locator('address')).toHaveText(address!);
+      await expect(section.locator(`a[href="${STUDIO_MAP.url}"]`)).toHaveCount(0);
+      await expect(map.getByRole('button')).toHaveCount(0);
+      await expect(frame).toHaveAttribute('src', contactsEmbed!);
+      await expect(frame).toHaveAttribute('title', contacts.mapLabel);
+      await expect(frame).toHaveAttribute('loading', 'eager');
+      await expect(frame).toHaveAttribute('allowfullscreen', '');
+      await expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+      await expect(frame.contentFrame().getByText('HDS Tower', { exact: true })).toBeVisible();
+      expect(mapRequests).toEqual([STUDIO_MAP.embedUrl]);
+      const bounds = (await map.boundingBox())!;
+      expect(bounds.height).toBeGreaterThanOrEqual(200);
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+      expect(await frame.boundingBox()).toEqual(bounds);
+    }
+  });
+}
+
 test('a repeat visit draws the landing H1 in Manrope (fetchpriority="low" preloads, cache)', async ({ browser }, ti) => {
   test.skip(ti.project.name !== 'A-pixel-7', 'one Chromium project (CDP)');
   test.setTimeout(240_000);
@@ -219,6 +268,7 @@ test('a repeat visit draws the landing H1 in Manrope (fetchpriority="low" preloa
   const windows = [{ label: '390 Android', opts: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, userAgent: ti.project.use.userAgent } }, { label: '1280', opts: { viewport: { width: 1280, height: 800 } } }];
   for (const url of ['/ru/lp/a/', '/en/lp/b/']) for (const w of windows) for (let round = 0; round < 3; round++) {
     const ctx = await browser.newContext({ ...w.opts, baseURL: ti.project.use.baseURL });
+    await stubStudioMap(ctx);
     await ctx.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'e2e' })));
     for (let visit = 1; visit <= 3; visit++) {
       const page = await ctx.newPage();
@@ -581,6 +631,7 @@ test('desktop and tablet windows 1024–1920: the form button on the first scree
   const bad: string[] = [];
   for (const [width, height] of DESKTOP) {
     const ctx = await browser.newContext({ viewport: { width, height }, baseURL: ti.project.use.baseURL, reducedMotion: 'reduce' });
+    await stubStudioMap(ctx);
     await ctx.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'gate' })));
     const page = await ctx.newPage();
     for (const url of PAGES) {
@@ -619,6 +670,7 @@ test('service cards on 320–1024: cards inside the list, no split words, demo p
   const bad: string[] = [];
   for (const [width, height] of CARD_WIDTHS) {
     const ctx = await browser.newContext({ viewport: { width, height }, baseURL: ti.project.use.baseURL, reducedMotion: 'reduce' });
+    await stubStudioMap(ctx);
     await ctx.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'gate' })));
     const page = await ctx.newPage();
     for (const url of PAGES) {
@@ -657,6 +709,7 @@ test('service cards on 320–1024: cards inside the list, no split words, demo p
 test('LP in Instagram on an iPhone SE (375×448): the form button whole on the first screen', async ({ browser }, ti) => {
   test.skip(ti.project.name !== 'A-iphone-se', 'one WebKit project');
   const ctx = await browser.newContext({ viewport: { width: 375, height: 448 }, baseURL: ti.project.use.baseURL, isMobile: true, hasTouch: true, userAgent: ti.project.use.userAgent });
+  await stubStudioMap(ctx);
   await ctx.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'gate' })));
   const page = await ctx.newPage(); const bad: string[] = [];
   for (const url of PAGES) {
@@ -686,6 +739,7 @@ test('a late web font moves nothing on the first screen: H1, sub-line, form and 
   for (const path of ['/ru/lp/a/', '/ru/lp/b/', '/ru/lp/a/?form=sheet']) for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1280, 800]]) {
     const phone = w < 768;
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, baseURL, ...(phone ? { deviceScaleFactor: 2, hasTouch: true } : {}) });
+    await stubStudioMap(ctx);
     await ctx.route(/\.woff2(\?|$)/, async (route) => { const r = await route.fetch(); await new Promise((res) => setTimeout(res, 800)); await route.fulfill({ response: r }); });
     await ctx.addInitScript((sel) => {
       localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'e2e' }));

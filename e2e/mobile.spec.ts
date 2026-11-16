@@ -549,6 +549,7 @@ test('DEV-16 reduced motion: from the first frame nothing moves — home, /booki
     let worst = { d: 0, what: '' }, hit = 0;
     for (let k = 0; k < 4; k++) {
       const ctx = await browser.newContext({ ...win.opts, baseURL, reducedMotion: 'reduce' });
+      if (pg.path === '/ru/lp/a/') await stubStudioMap(ctx);
       await ctx.addInitScript(([sel, d]) => {
         localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'e2e' }));
         if (d) sessionStorage.setItem('bm.bookingDraft', d);

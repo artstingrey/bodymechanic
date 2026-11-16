@@ -10,13 +10,14 @@ import { createHash } from 'node:crypto';
 import { test, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
-import { guard, expectClean, fillPhone, testHook } from './helpers';
+import { guard, expectClean, fillPhone, stubStudioMap, testHook } from './helpers';
 
 const GTM = 'GTM-LPTEST1';
 const TRACKERS = /facebook\.com|facebook\.net|googletagmanager\.com|google-analytics\.com|doubleclick\.net|googleadservices\.com|google\.com\/(pagead|ccm)/;
 const ALLOWED = ['event', 'lp_version', 'lang', 'placement', 'offer_id', 'event_id', 'error_type'];
 const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 const isFlows = (ti: TestInfo) => ti.project.name === 'flows';
+test.beforeEach(async ({ context }) => stubStudioMap(context));
 
 type Req = { eventId: string; consent: { marketing: boolean; details: boolean }; attribution: { utm: Record<string, string | null>; firstTouchAt: string | null; clickIds: Record<string, string | null>; fbc: string | null }; page: { url: string }; interests: string[] };
 type Bff = { requests: Req[]; telegram: string[]; capi: { data: { event_name: string; event_id: string; event_source_url: string; user_data: Record<string, unknown>; custom_data: Record<string, unknown> }[] }[]; ads: Record<string, unknown>[]; comments: string[] };
@@ -54,7 +55,7 @@ async function submitLead(page: Page, opts: { form?: string; name?: string; chip
 test.describe('LP tracking (lp-brief §5)', () => {
   test.beforeEach(({}, ti) => test.skip(!isFlows(ti), 'logic: desktop Chrome («flows»); devices: T-13 below'));
 
-  test('T-01 / T-11: nothing third-party before consent; after «Принять все» Consent Mode then GTM, not before load', async ({ page, baseURL }) => {
+  test('T-01 / T-11: no trackers before consent; after «Принять все» Consent Mode then GTM, not before load', async ({ page, baseURL }) => {
     const trackers = await setup(page);
     const g = guard(page, baseURL!);
     await page.goto('/ru/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
@@ -141,6 +142,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     const NO_IDS = { gclid: null, gbraid: null, wbraid: null, fbclid: null };
     for (const consent of [true, false]) {
       const context = await browser.newContext({ baseURL, viewport: { width: 1280, height: 800 } });
+      await stubStudioMap(context);
       /** a lead from a new tab: the context's cookies and localStorage, a sessionStorage of its own */
       const leadFrom = async (query: string) => {
         const tab = await context.newPage();
