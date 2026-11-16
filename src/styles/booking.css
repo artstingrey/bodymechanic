@@ -34,15 +34,6 @@
 }
 
 /* option lists (services, specialists) on radio cards */
-.bk-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.bk-opt { align-items: center; }
-.bk-opt__body { display: grid; gap: 4px; flex: 1; min-width: 0; }
-.bk-opt__body > span:not(.badge) { font-size: 13px; color: var(--muted); } /* the badge keeps its own AA pair (R-CODE-02 F-01 b) */
-.bk-opt__body .badge { justify-self: start; max-width: 100%; white-space: normal; text-wrap: balance; padding-block: 3px; line-height: 1.25; border-radius: 12px; } /* «Подобрано по вашим зонам» wraps inside a narrow card instead of running into its frame at 320 (design audit F28); one line stays a 24 px pill */
-.bk-opt__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; font-size: 13px; color: var(--muted); }
-.bk-opt__meta b { font-size: 15px; color: var(--text); white-space: nowrap; }
-@media (max-width: 479px) { .bk-opt { flex-wrap: wrap; } .bk-opt__meta { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; padding-left: 36px; text-align: left; } }
-
 /* step 4: calendar + slots */
 .bk-time { display: grid; gap: 24px; }
 .bk-slots { display: grid; gap: 16px; align-content: start; }

@@ -21,7 +21,13 @@ export interface BookingRecord3DDetails {
 export type BookingRecordRequest = BookingRecordBase & (
   | { source?: never; condition?: string; body3d?: never }
   | { source: '3d'; body3d: BookingRecord3DDetails; condition?: never }
-);
+| {
+  source: 'lp';
+  details?: string[];
+  utm?: Partial<Record<'utm_source' | 'utm_medium' | 'utm_campaign', string>>;
+  condition?: string;
+  body3d?: never;
+});
 
 export interface BookingRecordPart {
   recordId: number;
@@ -44,7 +50,7 @@ export type BookingRecordData =
 
 export type BookingRecordField = 'serviceId' | 'staffId' | 'datetime' | 'locale' | 'contact'
   | 'fullname' | 'phone' | 'email' | 'age' | 'condition' | 'consent' | 'idempotencyKey'
-  | 'source' | 'body3d' | 'healthConsent' | 'model' | 'markers' | 'generalNote';
+  | 'source' | 'body3d' | 'healthConsent' | 'model' | 'markers' | 'generalNote' | 'details';
 
 export type BookingRecordErrorCode =
   | 'INVALID_BODY' | 'PAYLOAD_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ORIGIN'

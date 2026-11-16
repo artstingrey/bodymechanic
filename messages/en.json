@@ -1131,17 +1131,21 @@
       "submit": "Find a time",
       "submitFirstVisit": "Book my first visit",
       "whatsapp": "Message us on WhatsApp",
-      "whatsappMessage": {
-        "name": "Name: {name}",
-        "phone": "Phone: {phone}",
-        "details": "What matters: {details}"
-      },
       "privacyNote": "We use your number only to reply about your booking",
       "details": {
         "toggle": "Add details (optional)",
         "hint": "Mark what matters so our admin can prepare better",
         "note": "Only the studio’s admin and specialist will see this"
       }
+    },
+    "booking": {
+      "selectService": "Find a service",
+      "continue": "Continue to booking",
+      "detailsHeading": "Booking details",
+      "book": "Book now",
+      "sending": "Confirming your booking…",
+      "confirmed": "Booking confirmed",
+      "resultTime": "{service} · {time} Dubai time"
     },
     "chips": {
       "recovery": "Recovery after training",

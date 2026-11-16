@@ -22,7 +22,7 @@ type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | '
   full: () => string;
 };
 
-export function openPrefilledUrl(url: string) {
+function openPrefilledUrl(url: string) {
   const w = window.open(url, '_blank');
   if (w) { try { w.opener = null; } catch { /* cross-origin already */ } } else window.location.assign(url);
 }

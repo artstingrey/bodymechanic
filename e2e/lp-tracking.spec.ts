@@ -7,7 +7,7 @@
  * with its attribution).
  */
 import { createHash } from 'node:crypto';
-import { test, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, type Page, type TestInfo } from '@playwright/test';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
 import { guard, expectClean, fillPhone, stubStudioMap, testHook } from './helpers';
@@ -58,7 +58,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
   test('T-01 / T-11: no trackers before consent; after «Принять все» Consent Mode then GTM, not before load', async ({ page, baseURL }) => {
     const trackers = await setup(page);
     const g = guard(page, baseURL!);
-    await page.goto('/ru/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     expect(trackers, 'no tracker request before consent').toEqual([]);
     expect(await dataLayer(page), 'no dataLayer queue before consent').toEqual([]);
@@ -81,7 +81,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
 
   test('T-11: with a stored consent GTM is requested only after the load event', async ({ page }) => {
     await setup(page, { analytics: true, marketing: true });
-    await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
     const t = await page.evaluate(() => {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       const gtm = performance.getEntriesByType('resource').find((e) => e.name.includes('googletagmanager.com'));
@@ -94,7 +94,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
   test('T-02 / T-14 / L-02: tags stored, utm_term and utm_content leave the address, all values reach the BFF and Telegram', async ({ page }) => {
     await setup(page);
     const before = Date.now();
-    await page.goto('/ru/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&utm_content=cr_a3&utm_term=kw_012&fbclid=TEST1&gclid=TEST2#lp-f1', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&utm_content=cr_a3&utm_term=kw_012&fbclid=TEST1&gclid=TEST2#lp-f1', { waitUntil: 'networkidle' });
     const search = await page.evaluate(() => location.search);
     expect(search).not.toMatch(/utm_term|utm_content/);
     expect(search).toMatch(/utm_source=meta/); expect(search).toMatch(/fbclid=TEST1/); expect(search).toMatch(/gclid=TEST2/);
@@ -109,7 +109,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     const tg = (await bff(page)).telegram[0];
     for (const v of ['meta', 'paid', 'lp_a_sports', 'cr_a3', 'kw_012', 'TEST1', 'TEST2']) expect(tg).toContain(v);
     // a second visit in the session: the first-visit UTM stay, the click ID is the last one
-    await page.goto('/ru/lp/a/?utm_source=google&utm_medium=paid&utm_campaign=lp_a_sports&gclid=NEW3', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?utm_source=google&utm_medium=paid&utm_campaign=lp_a_sports&gclid=NEW3', { waitUntil: 'networkidle' });
     const a = await page.evaluate(() => JSON.parse(sessionStorage.getItem('bm_attr')!));
     expect(a.utm.source).toBe('meta');
     expect(a.clickIds.gclid).toBe('NEW3');
@@ -123,7 +123,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     const FB = `IwZXh0bgNhZW0CMTEAAR${'aB3_x-9Zq'.repeat(14)}_aem_${'Kd7'.repeat(8)}`, G = `Cj0KCQiA${'x1Y-z_'.repeat(20)}`;
     expect(FB.length).toBeGreaterThan(150);
     expect(G.length).toBeGreaterThan(100);
-    await page.goto(`/ru/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&fbclid=${FB}&gclid=${G}&wbraid=%3Cscript%3E`, { waitUntil: 'networkidle' });
+    await page.goto(`/ru/lp/b/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&fbclid=${FB}&gclid=${G}&wbraid=%3Cscript%3E`, { waitUntil: 'networkidle' });
     await submitLead(page);
     const r = await lastRequest(page);
     expect(r.attribution.clickIds).toEqual({ fbclid: FB, gclid: G, wbraid: null, gbraid: null });
@@ -147,7 +147,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
       const leadFrom = async (query: string) => {
         const tab = await context.newPage();
         await setup(tab, { analytics: consent, marketing: false });
-        await tab.goto(`/ru/lp/a/${query}`, { waitUntil: 'networkidle' });
+        await tab.goto(`/ru/lp/b/${query}`, { waitUntil: 'networkidle' });
         await submitLead(tab);
         const r = await lastRequest(tab);
         await tab.close();
@@ -189,7 +189,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
 
   test('T-14: a phrase in utm_term / utm_content is dropped (null in the lead), gone from the address and from every outgoing request', async ({ page }) => {
     const trackers = await setup(page, { analytics: true, marketing: true });
-    await page.goto('/ru/lp/a/?utm_source=google&utm_medium=paid&utm_campaign=lp_a_sports&utm_term=massage_lower_back&utm_content=Lower%20back%20pain', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?utm_source=google&utm_medium=paid&utm_campaign=lp_a_sports&utm_term=massage_lower_back&utm_content=Lower%20back%20pain', { waitUntil: 'networkidle' });
     expect(await page.evaluate(() => location.search)).not.toMatch(/utm_term|utm_content|massage|back/i);
     await submitLead(page);
     const r = await lastRequest(page);
@@ -216,7 +216,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
 
   test('T-03 / T-09: a double tap makes one lead, one Telegram message and one lp_lead with event_id = the request id', async ({ page }) => {
     await setup(page, { analytics: true, marketing: true });
-    await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
     await submitLead(page, { double: true });
     await page.waitForTimeout(1200);
     const b = await bff(page);
@@ -226,19 +226,19 @@ test.describe('LP tracking (lp-brief §5)', () => {
     expect(leads).toHaveLength(1);
     expect(leads[0].event_id).toBe(b.requests[0].eventId);
     expect(b.requests[0].eventId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-    expect(leads[0]).toMatchObject({ lp_version: 'a', lang: 'ru', placement: 'hero', offer_id: 'first_visit_example' });
+    expect(leads[0]).toMatchObject({ lp_version: 'b', lang: 'ru', placement: 'hero', offer_id: 'first_visit_example' });
     // Telegram (§5.3): no marks without chips; the number opens WhatsApp; the page path; the short id
     const tg = b.telegram[0];
-    expect(tg).toContain('версия A · RU');
+    expect(tg).toContain('версия B · RU');
     expect(tg).toContain('<a href="https://wa.me/971501234567">+971501234567</a>');
-    expect(tg).toContain('Страница: /ru/lp/a/');
+    expect(tg).toContain('Страница: /ru/lp/b/');
     expect(tg).toContain(`Номер заявки: ${b.requests[0].eventId.slice(0, 8)}`);
     expect(tg).not.toContain('Есть отметки');
   });
 
   test('T-03: lp_lead only after the server accepted — a server error sends none, the retry sends one', async ({ page }) => {
     await setup(page, { analytics: true, marketing: true });
-    await page.goto('/ru/lp/a/?mock=server', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?mock=server', { waitUntil: 'networkidle' });
     const f = page.locator('#lp-f1');
     await f.locator('input[name="name"]').fill('Demo');
     await fillPhone(f.locator('input[type="tel"]'), '+971501234567');
@@ -254,7 +254,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
 
   test('T-03 (L-09): a chip without the marks consent — the checkbox is invalid, described by the error and focused', async ({ page }) => {
     await setup(page);
-    await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
     const f = page.locator('#lp-f1');
     await f.locator('input[name="name"]').fill('Demo');
     await fillPhone(f.locator('input[type="tel"]'), '+971501234567');
@@ -294,113 +294,31 @@ test.describe('LP tracking (lp-brief §5)', () => {
     for (const e of ev) expect(Object.keys(e).filter((k) => !ALLOWED.includes(k)), `${e.event}: only allowed parameters`).toEqual([]);
   });
 
-  for (const { locale, messages, nameLabel, phoneLabel, detailsLabel } of [
-    { locale: 'ru', messages: ru, nameLabel: 'Имя', phoneLabel: 'Телефон', detailsLabel: 'Что важно' },
-    { locale: 'en', messages: en, nameLabel: 'Name', phoneLabel: 'Phone', detailsLabel: 'What matters' },
-  ]) {
-    test(`15.3 / ${locale}: WhatsApp validates the active form and respects marks consent`, async ({ page, context }) => {
-      const trackers = await setup(page, { analytics: true, marketing: false });
-      const base = 'https://wa.me/971585172380';
-      const greeting = `${messages.lp.a.wa.message} [LP-A]`;
-      await context.route('https://wa.me/**', (route) => route.fulfill({ contentType: 'text/plain', body: 'WhatsApp intercepted by Playwright' }));
-
-      const fill = async (id: string, name: string, phone: string, indexes: number[]) => {
-        const form = page.locator(`#${id}`);
-        await form.locator('input[name="name"]').fill(name);
-        await form.locator('input[name="phone"]').fill(phone);
-        await form.locator('summary').click();
-        const selected = form.locator('.chip[aria-pressed="true"]');
-        for (const index of indexes) await form.locator('.chip').nth(index).click();
-        await expect(selected).toHaveCount(indexes.length);
-        return {
-          form, consent: form.locator('input[name="detailsConsent"]'),
-          details: `${detailsLabel}: ${(await selected.allTextContents()).join(', ')}`,
-          contact: [greeting, `${nameLabel}: ${name}`, `${phoneLabel}: ${phone.replace(/[ ().-]/g, '')}`],
-        };
-      };
-      const open = async (form: Locator, lines: string[], placement: 'hero' | 'final') => {
-        const count = (await lpEvents(page, 'lp_whatsapp_click')).length;
-        const done = await form.locator('.lp-thanks').count() === 1;
-        const control = form.getByRole(done ? 'link' : 'button', { name: messages.lp.form.whatsapp });
-        expect(await control.getAttribute('href')).toBe(done ? base : null);
-        const [chat] = await Promise.all([context.waitForEvent('page'), control.click()]);
+  for (const [locale, { lp }] of [['ru', ru], ['en', en]] as const) {
+    test(`15.3 / ${locale}: form WhatsApp opens the original chat message`, async ({ page, context }) => {
+      await setup(page, { analytics: true, marketing: false });
+      await context.route('https://wa.me/**', (route) => route.fulfill({ body: 'WhatsApp intercepted' }));
+      for (const id of ['lp-f1', 'lp-f2', 'lp-fs']) {
+        await page.goto(`/${locale}/lp/a/${id === 'lp-fs' ? '?form=sheet' : ''}`, { waitUntil: 'networkidle' });
+        if (id === 'lp-fs') await page.locator('.lp-hero-cta button').click();
+        const chatLink = page.locator(`#${id}`).getByRole('link', { name: lp.form.whatsapp });
+        const [chat] = await Promise.all([context.waitForEvent('page'), chatLink.click()]);
         try {
           await chat.waitForLoadState();
           const url = new URL(chat.url());
-          expect(url.origin + url.pathname).toBe(base);
-          expect([...url.searchParams]).toEqual([['text', lines.join('\n')]]);
-        } finally {
-          await chat.close();
-        }
-        expect(await control.getAttribute('href')).toBe(done ? base : null);
+          expect(url.origin + url.pathname).toBe('https://wa.me/971585172380');
+          expect([...url.searchParams]).toEqual([['text', `${lp.a.wa.message} [LP-A]`]]);
+        } finally { await chat.close(); }
         const events = await lpEvents(page, 'lp_whatsapp_click');
-        expect(events).toHaveLength(count + 1);
-        expect(events[count]).toMatchObject({ placement, lp_version: 'a', lang: locale, event_id: expect.any(String) });
-        expect(Object.keys(events[count]).filter((k) => !ALLOWED.includes(k))).toEqual([]);
-      };
-      const expectBlocked = async (id: string, fields: ('name' | 'phone')[]) => {
-        const form = page.locator(`#${id}`);
-        const start = page.url();
-        const count = (await lpEvents(page, 'lp_whatsapp_click')).length;
-        const first = fields.length > 1 ? form.getByRole('alert') : form.locator(`input[name="${fields[0]}"]`);
-        await form.getByRole('button', { name: messages.lp.form.whatsapp }).click();
-        await expect(first).toBeFocused();
-        for (const field of fields) await expect(form.locator(`input[name="${field}"]`)).toHaveAttribute('aria-invalid', 'true');
-        expect(context.pages()).toEqual([page]);
-        expect(page.url()).toBe(start);
-        expect(await lpEvents(page, 'lp_whatsapp_click')).toHaveLength(count);
-      };
-
-      await page.goto(`/${locale}/lp/a/`, { waitUntil: 'networkidle' });
-      await expectBlocked('lp-f1', ['name', 'phone']);
-      await page.locator('#lp-f2 input[name="name"]').fill('Даниэль Ли');
-      await expectBlocked('lp-f2', ['phone']);
-      await page.locator('#lp-f2 input[name="phone"]').fill('+44 77');
-      await expectBlocked('lp-f2', ['phone']);
-      const hero = await fill('lp-f1', 'Анна Романова', '+971 50 123-4567', [0, 2]);
-      const final = await fill('lp-f2', 'Даниэль Ли', '+44 (7700) 900 246', [1, 3]);
-      await hero.consent.check();
-      await open(hero.form, [...hero.contact, hero.details], 'hero');
-      await open(final.form, final.contact, 'final');
-      expect(await lpEvents(page, 'lp_lead')).toHaveLength(0);
-      expect((await bff(page)).requests).toHaveLength(0);
-
-      await final.consent.check();
-      for (const { form } of [hero, final]) {
-        const submit = form.getByRole('button', { name: messages.lp.form.submit });
-        await submit.click();
-        await expect(form.getByRole('heading', { name: messages.lp.result.title })).toBeVisible();
-      }
-      expect((await bff(page)).requests.map((request) => request.interests)).toEqual([
-        ['recovery', 'neckShoulders'], ['event', 'lowerBack'],
-      ]);
-      await open(hero.form, [...hero.contact, hero.details], 'hero');
-      const mainPageEvents = await dataLayer(page);
-
-      await page.setViewportSize({ width: 390, height: 844 });
-      await page.goto(`/${locale}/lp/a/?form=sheet`, { waitUntil: 'networkidle' });
-      await page.locator('.lp-hero-cta').getByRole('button', { name: messages.lp.form.submit }).click();
-      await expect(page.locator('dialog.lp-sheet')).toBeVisible();
-      await page.locator('#lp-fs input[name="phone"]').fill('+1 (202) 555-0136');
-      await expectBlocked('lp-fs', ['name']);
-      const sheet = await fill('lp-fs', 'Мира & О’Нил', '+1 (202) 555-0136', [2, 4]);
-      await sheet.consent.check();
-      await open(sheet.form, [...sheet.contact, sheet.details], 'hero');
-      await sheet.consent.uncheck();
-      await open(sheet.form, sheet.contact, 'hero');
-      expect((await bff(page)).requests).toHaveLength(0);
-
-      const publicData = JSON.stringify([mainPageEvents, await dataLayer(page)]) + trackers.join('\n') + page.url();
-      for (const value of ['Анна Романова', 'Даниэль Ли', 'Мира & О’Нил', '501234567', '7700900246', '2025550136', ...Object.values(messages.lp.chips)]) {
-        expect(publicData).not.toContain(value);
-        expect(publicData).not.toContain(encodeURIComponent(value));
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({ lp_version: 'a', lang: locale, placement: id === 'lp-f2' ? 'final' : 'hero' });
       }
     });
   }
 
   test('T-05 / T-06: chips, name and phone never reach dataLayer, trackers or URLs; CAPI = same event id, hashed ph / fn, no query', async ({ page }) => {
     const trackers = await setup(page, { analytics: true, marketing: true });
-    await page.goto('/ru/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&fbclid=FB9', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&fbclid=FB9', { waitUntil: 'networkidle' });
     await submitLead(page, { name: 'Zelda', chips: 2 });
     const b = await bff(page);
     const r = b.requests[0];
@@ -423,7 +341,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     expect(e.event_name).toBe('Lead');
     expect(e.event_id).toBe(r.eventId);
     expect(lead.event_id).toBe(e.event_id);
-    expect(e.event_source_url).toMatch(/\/ru\/lp\/a\/$/);
+    expect(e.event_source_url).toMatch(/\/ru\/lp\/b\/$/);
     expect(e.event_source_url).not.toContain('?');
     expect(e.user_data.ph).toEqual([sha('971501234567')]);
     expect(e.user_data.fn).toEqual([sha('zelda')]);
@@ -435,7 +353,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
 
   test('T-06: without «Маркетинг» the server sends no CAPI event', async ({ page }) => {
     await setup(page, { analytics: true, marketing: false });
-    await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
     await submitLead(page);
     const b = await bff(page);
     expect(b.requests[0].consent.marketing).toBe(false);
@@ -445,7 +363,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
 
   test('T-07: all Google click IDs stored; the upload carries gclid, and wbraid without gbraid — only with «Маркетинг»', async ({ page }) => {
     await setup(page, { analytics: true, marketing: true });
-    await page.goto('/ru/lp/a/?gclid=G1&wbraid=W1&gbraid=B1', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?gclid=G1&wbraid=W1&gbraid=B1', { waitUntil: 'networkidle' });
     await submitLead(page);
     let b = await bff(page);
     expect(b.requests[0].attribution.clickIds).toMatchObject({ gclid: 'G1', wbraid: 'W1', gbraid: 'B1' });
@@ -453,7 +371,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     expect(b.ads[0]).not.toHaveProperty('gbraid');
     // only wbraid + gbraid (a fresh session)
     await page.evaluate(() => sessionStorage.clear());
-    await page.goto('/ru/lp/a/?wbraid=W2&gbraid=B2', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?wbraid=W2&gbraid=B2', { waitUntil: 'networkidle' });
     await submitLead(page);
     b = await bff(page);
     expect(b.ads.at(-1)).toMatchObject({ wbraid: 'W2' });
@@ -465,7 +383,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
   for (const [name, consent] of [['necessary only', null], ['analytics only', { analytics: true, marketing: false }]] as const) {
     test(`T-07: without «Маркетинг» (${name}) — click IDs kept in the lead, no Google Ads upload record`, async ({ page }) => {
       await setup(page, consent ?? undefined);
-      await page.goto('/ru/lp/a/?gclid=G9&wbraid=W9&gbraid=B9', { waitUntil: 'networkidle' });
+      await page.goto('/ru/lp/b/?gclid=G9&wbraid=W9&gbraid=B9', { waitUntil: 'networkidle' });
       if (!consent) await page.getByRole('button', { name: ru.cookie.necessaryOnly }).click();
       await submitLead(page);
       const b = await bff(page);
@@ -482,7 +400,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     page.on('request', (r) => { if (/\/api\//.test(r.url())) api.push(r.url()); });
     const logs: string[] = [];
     page.on('console', (m) => { if (m.type() === 'info') logs.push(m.text()); });
-    await page.goto('/ru/lp/a/?mock=queued&utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?mock=queued&utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
     await submitLead(page);
     const b = await bff(page);
     expect(b.telegram[0]).toContain('резервной очереди');
@@ -507,7 +425,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     });
     const said: string[] = [];
     page.on('console', (m) => said.push(`${m.type()}: ${m.text()}`));
-    await page.goto('/ru/lp/a/?mock=server&utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?mock=server&utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports', { waitUntil: 'networkidle' });
     await submitLead(page, { name: NAME, chips: 1 }); // «спасибо» at the first try: ?mock=server did not make the stub fail
     await page.waitForTimeout(500);
     const kept = await page.evaluate(() => ({
@@ -529,7 +447,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     const gtm: string[] = [];
     await page.route(TRACKERS, (r) => { gtm.push(r.request().url()); return r.fulfill({ status: 200, contentType: 'text/javascript', body: '' }); });
     await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: true, marketing: true, at: 'gate' })));
-    await page.goto('/ru/lp/a/?mock=server', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?mock=server', { waitUntil: 'networkidle' });
     await page.evaluate(() => {
       const w = window as unknown as { __bmTest?: unknown; __late?: string[] };
       w.__late = [];
@@ -551,7 +469,7 @@ test.describe('LP tracking on devices (T-13)', () => {
   test('consent bar: on top, ≤ 35 % of the screen (≥ 600 px high) / ≤ 50 % (lower), the hero form button or first field stays whole and tappable; a lead carries UTM and click IDs', async ({ page, baseURL }) => {
     await setup(page);
     const g = guard(page, baseURL!);
-    await page.goto('/ru/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&utm_content=cr_a3&fbclid=FB1&gclid=G1', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports&utm_content=cr_a3&fbclid=FB1&gclid=G1', { waitUntil: 'networkidle' });
     const bar = page.getByTestId('lp-consent');
     await expect(bar).toBeVisible();
     const vp = page.viewportSize()!;
@@ -585,7 +503,7 @@ test.describe('LP tracking on devices (T-13)', () => {
 
   test('consent settings opened: the categories get room (not the 35 / 50 % cap), all three readable by scrolling, buttons on screen', async ({ page }) => {
     await setup(page);
-    await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
+    await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: ru.cookie.customize }).click();
     const vp = page.viewportSize()!;
     const area = await page.locator('.lp-consent__scroll').evaluate((e) => e.clientHeight);

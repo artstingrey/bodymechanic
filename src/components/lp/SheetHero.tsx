@@ -36,11 +36,11 @@ export function SheetHero({ variant, chips, waMessage, privacyHref }: {
       <div className="lp-hero-cta">
         <div className="row">
           <button ref={btn} type="button" className="btn btn--p" aria-haspopup="dialog" data-lp-cta="" onClick={() => window.dispatchEvent(new Event('lp:open-sheet'))}>
-            {t('form.submit')}<Icon name="arrow-right" />
+            {t(variant === 'a' ? 'booking.selectService' : 'form.submit')}<Icon name="arrow-right" />
           </button>
           <a className="btn btn--wa btn--icon" href={whatsappUrl(waMessage)} target="_blank" rel="noopener noreferrer" aria-label={t('form.whatsapp')} data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span></a>
         </div>
-        <p className="resp">{t('form.phoneHint')}</p>
+        {variant === 'b' && <p className="resp">{t('form.phoneHint')}</p>}
       </div>
       <dialog ref={dlg} className="lp-sheet" aria-labelledby="lp-sheet-title" onClick={(e) => { if (e.target === e.currentTarget) dlg.current?.close(); }}>
         <div className="lp-sheet__top">

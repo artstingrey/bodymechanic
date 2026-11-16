@@ -6,6 +6,8 @@ import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, isMarkerIntensity, MARKER
 import { ZONE_KEYS } from '@/lib/body3d/zones';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { normalizePhone, requiredEmail, rules } from '@/lib/forms/validate';
+import { LANDING_BOOKING_STAFF, landingBookingChips } from '@/lib/lp/booking';
+import { landingPhoneError } from '@/lib/lp/phone';
 import { isRecord } from '../altegio/client';
 import { parseBookingDatetime } from './availability';
 import type { RecordOutcome } from './record-result';
@@ -129,8 +131,9 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
   const invalid = (): ParsedRequest => ({
     error: { status: 400, code: 'INVALID_FIELDS', fields }, locale: locale === 'ru' ? 'ru' : 'en',
   });
+  const landing = source === 'lp';
   if (!validId(serviceId)) fields.push('serviceId');
-  if (!validId(staffId, 0)) fields.push('staffId');
+  if (!validId(staffId, 0) || (landing && staffId !== LANDING_BOOKING_STAFF)) fields.push('staffId');
   const instant = typeof datetime === 'string' && datetime.length <= 48 ? parseBookingDatetime(datetime) : null;
   if (!instant) fields.push('datetime');
   if (locale !== 'ru' && locale !== 'en') fields.push('locale');
@@ -143,14 +146,23 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
   const fullname = boundedText(contact.fullname, 100) ?? '';
   const phone = boundedText(contact.phone, 32) ?? '';
   const email = boundedText(contact.email, 254) ?? '';
-  const condition = read.value.condition === undefined ? '' : boundedText(read.value.condition, 1000, true);
+  const condition = readNote(read.value.condition, 1000);
   if (rules.name(fullname)) fields.push('fullname');
-  if (rules.phone(phone)) fields.push('phone');
+  if (landing ? landingPhoneError(phone) : rules.phone(phone)) fields.push('phone');
   if (requiredEmail(email)) fields.push('email');
-  if (age !== undefined && (typeof age !== 'number' || rules.age(age))) fields.push('age');
+  if (age !== undefined && (landing || typeof age !== 'number' || rules.age(age))) fields.push('age');
   if (condition === null || (source === '3d' && read.value.condition !== undefined)) fields.push('condition');
-  if ((source !== undefined && source !== '3d') || (source === undefined && read.value.body3d !== undefined)) fields.push('source');
+  if ((source !== undefined && source !== '3d' && !landing) ||
+    (source !== '3d' && read.value.body3d !== undefined)) fields.push('source');
   const body3d = source === '3d' ? parseBody3D(read.value.body3d, fields) : null;
+  let details: string[] | undefined;
+  if (read.value.details !== undefined) {
+    const raw = read.value.details;
+    if (!landing || !Array.isArray(raw) ||
+      raw.length > landingBookingChips.size || !raw.every((id) => typeof id === 'string' && landingBookingChips.has(id))) {
+      fields.push('details');
+    } else details = [...new Set<string>(raw)];
+  }
   if (fields.length || !instant) return invalid();
 
   const base = {
@@ -163,7 +175,16 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
     consent: true as const,
     idempotencyKey: (idempotencyKey as string).toLowerCase(),
   };
+  if (landing) {
+    const rawUtm = read.value.utm;
+    const utm = isRecord(rawUtm) ? Object.fromEntries(['utm_source', 'utm_medium', 'utm_campaign'].flatMap((key) => {
+      const value = boundedText(rawUtm[key], 100);
+      return value?.isWellFormed() ? [[key, value]] : [];
+    })) : {};
+    return { instant, data: { ...base, source: 'lp', ...(details?.length ? { details } : {}), ...(condition ? { condition } : {}),
+      ...(Object.keys(utm).length ? { utm } : {}) } };
+  }
   return { instant, data: body3d
     ? { ...base, source: '3d', body3d }
-    : { ...base, ...(condition ? { condition: condition.replace(/\r\n?/g, '\n') } : {}) } };
+    : { ...base, ...(condition ? { condition } : {}) } };
 }

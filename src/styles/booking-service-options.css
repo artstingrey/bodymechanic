@@ -1,0 +1,19 @@
+.rcard { position: relative; display: flex; gap: 14px; align-items: center; min-height: 64px; padding: 14px 16px; border-radius: var(--r-card-sm);
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); cursor: pointer; transition: box-shadow var(--d-hover) var(--e-out); }
+.rcard input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.rcard .dot { flex: none; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--field-border); transition: box-shadow var(--d-hover) var(--e-out); }
+.rcard:has(input:checked) { box-shadow: inset 0 0 0 2px var(--text); }
+.rcard:has(input:checked) .dot { box-shadow: inset 0 0 0 6px var(--text); }
+.rcard:has(input:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.rcard:has(input:disabled) { opacity: var(--disabled-opacity); cursor: not-allowed; }
+.rcard b { display: block; font-size: 15px; }
+.rcard span:not(.badge) { font-size: 13px; color: var(--muted); } /* badges keep their own AA pair (R-CODE-02 F-01 b) */
+
+.bk-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.bk-opt { align-items: center; }
+.bk-opt__body { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.bk-opt__body > span:not(.badge) { font-size: 13px; color: var(--muted); } /* the badge keeps its own AA pair (R-CODE-02 F-01 b) */
+.bk-opt__body .badge { justify-self: start; max-width: 100%; white-space: normal; text-wrap: balance; padding-block: 3px; line-height: 1.25; border-radius: 12px; } /* «Подобрано по вашим зонам» wraps inside a narrow card instead of running into its frame at 320 (design audit F28); one line stays a 24 px pill */
+.bk-opt__meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; font-size: 13px; color: var(--muted); }
+.bk-opt__meta b { font-size: 15px; color: var(--text); white-space: nowrap; }
+@media (max-width: 479px) { .bk-opt { flex-wrap: wrap; } .bk-opt__meta { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; padding-left: 36px; text-align: left; } }

@@ -324,7 +324,8 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
         </div>
         <p>{t('disclaimer.general')}</p>
       </footer>
-      <StickyCta label={t('lp.form.submit')} sheetLabel={t('lp.form.submit')} waLabel={t('lp.form.whatsapp')} waHref={waHref} />
+      <StickyCta label={t(variant === 'a' ? 'lp.booking.selectService' : 'lp.form.submit')}
+        sheetLabel={t(variant === 'a' ? 'lp.booking.selectService' : 'lp.form.submit')} waLabel={t('lp.form.whatsapp')} waHref={waHref} />
     </div>
   );
 }

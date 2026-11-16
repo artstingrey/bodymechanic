@@ -6,6 +6,8 @@
    ===================================================================== */
 @import "./icon-button.css";
 @import "./carousel.css";
+@import "./booking-calendar.css";
+@import "./booking-service-options.css";
 
 /* ---------- Type helpers ---------- */
 .i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; display: block; }
@@ -96,16 +98,7 @@ a.btn-book:not(.btn) { display: inline-flex; align-items: center; justify-conten
 .form-errors li > a, .form-errors > a { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; color: var(--error); text-decoration: underline; text-underline-offset: 3px; }
 .form-errors li > a::before, .form-errors > a::before { content: "!"; flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--error); color: #fff; font: 800 12px/18px var(--font-sans); text-align: center; }
 
-.rcard { position: relative; display: flex; gap: 14px; align-items: center; min-height: 64px; padding: 14px 16px; border-radius: var(--r-card-sm);
-  background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); cursor: pointer; transition: box-shadow var(--d-hover) var(--e-out); }
-.rcard input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
-.rcard .dot { flex: none; width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--field-border); transition: box-shadow var(--d-hover) var(--e-out); }
-.rcard:has(input:checked) { box-shadow: inset 0 0 0 2px var(--text); }
-.rcard:has(input:checked) .dot { box-shadow: inset 0 0 0 6px var(--text); }
-.rcard:has(input:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.rcard:has(input:disabled) { opacity: var(--disabled-opacity); cursor: not-allowed; }
-.rcard b { display: block; font-size: 15px; }
-.rcard span:not(.badge) { font-size: 13px; color: var(--muted); } /* badges keep their own AA pair (R-CODE-02 F-01 b) */
+
 
 .switch { flex: none; width: 52px; height: 44px; border-radius: 16px; background: transparent; position: relative; border: 0; padding: 0; cursor: pointer; }
 .switch::before { content: ""; position: absolute; left: 0; top: 6px; width: 52px; height: 32px; border-radius: 16px; background: var(--field-border); transition: background-color var(--d-hover) var(--e-out); }
@@ -228,34 +221,6 @@ nav > .steps { display: none; }
 .mstep b { font-weight: 800; }
 .prog { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
 .prog i { display: block; height: 100%; width: 100%; background: var(--accent); transform-origin: 0 50%; transition: transform var(--d-2) var(--e-out); }
-
-/* ---------- Slots & calendar ---------- */
-.slots-part { display: grid; gap: 8px; }
-.slots { display: flex; flex-wrap: wrap; gap: 8px; }
-.slot { min-height: 44px; min-width: 76px; padding: 0 14px; border-radius: var(--r-pill); border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border);
-  font: 700 15px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text); cursor: pointer; }
-.slot[aria-pressed="true"] { background: var(--text); color: var(--bg); box-shadow: none; }
-.slot[aria-disabled="true"], .slot:disabled { text-decoration: line-through; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); cursor: not-allowed; background: var(--bg); }
-.zone-note { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); }
-.zone-note .i { width: 16px; height: 16px; }
-.cal { display: grid; grid-template-columns: repeat(7, minmax(44px, 1fr)); gap: 4px 2px; text-align: center; }
-@media (min-width: 420px) { .cal { gap: 4px; } }
-@media (max-width: 359px) { .cal { margin-inline: calc(var(--edge) * -1 + 4px); column-gap: 0; } } /* 288 px container < 7 × 44 + gaps: the grid takes the side space (lead, R-FINAL-2 a) */
-.cal .wd { font-size: var(--fs-micro); font-weight: 700; color: var(--muted); padding: 6px 0; text-transform: capitalize; }
-.cal button { min-height: 44px; border-radius: 12px; border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); font: 700 15px/1 var(--font-sans);
-  font-variant-numeric: tabular-nums; color: var(--text); cursor: pointer; padding: 0; }
-.cal button[aria-disabled="true"] { background: repeating-linear-gradient(135deg, var(--bg) 0 4px, var(--surface) 4px 8px); color: var(--muted); box-shadow: none; cursor: not-allowed; font-weight: 500; }
-.cal .off { min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; background: repeating-linear-gradient(135deg, var(--bg) 0 4px, var(--surface) 4px 8px); color: var(--muted); font: 500 15px/1 var(--font-sans); font-variant-numeric: tabular-nums; }
-.cal .off[data-today] { box-shadow: inset 0 0 0 2px var(--accent); }
-.cal .off small { display: block; margin: -2px 0 2px; font-size: var(--fs-micro); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.calendar { display: grid; gap: 10px; align-content: start; }
-.calendar__title { margin: 0; }
-.cal button[aria-pressed="true"] { background: var(--text); color: var(--bg); box-shadow: none; }
-.cal button:focus-visible { position: relative; z-index: 1; } /* the 2 px ring + 2 px offset is painted above the neighbours (column gap 0 below 360) */
-.cal button[data-today="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
-.cal button small { display: block; margin: -2px 0 2px; font-size: var(--fs-micro); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); }
-.cal button[aria-disabled="true"] small { color: var(--muted); }
-.cal button[aria-pressed="true"] small { color: var(--bg); }
 
 /* ---------- Marker card + intensity 1–10 ---------- */
 .mcard { background: var(--bg); border-radius: var(--r-card-sm); padding: 12px; display: grid; gap: 10px; }

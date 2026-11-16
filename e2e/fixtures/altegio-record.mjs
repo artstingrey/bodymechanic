@@ -35,6 +35,7 @@ globalThis.fetch = async (input, init) => {
   assert.equal(headers.get('content-type'), 'application/json');
   assert.match(headers.get('accept-language'), /^(en-US|ru-RU)$/);
   const scenario = readFileSync(scenarioFile, 'utf8');
+  const landing = scenario.startsWith('lp-');
   const needsConcreteStaff = scenario === 'package-classic' || scenario === 'package-any-no-slot';
   appendFileSync(journal, `${method} ${resource}\n`);
 
@@ -61,14 +62,17 @@ globalThis.fetch = async (input, init) => {
     }
     if (resource === 'book_dates') {
       assert.deepEqual(rest, []);
-      assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380)&staff_id=(0|91601)$/);
+      assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380|91201)&staff_id=(0|91601)$/);
+      if (landing) assert.equal(url.searchParams.get('staff_id'), '0');
       return success({ booking_dates: [date] });
     }
     if (resource === 'book_times') {
       assert.equal(rest[1], date);
       assert.ok(['0', '91601', '91603'].includes(rest[0]));
       assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380|91201)$/);
-      const noSlot = scenario === 'empty-time' || (scenario === 'package-any-no-slot' && rest[0] !== '0');
+      if (landing) assert.equal(rest[0], '0');
+      const lostSlot = scenario === 'lp-conflict' && readFileSync(journal, 'utf8').includes('POST book_check\n');
+      const noSlot = lostSlot || scenario === 'empty-time' || (scenario === 'package-any-no-slot' && rest[0] !== '0');
       return success(noSlot ? [] : [{ datetime, time: '23:20' }]);
     }
     assert.equal(resource, 'book_record');
@@ -96,7 +100,8 @@ globalThis.fetch = async (input, init) => {
     if (scenario === 'no-details') return new Response(null, { status: 403 });
     return Response.json({
       id: 12345, datetime: new Date(datetime).toISOString(), deleted: false,
-      services: [{ id: 13982355 }], staff: { id: 91601, name: 'Example specialist', private: 'fixture-private-upstream-error' },
+      services: [{ id: landing ? Number(readFileSync(`${scenarioFile}.service`, 'utf8')) : 13982355 }],
+      staff: { id: 91601, name: 'Example specialist', private: 'fixture-private-upstream-error' },
       client: { fullname: 'fixture-private-fullname', phone: '+971501234567' }, record_hash: receiptHash,
     });
   }
@@ -112,13 +117,14 @@ globalThis.fetch = async (input, init) => {
   assert.equal(appointment.services.length, 1);
   assert.ok([13982355, 91201, ...packageIds].includes(appointment.services[0]));
   assert.deepEqual(appointment, { id: 1, staff_id: appointment.staff_id, services: appointment.services, datetime });
+  if (landing) assert.equal(appointment.staff_id, 0);
 
   if (resource === 'book_check') {
     assert.deepEqual(Object.keys(payload), ['appointments']);
     if (needsConcreteStaff && [0, 91603].includes(appointment.staff_id)) {
       return Response.json({ success: false, data: null, meta: { message: 'fixture-private-upstream-error' } }, { status: 404 });
     }
-    if (scenario === 'check-conflict') return reject(433);
+    if (scenario === 'check-conflict' || scenario === 'lp-conflict') return reject(433);
     if (scenario === 'check-staff') return reject(436);
     if (scenario === 'check-429') return new Response(null, { status: 429, headers: { 'Retry-After': '17' } });
     if (scenario === 'check-bad') return success([], 201);
@@ -130,6 +136,7 @@ globalThis.fetch = async (input, init) => {
   }
 
   assert.equal(resource, 'book_record');
+  if (landing) writeFileSync(`${scenarioFile}.service`, String(appointment.services[0]));
   if (needsConcreteStaff) assert.equal(appointment.staff_id, 91601);
   assert.deepEqual(Object.keys(payload).sort(), ['appointments', ...('comment' in payload ? ['comment'] : []), 'email', 'fullname', 'phone']);
   assert.match(payload.email, /^visitor\d*@example\.test$/);
@@ -142,8 +149,9 @@ globalThis.fetch = async (input, init) => {
     appendFileSync(`${scenarioFile}.comments`, JSON.stringify(payload.comment) + '\n');
   }
   if (scenario === 'record-sms') return reject(432);
+  if (scenario === 'lp-invalid-phone') return reject(431);
   if (scenario === 'record-429') return new Response(null, { status: 429, headers: { 'Retry-After': 'Tue, 01 Jan 2030 00:00:00 GMT' } });
-  if (scenario === 'bad-receipt') return success([{ id: 2, record_id: 12345, record_hash: receiptHash }], 201);
+  if (scenario === 'bad-receipt' || scenario === 'lp-unknown') return success([{ id: 2, record_id: 12345, record_hash: receiptHash }], 201);
   if (scenario === 'hold-record') {
     while (!existsSync(`${scenarioFile}.release`)) await delay(20, undefined, { signal });
   }

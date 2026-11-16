@@ -151,7 +151,12 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
     await expect(page.locator('.lp-final .ex')).toHaveCount(exampleOffer ? 1 : 0);
     await expectNoDemoLabels(page);
     if (await page.locator('#lp-f1').isVisible()) {
-      await expect(page.locator('#lp-f1 .resp')).toHaveText((url.startsWith('/ru/') ? ru : en).lp.form.phoneHint);
+      const { lp } = url.startsWith('/ru/') ? ru : en;
+      if (exampleOffer) await expect(page.locator('#lp-f1 .resp')).toHaveText(lp.form.phoneHint);
+      else {
+        await expect(page.locator('#lp-f1 .resp')).toHaveCount(0);
+        await expect(page.locator('#lp-f1 button[type="submit"]')).toHaveText(lp.booking.selectService);
+      }
     }
     // §6: only the landing's static Manrope instances, never the site's variable font (LP root layout)
     expect(fonts.length).toBeGreaterThan(0);
@@ -392,7 +397,7 @@ test('form: errors + summary, consent for the marks only with a chip, AA in stat
   test.skip(levelOf(ti.project.name) !== 'A', 'level A only');
   const errs = consoleGuard(page);
   await testHook(page); // RC-9: the count of accepted leads comes through the gate's sink (no debug global in the build)
-  await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
+  await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
   const f = page.locator('#lp-f1');
   await f.locator('button[type="submit"]').click();
   await expect(f.locator('.form-errors[role="alert"]')).toBeVisible();

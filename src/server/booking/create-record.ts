@@ -1,7 +1,9 @@
 import 'server-only';
 
+import { createTranslator } from 'next-intl';
 import { formatComment } from '@/lib/altegio/formatComment';
 import type { BookingRecordPart, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import { landingBookingChips } from '@/lib/lp/booking';
 import { altegioGet, altegioPost, bookingLanguages, isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
 import { fetchBookServices } from '../altegio/services';
@@ -15,6 +17,24 @@ const staffMissing: RecordOutcome = { status: 404, code: 'STAFF_NOT_FOUND' };
 const slotTaken: RecordOutcome = { status: 409, code: 'SLOT_TAKEN' };
 const prepaymentRequired: RecordOutcome = { status: 422, code: 'PREPAYMENT_REQUIRED' };
 const correlationId = 1;
+
+async function appointmentComment(input: BookingRecordRequest) {
+  const { locale, age, condition } = input;
+  if (input.source === '3d') {
+    return formatComment({ source: '3d', age, gender: input.body3d.model, markers: input.body3d.markers, generalNote: input.body3d.generalNote });
+  }
+  if (input.source === 'lp') {
+    const { default: messages } = await import(`../../../messages/${locale}.json`);
+    const t = createTranslator({ locale, messages });
+    const marks = input.details?.flatMap((id) => {
+      const key = landingBookingChips.get(id);
+      return key ? [t(key)] : [];
+    }).join(', ');
+    const generalNote = [marks, condition].filter(Boolean).join('\n');
+    return formatComment({ source: 'lp', generalNote, utm: input.utm }, locale);
+  }
+  if (age !== undefined || condition) return formatComment({ source: 'form', age, generalNote: condition }, locale);
+}
 
 function upstreamErrorCodes(payload: unknown) {
   const meta = isRecord(payload) && isRecord(payload.meta) ? payload.meta : null;
@@ -165,7 +185,7 @@ async function findAvailableAppointment(locationId: number, input: BookingRecord
 }
 
 export async function createBookingRecord(locationId: number, input: BookingRecordRequest, instant: Date): Promise<RecordOutcome> {
-  const { locale, serviceId, staffId, datetime, contact, age, condition } = input;
+  const { locale, serviceId, staffId, datetime, contact } = input;
   const language = bookingLanguages[locale];
   let appointment = { id: correlationId, services: [serviceId], staff_id: staffId, datetime };
   let sending = false;
@@ -194,6 +214,7 @@ export async function createBookingRecord(locationId: number, input: BookingReco
     const times = await getBookingTimes(locale, serviceId, staffId, date);
     if (!times.some((slot) => slot.datetime === datetime)) return slotTaken;
 
+    const comment = await appointmentComment(input);
     const composite = service.is_composite === true;
     const failure = await checkAppointment(locationId, language, serviceId, appointment);
     if (failure) {
@@ -203,11 +224,6 @@ export async function createBookingRecord(locationId: number, input: BookingReco
       appointment = fallback.appointment;
     }
 
-    const comment = input.source === '3d'
-      ? formatComment({ source: '3d', age, gender: input.body3d.model, markers: input.body3d.markers, generalNote: input.body3d.generalNote })
-      : age !== undefined || condition
-        ? formatComment({ source: 'form', age, generalNote: condition }, locale)
-        : undefined;
     sending = true;
     const result = await altegioPost('book_record', locationId, language, {
       ...contact, appointments: [appointment], ...(comment ? { comment } : {}),
@@ -216,6 +232,9 @@ export async function createBookingRecord(locationId: number, input: BookingReco
     const responseData = response?.data;
     console.log('[booking] Altegio book_record response', JSON.stringify({
       httpStatus: result.status,
+      source: input.source,
+      anyStaff: appointment.staff_id === 0,
+      errorCodes: upstreamErrorCodes(result.payload).filter((code) => /^\d{3,5}$/.test(code)),
       empty: result.empty,
       composite: service.is_composite === true,
       compositeType: typeof service.is_composite,

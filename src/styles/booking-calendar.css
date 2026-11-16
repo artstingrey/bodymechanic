@@ -1,0 +1,27 @@
+/* ---------- Slots & calendar ---------- */
+.slots-part { display: grid; gap: 8px; }
+.slots { display: flex; flex-wrap: wrap; gap: 8px; }
+.slot { min-height: 44px; min-width: 76px; padding: 0 14px; border-radius: var(--r-pill); border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border);
+  font: 700 15px/1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text); cursor: pointer; }
+.slot[aria-pressed="true"] { background: var(--text); color: var(--bg); box-shadow: none; }
+.slot[aria-disabled="true"], .slot:disabled { text-decoration: line-through; color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); cursor: not-allowed; background: var(--bg); }
+.zone-note { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); }
+.zone-note .i { width: 16px; height: 16px; }
+.cal { display: grid; grid-template-columns: repeat(7, minmax(44px, 1fr)); gap: 4px 2px; text-align: center; }
+@media (min-width: 420px) { .cal { gap: 4px; } }
+@media (max-width: 359px) { .cal { margin-inline: calc(var(--edge) * -1 + 4px); column-gap: 0; } } /* 288 px container < 7 × 44 + gaps: the grid takes the side space (lead, R-FINAL-2 a) */
+.cal .wd { font-size: var(--fs-micro); font-weight: 700; color: var(--muted); padding: 6px 0; text-transform: capitalize; }
+.cal button { min-height: 44px; border-radius: 12px; border: 0; background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); font: 700 15px/1 var(--font-sans);
+  font-variant-numeric: tabular-nums; color: var(--text); cursor: pointer; padding: 0; }
+.cal button[aria-disabled="true"] { background: repeating-linear-gradient(135deg, var(--bg) 0 4px, var(--surface) 4px 8px); color: var(--muted); box-shadow: none; cursor: not-allowed; font-weight: 500; }
+.cal .off { min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; background: repeating-linear-gradient(135deg, var(--bg) 0 4px, var(--surface) 4px 8px); color: var(--muted); font: 500 15px/1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.cal .off[data-today] { box-shadow: inset 0 0 0 2px var(--accent); }
+.cal .off small { display: block; margin: -2px 0 2px; font-size: var(--fs-micro); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.calendar { display: grid; gap: 10px; align-content: start; }
+.calendar__title { margin: 0; }
+.cal button[aria-pressed="true"] { background: var(--text); color: var(--bg); box-shadow: none; }
+.cal button:focus-visible { position: relative; z-index: 1; } /* the 2 px ring + 2 px offset is painted above the neighbours (column gap 0 below 360) */
+.cal button[data-today="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+.cal button small { display: block; margin: -2px 0 2px; font-size: var(--fs-micro); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); }
+.cal button[aria-disabled="true"] small { color: var(--muted); }
+.cal button[aria-pressed="true"] small { color: var(--bg); }

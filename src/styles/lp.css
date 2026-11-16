@@ -8,6 +8,8 @@
 @import "./tokens.css";
 @import "./icon-button.css";
 @import "./carousel.css";
+@import "./booking-calendar.css";
+@import "./booking-service-options.css";
 
 @font-face { font-family: ManropeLP; src: url("/fonts/v1/Manrope-400.woff2") format("woff2"); font-weight: 400; font-display: optional; }
 @font-face { font-family: ManropeLP; src: url("/fonts/v1/Manrope-600.woff2") format("woff2"); font-weight: 600; font-display: optional; }
@@ -157,20 +159,44 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-form { position: relative; display: grid; gap: 12px; padding: 14px 14px 16px; min-width: 0; border-radius: var(--r-card); background: var(--surface); box-shadow: var(--sh-2), inset 0 0 0 1px var(--line); }
 .lp-form .ftitle { font-size: 20px; line-height: 1.2; letter-spacing: -.02em; }
 .lp-form .fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.lp-form .lp-email { grid-column: 1 / -1; }
+@media (min-width: 360px) and (max-width: 767px) {
+  .lp[data-variant="a"] .lp-hero > #lp-f1 .fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+}
 .lp-form .field { display: grid; gap: 5px; align-content: start; } /* two columns (≥ 768): an error under one field must not push the other field's input down */
 .lp-form .field label { font-size: 14px; font-weight: 700; }
-.lp-form .input input { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: var(--r-field); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--field-border); font: 400 16px/1 var(--font-sans); color: var(--text); transition: box-shadow var(--d-fade) var(--e-out); }
+.lp-form .input :is(input, textarea) { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: var(--r-field); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--field-border); font: 400 16px/1 var(--font-sans); color: var(--text); transition: box-shadow var(--d-fade) var(--e-out); }
+.lp-form .input textarea { min-height: 96px; padding-block: 12px; line-height: 1.4; resize: vertical; }
+.lp-form .counter { font-size: 13px; color: var(--muted); text-align: end; }
 .lp-form .input input[type="tel"] { padding-inline: 8px; }
-.lp-form .input input::placeholder { color: var(--muted); opacity: 1; }
+.lp-form .input :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
 .lp-form .input input[type="tel"]::placeholder { font-size: .8125rem; letter-spacing: -.02em; }
-@media (hover: hover) { .lp-form .input input:hover { box-shadow: inset 0 0 0 1.5px var(--text); } }
-.lp-form .input input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (hover: hover) { .lp-form .input :is(input, textarea):hover { box-shadow: inset 0 0 0 1.5px var(--text); } }
+.lp-form .input :is(input, textarea):focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .lp-form .input[data-invalid="true"] input { box-shadow: inset 0 0 0 2px var(--error); }
 .lp-form .err { display: flex; gap: 6px; align-items: flex-start; margin: 0; font-size: 13px; font-weight: 600; color: var(--error); }
 .lp-form .err .i { width: 16px; height: 16px; margin-top: 1px; }
 .lp-form .hint { margin: 0; font-size: 13px; color: var(--muted); }
 .lp-form .acts { display: flex; flex-wrap: wrap; gap: 10px; } /* wraps only when the words no longer fit (zoomed text) */
 .lp-form .acts .btn--p { flex: 1 1 0; }
+.lp-booking-time, .lp-booking-details, .lp-booking-details > fieldset { display: grid; gap: 12px; min-width: 0; }
+@media (min-width: 768px) {
+  .lp-booking-time .bk-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lp-booking-time .bk-opt {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 1fr auto;
+    align-items: start; gap: 6px 8px; height: 100%; padding: 12px;
+  }
+  .lp-booking-time .bk-opt__meta {
+    grid-column: 1 / -1; flex-flow: row wrap; align-items: baseline; width: auto; padding: 0; text-align: start;
+  }
+  .lp-booking-time .bk-opt__meta b { white-space: normal; }
+}
+.lp-booking-details > fieldset { margin: 0; padding: 0; border: 0; }
+.lp-booking-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.lp-booking-actions .btn:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
+.lp-booking-time .cal { grid-template-columns: repeat(7, minmax(0, 1fr)); margin-inline: 0; }
+.lp-booking-time h2.slots-h { font-size: 14px; letter-spacing: 0; text-align: start; }
+.lp-booking-time .btn { justify-self: start; }
 .lp :is(.lp-form, .lp-hero-cta) .resp { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; }
 .lp :is(.lp-form, .lp-hero-cta) .resp .i { width: 16px; height: 16px; color: #1f8a4c; }
 .lp-form .fine { max-width: 37.9em; font-size: 13px; line-height: 1.45; color: var(--muted); } /* ≤ ~65 characters a line (was 80 on ≥ 744 — desktop audit L8); 37.9em = 62ch of Manrope (492 px), em so the swap does not move it (RC-6) */
@@ -202,6 +228,8 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 /* Result in place of the form. */
 .lp-thanks { display: grid; gap: 14px; animation: lp-in 400ms var(--e-out) both; }
 .lp-thanks:focus { outline: none; }
+.lp-thanks__icon { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; background: var(--success); color: #fff; }
+.lp-thanks__icon .i { width: 32px; height: 32px; stroke-width: 2.5; }
 .lp-thanks h3 { font-size: 22px; line-height: 1.15; letter-spacing: -.02em; }
 .lp .server-err { display: grid; gap: 10px; padding: 12px 14px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--error) 8%, var(--surface)); color: var(--error); font-size: 14px; font-weight: 600; }
 @keyframes lp-in { from { opacity: 0; transform: translateY(12px); } }

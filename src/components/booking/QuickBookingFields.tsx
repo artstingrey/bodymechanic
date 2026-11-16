@@ -1,56 +1,16 @@
 'use client';
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useContext, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/Field';
 import { dubaiToday } from '@/lib/api/dubai';
-import type { CatalogLocale, CatalogService, CatalogStaffMember } from '@/lib/contracts/catalog';
+import type { CatalogLocale, CatalogService } from '@/lib/contracts/catalog';
 import { QuickFormContext, type AvailabilityConflict } from './quick-form-context';
+import { bookingUrl, useBookingOptions, type BookingOptionsStatus as Status } from './useBookingOptions';
 
 type Service = Pick<CatalogService, 'id' | 'title'>;
-type Options = {
-  staff: Pick<CatalogStaffMember, 'id' | 'name'>;
-  dates: string;
-  times: { datetime: string; time: string };
-};
-type Status = 'idle' | 'loading' | 'error' | 'empty' | 'ready';
-
-function bookingUrl(resource: keyof Options, params: Record<string, string>) {
-  return `/api/booking/${resource}?${new URLSearchParams(params)}`;
-}
-
-function useBookingOptions<K extends keyof Options>(resource: K, url: string | null) {
-  const [attempt, setAttempt] = useState(0);
-  const retry = useCallback(() => setAttempt((value) => value + 1), []);
-  const request = useMemo(() => ({ url, attempt }), [url, attempt]);
-  const [response, setResponse] = useState<{ request: typeof request; items: Options[K][] | null }>();
-
-  useEffect(() => {
-    if (!request.url) return;
-    const controller = new AbortController();
-    async function load(url: string) {
-      try {
-        const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
-        if (!response.ok) throw new Error('Booking options are unavailable');
-        const body = await response.json() as { data?: Record<K, Options[K][]> };
-        const items = body.data?.[resource];
-        if (!Array.isArray(items)) throw new Error('Invalid booking options');
-        if (!controller.signal.aborted) setResponse({ request, items });
-      } catch {
-        if (!controller.signal.aborted) setResponse({ request, items: null });
-      }
-    }
-    void load(request.url);
-    return () => controller.abort();
-  }, [request, resource]);
-
-  const items = response?.request === request ? response.items : undefined;
-  const status: Status = !url ? 'idle' : items === undefined ? 'loading' : items === null ? 'error' : items.length ? 'ready' : 'empty';
-  return { items: items ?? [], status, retry };
-}
-
 function OptionStatus({ id, status, copy, retry, retryLabel, pending }: {
   id: string;
   status: Status;
@@ -136,7 +96,7 @@ export function QuickBookingFields({ locale, services, loading = false }: {
     const code = form?.errors[id];
     return code ? t(`forms.error.${code}`) : undefined;
   };
-  const description = (id: string, resource: keyof Options | 'services') =>
+  const description = (id: string, resource: Parameters<typeof bookingUrl>[0] | 'services') =>
     `${error(id) ? `${id}-err ` : ''}qf-${resource}-status`;
   const clearTime = () => {
     form?.clearError('qf-date');

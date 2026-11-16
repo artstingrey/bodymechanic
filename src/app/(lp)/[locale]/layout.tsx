@@ -38,7 +38,11 @@ const FORM_FLAG = `(function(){try{var f=new URLSearchParams(location.search).ge
 export default async function LandingLayout({ children }: LayoutProps<'/[locale]'>) {
   const locale = await rootLocale();
   if (!isLocale(locale)) notFound();
-  const messages = await pickMessages(['lp', 'forms.field', 'forms.error', 'common.actions']);
+  const messages = await pickMessages([
+    'lp', 'forms.field', 'forms.error', 'forms.consent', 'common.actions', 'booking.service', 'booking.time',
+    'home.form.availability', 'home.form.feedback', 'home.services.cards', 'home.services.priceUnknown',
+    'home.services.priceFrom', 'home.services.duration', 'body3d.panel.noteCounter',
+  ]);
   return (
     <html lang={locale} data-lp-form="hero" suppressHydrationWarning>
       <head>
