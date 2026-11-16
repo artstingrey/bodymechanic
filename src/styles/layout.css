@@ -106,12 +106,16 @@ dialog.burger-dialog[open] .burger-dialog__panel { opacity: 1; transform: none; 
 .burger-dialog__guard { position: absolute; width: 1px; height: 1px; outline: none; }
 .burger-dialog__scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 12px; scrollbar-width: thin; }
 .burger-dialog .big { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr 1fr; }
+@media (max-width: 767px) { .burger-dialog .big:has(.is-social) { grid-template-columns: 1fr 1fr 44px; } }
 .burger-dialog .big a { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text); text-decoration: none; line-height: 1.1; font-weight: 700; -webkit-tap-highlight-color: transparent; transition: transform 140ms var(--e-out); }
 .burger-dialog .big a:active { transform: translateX(3px); transition-duration: 80ms; }
 .burger-dialog .is-major { grid-column: 1 / -1; }
 .burger-dialog .is-major a { min-height: clamp(44px, 9.2svh, 76px); font-size: clamp(30px, 5.8svh, 44px); letter-spacing: -0.03em; }
 .burger-dialog .is-minor a { min-height: 44px; padding-right: 12px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; justify-content: flex-start; }
-.burger-dialog .is-minor:nth-child(5), .burger-dialog .is-minor:nth-child(6) { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+.burger-dialog .is-minor { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
+.burger-dialog .is-social { border-color: transparent; }
+.burger-dialog .is-social a { width: 44px; padding: 0; justify-content: center; border-radius: 50%; }
+@media (hover: hover) { .burger-dialog .is-social a:hover { background: var(--surface); color: var(--accent-ink); } }
 .burger-dialog .arr { opacity: 0; font-size: 18px; color: var(--accent-ink); transform: translateX(-6px); transition: opacity var(--d-fade) var(--e-out), transform var(--d-fade) var(--e-out); }
 @media (hover: hover) { .burger-dialog .is-major a:hover .arr { opacity: 1; transform: none; } .burger-dialog .is-minor a:hover { text-decoration: underline; text-underline-offset: 4px; } }
 :is(.burger-dialog, .nf-menu__panel) .acct { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; min-height: 60px; margin-top: 14px; padding: 8px 14px 8px 12px; border-radius: var(--r-card-sm); border: 1.5px solid var(--field-border); color: var(--text); text-decoration: none; -webkit-tap-highlight-color: transparent; }
@@ -133,7 +137,7 @@ dialog.burger-dialog[open] .acct { transition: opacity 220ms var(--e-out) 170ms,
 dialog.burger-dialog[open] .meta { transition: opacity 220ms var(--e-out) 190ms, transform 260ms var(--e-out) 190ms; }
 @media (max-width: 767px) and (max-height: 699px) {
   .burger-dialog .is-major a { min-height: 44px; font-size: 30px; }
-  .burger-dialog .is-minor:nth-child(5), .burger-dialog .is-minor:nth-child(6) { margin-top: 2px; padding-top: 2px; }
+  .burger-dialog .is-minor { margin-top: 2px; padding-top: 2px; }
   .burger-dialog__scroll { padding-bottom: 4px; }
   :is(.burger-dialog, .nf-menu__panel) .acct { min-height: 52px; margin-top: 8px; padding-block: 4px; }
   :is(.burger-dialog, .nf-menu__panel) .acct .av { width: 32px; height: 32px; }
@@ -150,7 +154,6 @@ dialog.burger-dialog[open] .meta { transition: opacity 220ms var(--e-out) 190ms,
   .burger-dialog .is-major { grid-column: span 2; }
   .burger-dialog .is-major a { min-height: 60px; font-size: 30px; }
   .burger-dialog .is-minor a { font-size: 16px; }
-  .burger-dialog .is-minor:nth-child(7), .burger-dialog .is-minor:nth-child(8) { margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--line); }
   .burger-dialog__cta { padding: 14px 0 19px; margin-block: 6px 1px; } /* 1 px above the panel's edge: its background painted over the inset ring */
 }
 /* reduced motion: short fades only */

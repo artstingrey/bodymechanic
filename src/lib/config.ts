@@ -4,12 +4,9 @@
  */
 export const BOOKING_SMS_REQUIRED = process.env.NEXT_PUBLIC_BOOKING_SMS_REQUIRED === 'true';
 
-/** Studio WhatsApp (digits, E.164 without «+»). TODO(content): the number comes from the client → Render env. Empty → the
- * wa.me link opens WhatsApp with the prepared text and lets the visitor pick the chat (no invented number). */
-export const STUDIO_WHATSAPP = (process.env.NEXT_PUBLIC_STUDIO_WHATSAPP || '').replace(/\D/g, '');
-export const whatsappUrl = (text: string) => `https://wa.me/${STUDIO_WHATSAPP}?text=${encodeURIComponent(text)}`;
 /** The chat without any text: the `href` of a link whose prefilled text carries the visitor's data (components/ui/PrefilledLink, В-4). */
-export const WHATSAPP_BASE = `https://wa.me/${STUDIO_WHATSAPP}`;
+export const WHATSAPP_BASE = 'https://wa.me/971585172380';
+export const whatsappUrl = (text: string) => text ? `${WHATSAPP_BASE}?text=${encodeURIComponent(text)}` : WHATSAPP_BASE;
 /** Booking: demo captcha (Turnstile at stage 2, ТЗ §07). The prototype issues a mock token after a short check. */
 export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 /** Google Tag Manager container (ТЗ §14, GA4 + Meta Pixel inside). Empty in the prototype → events stay in window.dataLayer. */

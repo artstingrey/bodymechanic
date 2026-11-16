@@ -12,7 +12,7 @@
 |---|---|---|---|
 | `NEXT_PUBLIC_SITE_URL` | Адрес сайта в canonical, hreflang, Open Graph, `sitemap.xml`, строке `Sitemap:` в `robots.txt` и в разметке JSON-LD. Косая черта в конце отбрасывается. | `https://bodymechanic.example` | `src/lib/site.ts` |
 | `NEXT_PUBLIC_GTM_ID` | Идентификатор контейнера Google Tag Manager вида `GTM-XXXXXXX`. Контейнер грузится только после согласия посетителя на «Аналитику» или «Маркетинг». Значение другого вида игнорируется. **Задавать только на выпуске RC-10 или новее**: в RC-9 номер услуги попадал в адрес страницы записи, а пиксель Meta, тег Google и GA4 сами отправляют адрес страницы (`KNOWN-ISSUES.md`, раздел 5, пункт 20). | пусто: GTM не грузится, события остаются в `window.dataLayer` | `src/lib/config.ts`, `src/lib/analytics/gtm.ts` |
-| `NEXT_PUBLIC_STUDIO_WHATSAPP` | Номер WhatsApp студии для всех ссылок `wa.me` (лендинг, шаги записи, «Мои записи»). Из значения берутся только цифры. | пусто: ссылка `https://wa.me/` без номера, WhatsApp предложит выбрать чат | `src/lib/config.ts` |
+| `NEXT_PUBLIC_STUDIO_WHATSAPP` | Номер в ссылках демо-кабинета «Мои записи». Из значения берутся только цифры. | пусто: ссылка `https://wa.me/` без номера, WhatsApp предложит выбрать чат | `src/components/account/Account.tsx` |
 | `NEXT_PUBLIC_STUDIO_ADDRESS` | Переопределяет адрес в футере, контактах, подтверждении записи, календаре и JSON-LD. При переезде обновите также обе ссылки на точку в Google Maps. | Адрес HDS Tower из задания этапа 10 | `src/lib/config.ts` |
 | `NEXT_PUBLIC_STUDIO_PHONE` | Телефон студии в JSON-LD, формат `+971…`. | пусто: поле не попадает | там же |
 | `NEXT_PUBLIC_STUDIO_HOURS` | Часы работы в JSON-LD в формате schema.org, несколько значений через `;`. Пример: `Mo-Sa 09:00-21:00`. | пусто: поле не попадает | там же |
@@ -20,6 +20,8 @@
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Задумана под ключ капчи Cloudflare Turnstile. **Сейчас ни на что не влияет:** значение читается в константу `TURNSTILE_SITE_KEY`, которую код не использует. | пусто | `src/lib/config.ts` |
 | `RENDER` | Признак сборки на Render. Если он есть, а `NEXT_PUBLIC_SITE_URL` не задан, сборка останавливается с ошибкой. | — | `next.config.ts` |
 | `NODE_VERSION` | Версия Node.js для сборки на Render. | — | настройка Render, в коде не читается |
+
+Рекламные лендинги и шаги записи используют номер студии из `WHATSAPP_BASE` в `src/lib/config.ts`.
 
 Файлы `.env*` в git не попадают (`.gitignore`). В репозитории таких файлов нет.
 

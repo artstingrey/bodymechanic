@@ -10,10 +10,9 @@ import { calendarDays, cancelRecord, errorKind, getAccountRecords, getDates, get
 import type { ApiErrorKind } from '@/lib/api/errors';
 import type { AccountRecord, Slot } from '@/lib/api/types';
 import { zoneLabel } from '@/lib/body3d/zones';
-import { WHATSAPP_BASE, whatsappUrl } from '@/lib/config';
 import { PrefilledLink } from '@/components/ui/PrefilledLink';
 import { BookingLink } from '@/components/booking/BookingLink';
-import { ErrorBox, Loading } from '@/components/booking/ui';
+import { ErrorBox as BookingErrorBox, Loading } from '@/components/booking/ui';
 import { useAsync } from '@/components/booking/useBookingFlow';
 import { track } from '@/lib/analytics/track';
 import { PhoneField, TextField } from '@/components/ui/Field';
@@ -22,6 +21,13 @@ import { collect, messageArgs, normalizePhone, rules } from '@/lib/forms/validat
 import type { Locale } from '@/i18n/routing';
 import { Todo } from '@/components/ui/Todo';
 import { useDialogBackCloses } from '@/lib/ui/useBackCloses';
+
+const demoWhatsappBase = `https://wa.me/${(process.env.NEXT_PUBLIC_STUDIO_WHATSAPP || '').replace(/\D/g, '')}`;
+const demoWhatsappUrl = (text: string) => `${demoWhatsappBase}?text=${encodeURIComponent(text)}`;
+
+function ErrorBox(props: Pick<React.ComponentProps<typeof BookingErrorBox>, 'kind' | 'onRetry'>) {
+  return <BookingErrorBox {...props} whatsappHref={demoWhatsappUrl('')} />;
+}
 
 function useWhen() {
   const t = useTranslations();
@@ -120,7 +126,7 @@ function RecordCard({ r: initial, past }: { r: AccountRecord; past?: boolean }) 
               (PrivateBoundary), so the hand-over waits in the tab's storage */}
           <BookingLink preset={{ ...(r.serviceId ? { service: r.serviceId } : {}), ...(r.staffId ? { staff: r.staffId } : {}) }}>{t('common.actions.bookAgain')}</BookingLink>{' '}
           {/* review: the studio collects reviews in WhatsApp until the review link exists (TODO content) */}
-          <PrefilledLink href={WHATSAPP_BASE} full={() => whatsappUrl(`${t('account.action.review')}: ${r.serviceTitle}, ${when(r.datetime)}`)}>{t('account.action.review')}</PrefilledLink>
+          <PrefilledLink href={demoWhatsappBase} full={() => demoWhatsappUrl(`${t('account.action.review')}: ${r.serviceTitle}, ${when(r.datetime)}`)}>{t('account.action.review')}</PrefilledLink>
         </p>
       ) : active ? (
         late ? (
@@ -128,7 +134,7 @@ function RecordCard({ r: initial, past }: { r: AccountRecord; past?: boolean }) 
             <p>{t('account.reschedule.unavailable')}</p>
             <button type="button" disabled>{t('account.reschedule.unavailableShort')}</button>{' '}
             <button type="button" disabled>{t('account.action.cancel')}</button>{' '}
-            <PrefilledLink href={WHATSAPP_BASE} full={() => whatsappUrl(`${r.serviceTitle}, ${when(r.datetime)}`)}>{t('common.actions.writeWhatsapp')}</PrefilledLink>
+            <PrefilledLink href={demoWhatsappBase} full={() => demoWhatsappUrl(`${r.serviceTitle}, ${when(r.datetime)}`)}>{t('common.actions.writeWhatsapp')}</PrefilledLink>
           </div>
         ) : (
           <p>

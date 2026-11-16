@@ -10,11 +10,14 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
 import { ButtonLink } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
 import { LangSwitch } from './LangSwitch';
 import { PrivateLink } from './PrivateLink';
 import { isTodo } from '@/components/ui/Todo';
+import { catalogServiceId } from '@/lib/catalog-service-slugs';
+import { catalogStaffId } from '@/lib/catalog-staff-slug';
 import { useBackCloses } from '@/lib/ui/useBackCloses';
 
 /** put the page back where it was (instant, also one frame later: the browser may scroll after a focus move) */
@@ -151,6 +154,11 @@ const MAJOR = 4;
 
 export function BurgerDialog() {
   const t = useTranslations();
+  const [, section, slug] = usePathname().split('/');
+  const isDemo = section === 'account' || section === 'journal' || !!slug && (
+    (section === 'services' && catalogServiceId(slug) === undefined) ||
+    (section === 'team' && catalogStaffId(slug) === undefined)
+  );
   const { open, close, follow, dialog, panel, btn } = useMenu();
   const btnFocus = () => btn.current?.focus({ preventScroll: true });
   return (
@@ -165,6 +173,11 @@ export function BurgerDialog() {
                   <Link href={href} replace onClick={follow}>{t(key)}{i < MAJOR ? <span className="arr" aria-hidden="true">→</span> : null}</Link>
                 </li>
               ))}
+              {!isDemo && <li className="is-minor is-social" style={{ '--i': ITEMS.length } as CSSProperties}>
+                <a href="https://www.instagram.com/mechanic.body.uae/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                  <Icon name="instagram" />
+                </a>
+              </li>}
             </ul>
           </nav>
           {/* RC-9 (S-2): a full page load — the account runs without the tag manager (PrivateLink) */}

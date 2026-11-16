@@ -20,6 +20,7 @@ const PATHS = {
   undo: <><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" /></>,
   // chat bubble (Lucide message-circle) for WhatsApp buttons: a contact action, no third-party logo
   whatsapp: <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
+  instagram: <><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><path d="M17.5 6.5h.01" /></>,
 } as const;
 
 export type IconName = keyof typeof PATHS;
