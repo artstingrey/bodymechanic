@@ -253,6 +253,11 @@ try {
     ]);
 
     await scenario('package-classic');
+    const landingPackage = await post(origin, request({ source: 'lp', serviceId: 13982380, locale: 'ru' }), { status: 201 });
+    assert.deepEqual(landingPackage.data, assigned.data);
+    assert.match(JSON.parse(await fs.readFile(comments, 'utf8')), /^\[Сайт\/LP\]/);
+
+    await scenario('package-classic');
     await post(origin, request({ serviceId: 13982380, locale: 'ru', staffId: 91603 }), { status: 503, code: 'BOOKING_UNAVAILABLE' });
     assert.deepEqual(await history(), ['GET book_services', 'GET book_times', checkCall]);
 

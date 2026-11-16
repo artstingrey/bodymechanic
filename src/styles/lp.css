@@ -151,6 +151,9 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-final .lbl .ex { display: flex; width: fit-content; margin-top: 8px; } /* L11: its own row inside the offer line's block, every width */
 .lp-copy { display: grid; gap: 8px; }
 .lp-copy .offer-pill { display: none; justify-self: start; }
+/* Keep the mobile B photo callouts clear when the catalog offer wraps. */
+.lp[data-variant="b"] .lp-media .offer-pill { display: none; }
+.lp[data-variant="b"] .lp-copy .offer-pill { display: inline-flex; }
 .lp h1 { font-size: 30px; line-height: 1.04; font-weight: 700; letter-spacing: var(--tracking-display); text-wrap: balance; } /* RC-8: 700 and 1.04 as the reference; the size stays: it carries the first screen */
 .lp h1 .acc { color: var(--accent); }
 .lp .sub { font-size: 15px; line-height: 1.45; color: var(--muted); max-width: 28.1em; } /* = 46ch of Manrope (421 px); em, not ch: a ch is the fallback's «0» until Manrope arrives — the box grew 23 px at the swap (RC-6) */
@@ -161,7 +164,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-form .fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .lp-form .lp-email { grid-column: 1 / -1; }
 @media (min-width: 360px) and (max-width: 767px) {
-  .lp[data-variant="a"] .lp-hero > #lp-f1 .fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+  .lp-hero > #lp-f1 .fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
 }
 .lp-form .field { display: grid; gap: 5px; align-content: start; } /* two columns (≥ 768): an error under one field must not push the other field's input down */
 .lp-form .field label { font-size: 14px; font-weight: 700; }
@@ -299,10 +302,10 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-card dd .price { white-space: nowrap; }
 .lp-card dd .price-row { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; } /* the price and the old price never part — «520 AED / 650 / ДЕМО» in three lines on 360 / 800 / 820 (HR, RC-4); «Демо» may wrap */
 .lp-card dl div:first-child { padding-right: 12px; }
-.lp[data-variant="a"] .lp-card dl:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
-.lp[data-variant="a"] .lp-card dl > :only-child { padding-right: 0; }
-.lp[data-variant="a"] .lp-card .price-row { max-width: 100%; flex-wrap: wrap; gap: 2px 8px; }
-.lp[data-variant="a"] .lp-card .price-row > * { max-width: 100%; white-space: normal; }
+.lp-card dl:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.lp-card dl > :only-child { padding-right: 0; }
+.lp-card .price-row { max-width: 100%; flex-wrap: wrap; gap: 2px 8px; }
+.lp-card .price-row > * { max-width: 100%; white-space: normal; }
 .lp-studio { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .lp-studio figure { position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-card); background: var(--card-sand); overflow: hidden; display: flex; align-items: flex-end; justify-content: center; color: color-mix(in srgb, var(--accent) 22%, var(--card-sand)); }
 .lp-studio figure svg { width: 80%; height: auto; }
@@ -566,10 +569,16 @@ html[data-lp-form="sheet"] .lp-sticky .l-sheet { display: inline-flex; }
   .lp h1 { font-size: min(60px, calc(6.6vw - 12px), 8svh); }
   .lp h2 { font-size: min(44px, calc(4.3vw - 7px)); }
 }
-/* short windows (≤ 700 high: 1366×768 and 1280×800 screens with the browser's bars): a tighter first screen */
+/* Keep the contact CTA in view with the additional email row on shorter desktop windows. */
+@media (min-width: 1024px) and (orientation: landscape) and (max-height: 820px) {
+  .lp-hero { row-gap: 12px; padding-top: 12px; }
+  .lp-copy { gap: 8px; }
+  .lp-hero > form.lp-form { gap: 8px; padding-top: 10px; }
+  .lp-hero > form.lp-form .fields { gap: 8px; }
+  .lp-hero > form.lp-form .input input { min-height: 44px; }
+}
 @media (min-width: 1024px) and (orientation: landscape) and (max-height: 700px) {
-  .lp-hero { row-gap: 18px; padding-top: 8px; }
-  .lp-copy { gap: 10px; }
+  .lp-hero { row-gap: 10px; padding-top: 8px; }
   .lp .sub { font-size: 17px; }
 }
 /* «Спасибо» on two columns: the card keeps the photo beside it (hiding it left the right half empty and pulled the next

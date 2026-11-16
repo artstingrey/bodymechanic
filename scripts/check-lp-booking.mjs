@@ -3,7 +3,8 @@ import { randomInt, randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { chromium, expect } from '@playwright/test';
+import { chromium, expect, webkit } from '@playwright/test';
+import config from '../src/lib/lp/config.json' with { type: 'json' };
 import en from '../messages/en.json' with { type: 'json' };
 import ru from '../messages/ru.json' with { type: 'json' };
 import { withProductionServer } from './check-server.mjs';
@@ -24,6 +25,7 @@ const lang = { ru, en };
 async function run(scenario, check) {
   await fs.writeFile(scenarioFile, scenario);
   await fs.writeFile(journal, '');
+  await fs.rm(comments, { force: true });
   return withProductionServer(async (origin, logs) => {
     try {
       await check(origin);
@@ -39,8 +41,9 @@ async function run(scenario, check) {
   }) });
 }
 
-async function openForm(browser, origin, locale, id) {
-  const page = await browser.newPage({ viewport: { width: id === 'lp-f2' ? 1280 : 320, height: 850 },
+async function openForm(browser, origin, variant, locale, id) {
+  const mobile = id !== 'lp-f2';
+  const page = await browser.newPage({ viewport: { width: mobile ? 320 : 1280, height: 850 }, isMobile: mobile, hasTouch: mobile,
     timezoneId: 'America/Los_Angeles', reducedMotion: 'reduce' });
   await page.route((url) => url.origin !== origin, (route) => route.fulfill({ body: '' }));
   await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({
@@ -53,18 +56,19 @@ async function openForm(browser, origin, locale, id) {
   });
   const copy = lang[locale];
   const form = page.locator(`#${id}`);
-  await page.goto(`${origin}/${locale}/lp/a/?utm_source=meta&utm_medium=paid&utm_campaign=lp_a_sports${id === 'lp-fs' ? '&form=sheet' : ''}`);
+  await page.goto(`${origin}/${locale}/lp/${variant}/?utm_source=meta&utm_medium=paid&utm_campaign=lp_${variant}_booking${id === 'lp-fs' ? '&form=sheet' : ''}`);
+  await expect.poll(() => page.evaluate(() => window.dataLayer?.some((event) => event.event === 'lp_view'))).toBe(true);
   if (id === 'lp-fs') await page.locator('.lp-hero-cta button').click();
   const wa = form.getByRole('link', { name: copy.lp.form.whatsapp });
   await expect(wa).toHaveAttribute('href', /^https:\/\/wa\.me\/971585172380\?text=/);
-  assert.equal(new URL(await wa.getAttribute('href')).searchParams.get('text'), `${copy.lp.a.wa.message} [LP-A]`);
+  assert.equal(new URL(await wa.getAttribute('href')).searchParams.get('text'), `${copy.lp[variant].wa.message} ${config.versions[variant].waTag}`);
   await form.locator('input[name="name"]').fill(contact.fullname);
   await form.locator('input[type="tel"]').fill(contact.phone);
   return { page, form, copy, lookups };
 }
 
-async function choose(browser, origin, locale, id, { serviceId = 13982355, marks = false, result = 'created' } = {}) {
-  const { page, form, copy, lookups } = await openForm(browser, origin, locale, id);
+async function choose(browser, origin, variant, locale, id, { serviceId = 13982355, marks = false, result = 'created' } = {}) {
+  const { page, form, copy, lookups } = await openForm(browser, origin, variant, locale, id);
   try {
     const before = await calls('POST book_record');
     const open = form.getByRole('button', { name: copy.lp.booking.selectService });
@@ -135,9 +139,13 @@ async function choose(browser, origin, locale, id, { serviceId = 13982355, marks
     const consent = form.locator('input[name="consent"]');
     await expect(form.locator('a[href*="/privacy"]')).toHaveAttribute('href', new RegExp(`/${locale}/privacy/?$`));
     const submit = form.getByRole('button', { name: copy.lp.booking.book });
+    const chips = config.versions[variant].chips.map(({ id }) => id);
+    const labels = chips.map((id) => copy.lp.chips[id]);
+    const details = [chips[0], chips[2]];
     if (marks) {
       await form.locator('textarea[name="condition"]').fill(condition);
       await form.locator('summary').click();
+      await expect(form.locator('.chip')).toHaveText(labels);
       await form.locator('.chip').first().click();
       await form.locator('.chip').nth(2).click();
       await form.getByRole('button', { name: copy.common.actions.back, exact: true }).click();
@@ -155,7 +163,7 @@ async function choose(browser, origin, locale, id, { serviceId = 13982355, marks
     const submitted = await response;
     const body = submitted.request().postDataJSON();
     assert.deepEqual([body.source, body.serviceId, body.staffId, body.datetime, body.contact, body.consent], ['lp', serviceId, 0, datetime, contact, true]);
-    assert.deepEqual(body.details, marks ? ['recovery', 'neckShoulders'] : undefined);
+    assert.deepEqual(body.details, marks ? details : undefined);
     assert.equal(body.condition, marks ? condition : undefined);
     assert.deepEqual(lookups.slice(0, 2).map((url) => [url.pathname, url.searchParams.get('staffId'), url.searchParams.get('serviceId')]), [
       ['/api/booking/dates', '0', String(serviceId)], ['/api/booking/times', '0', String(serviceId)],
@@ -176,20 +184,34 @@ async function choose(browser, origin, locale, id, { serviceId = 13982355, marks
       const feedback = result === 'conflict' ? 'slotTaken' : 'unknown';
       await expect(form.getByRole('alert')).toHaveText(copy.home.form.feedback[feedback]);
       await expect(form.locator('.lp-thanks')).toHaveCount(0);
-      if (result === 'conflict') await expect(time).toHaveCount(0);
-      else await expect(submit).toBeDisabled();
+      if (result === 'conflict') {
+        await expect(time).toHaveCount(0);
+        await form.getByRole('button', { name: '15:20', exact: true }).click();
+        await next.click();
+        await expect(form.locator('textarea[name="condition"]')).toHaveValue(condition);
+        await expect(form.locator('.chip[aria-pressed="true"]')).toHaveText([labels[0], labels[2]]);
+        await expect(consent).toBeChecked();
+      } else {
+        await expect(submit).toBeDisabled();
+        const chat = form.getByRole('link', { name: copy.lp.form.whatsapp });
+        assert.equal(new URL(await chat.getAttribute('href')).searchParams.get('text'),
+          `${copy.lp[variant].wa.message} ${config.versions[variant].waTag}`);
+        await expect(chat).toHaveAttribute('data-track', 'whatsapp');
+      }
     }
     const events = await page.evaluate(() => (window.dataLayer ?? []).filter((event) => event.event === 'lp_lead'));
     assert.equal(events.length, result === 'created' ? 1 : 0);
-    assert.doesNotMatch(JSON.stringify(events), /fixture-private-fullname|501234567|neckShoulders/);
+    if (result === 'created') {
+      assert.deepEqual([events[0].lp_version, events[0].lang, events[0].placement, events[0].event_id],
+        [variant, locale, id === 'lp-f2' ? 'final' : 'hero', body.idempotencyKey]);
+    }
+    assert.doesNotMatch(JSON.stringify(events), /fixture-private-fullname|501234567|visitor@example|neckShoulders/);
   } finally {
     await page.close();
   }
 }
 
-let browser;
-try {
-  browser = await chromium.launch({ channel: 'chrome' });
+async function checkBooking(browser, variant) {
   await run('lp-live', async (origin) => {
     const valid = { source: 'lp', serviceId: 13982355, staffId: 0, datetime, contact, locale: 'ru', consent: true };
     for (const [changes, field] of [[{ staffId: 91601 }, 'staffId'], [{ serviceId: 0 }, 'serviceId'], [{ consent: false }, 'consent'],
@@ -203,32 +225,52 @@ try {
       assert.equal(response.status, 400);
       assert.ok((await response.json()).error.fields.includes(field));
     }
-    await choose(browser, origin, 'ru', 'lp-f1', { marks: true });
-    await choose(browser, origin, 'en', 'lp-f2', { serviceId: 91201 });
-    await choose(browser, origin, 'en', 'lp-fs', { marks: true });
-    assert.equal(await calls('POST book_check'), 3);
-    assert.equal(await calls('POST book_record'), 3);
-    const written = (await fs.readFile(comments, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
-    assert.ok(written.every((comment) => comment.startsWith('[Сайт/LP]') && comment.includes('meta / paid / lp_a_sports')));
-    assert.ok(written[0].includes(ru.lp.chips.recovery) && written[0].includes(ru.lp.chips.neckShoulders));
-    assert.ok(written[2].includes(en.lp.chips.recovery) && written[2].includes(en.lp.chips.neckShoulders));
-    assert.ok(written[0].includes(condition) && written[2].includes(condition));
-    assert.doesNotMatch(written[1], /Recovery|Neck/);
+
   });
+  // Give each locale a fresh server so the same synthetic contact stays below the live rate limit.
+  const placements = ['lp-f1', 'lp-f2', 'lp-fs'];
+  const marked = [config.versions[variant].chips[0].id, config.versions[variant].chips[2].id];
+  for (const locale of Object.keys(lang)) {
+    await run('lp-live', async (origin) => {
+      for (const id of placements) {
+        await choose(browser, origin, variant, locale, id, { serviceId: id === 'lp-f2' ? 91201 : 13982355, marks: id !== 'lp-f2' });
+      }
+      assert.equal(await calls('POST book_check'), placements.length);
+      assert.equal(await calls('POST book_record'), placements.length);
+      const written = (await fs.readFile(comments, 'utf8')).trim().split('\n').map((line) => JSON.parse(line));
+      for (const [i, comment] of written.entries()) {
+        assert.ok(comment.startsWith('[Сайт/LP]') && comment.includes(`meta / paid / lp_${variant}_booking`));
+        assert.equal(comment.includes(condition), placements[i] !== 'lp-f2');
+        for (const mark of marked) assert.equal(comment.includes(lang[locale].lp.chips[mark]), placements[i] !== 'lp-f2');
+      }
+    });
+  }
   await run('lp-conflict', async (origin) => {
-    await choose(browser, origin, 'ru', 'lp-f1', { result: 'conflict' });
+    await choose(browser, origin, variant, 'ru', 'lp-f1', { result: 'conflict', marks: true });
     assert.equal(await calls('POST book_record'), 0);
   });
   await run('lp-unknown', async (origin) => {
-    await choose(browser, origin, 'en', 'lp-f1', { result: 'unknown' });
+    await choose(browser, origin, variant, 'en', 'lp-f1', { result: 'unknown' });
     assert.equal(await calls('POST book_record'), 1);
   });
   await run('lp-invalid-phone', async (origin) => {
-    await choose(browser, origin, 'ru', 'lp-f1', { result: 'invalid-phone' });
+    await choose(browser, origin, variant, 'ru', 'lp-f1', { result: 'invalid-phone' });
     assert.equal(await calls('POST book_record'), 1);
   });
-  console.log('Landing booking: RU/EN hero, final and sheet, service choice, any staff, consent, conflict and unknown result: OK');
+}
+
+try {
+  for (const [engine, options] of [[chromium, { channel: 'chrome' }], [webkit, {}]]) {
+    const browser = await engine.launch(options);
+    try {
+      for (const variant of ['a', 'b']) {
+        await checkBooking(browser, variant);
+        console.log(`Landing ${variant.toUpperCase()} booking (${options.channel ?? engine.name()}): RU/EN hero, final and sheet, consent, conflict and unknown result: OK`);
+      }
+    } finally {
+      await browser.close();
+    }
+  }
 } finally {
-  await browser?.close();
   await fs.rm(dir, { recursive: true, force: true });
 }

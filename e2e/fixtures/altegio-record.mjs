@@ -72,7 +72,8 @@ globalThis.fetch = async (input, init) => {
       assert.match(url.search, /^\?service_ids%5B%5D=(13982355|13982379|13982380|91201)$/);
       if (landing) assert.equal(rest[0], '0');
       const lostSlot = scenario === 'lp-conflict' && readFileSync(journal, 'utf8').includes('POST book_check\n');
-      const noSlot = lostSlot || scenario === 'empty-time' || (scenario === 'package-any-no-slot' && rest[0] !== '0');
+      if (lostSlot) return success([{ datetime: `${date}T15:20:00+04:00`, time: '15:20' }]);
+      const noSlot = scenario === 'empty-time' || (scenario === 'package-any-no-slot' && rest[0] !== '0');
       return success(noSlot ? [] : [{ datetime, time: '23:20' }]);
     }
     assert.equal(resource, 'book_record');

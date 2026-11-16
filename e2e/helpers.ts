@@ -105,7 +105,7 @@ export function guard(page: Page, baseURL: string, opts: { allowStatus?: (url: s
     if (/^(data|blob):/.test(u)) return;
     const studioMap = u === STUDIO_MAP.embedUrl && r.isNavigationRequest()
       && r.frame().parentFrame() === page.mainFrame()
-      && /^\/(en|ru)\/(contacts|lp\/a)\/$/.test(new URL(page.url()).pathname);
+      && /^\/(en|ru)\/(contacts|lp\/[ab])\/$/.test(new URL(page.url()).pathname);
     if (new URL(u).origin !== origin && !studioMap) out.push(`third-party request: ${r.method()} ${u}`);
   });
   page.on('response', (r) => {

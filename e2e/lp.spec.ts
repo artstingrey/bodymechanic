@@ -7,8 +7,8 @@
  * First screen: the whole form button (iPhone from 375×629, Android from 360×732) OR the sticky CTA. No horizontal scroll;
  * targets ≥ 44 (chips 48; links inside a sentence excepted, WCAG 2.5.8); text ≥ 13. Level A also: 200, no console errors,
  * only the static LP fonts, one h1, noindex, hreflang ru/en/x-default, color-scheme «only light», AA 0, denylist banned +
- * landing_banned on the rendered text = 0; errors + summary, consent for the marks only with a chip, AA in the error and
- * thank-you states, double tap → one lead, server error keeps the input, ?form=sheet + «Назад» closes the sheet, sticky CTA
+ * landing_banned on the rendered text = 0; contact validation, AA in the error state, catalog error keeps the input,
+ * ?form=sheet + «Назад» closes the sheet, sticky CTA
  * show / hide, the keyboard never covers the focused field.
  */
 import { createHash } from 'node:crypto';
@@ -18,7 +18,7 @@ import { test, expect, type Page } from '@playwright/test';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
 import { STUDIO_MAP } from '../src/lib/config';
-import { expectNoDemoLabels, seedConsent, stubStudioMap, testHook } from './helpers';
+import { expectNoDemoLabels, seedConsent, stubStudioMap } from './helpers';
 
 const PAGES = ['/ru/lp/a/', '/ru/lp/b/', '/en/lp/a/', '/en/lp/b/'];
 test.beforeEach(async ({ context }) => stubStudioMap(context));
@@ -145,18 +145,13 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
   if (foot.shown) expect(foot.barTop, 'sticky bar over the footer disclaimer').toBeGreaterThanOrEqual(foot.disclaimerBottom);
   await page.evaluate(() => window.scrollTo(0, 0));
   if (full) {
-    // Variant B still uses the example offer from lp-config.
-    const exampleOffer = url.endsWith('/b/');
-    expect(await page.locator('.lp-hero .ex').evaluateAll((els) => els.some((e) => e.getBoundingClientRect().width > 0)), 'example badge on the hero offer').toBe(exampleOffer);
-    await expect(page.locator('.lp-final .ex')).toHaveCount(exampleOffer ? 1 : 0);
+    await expect(page.locator('.offer-pill:visible')).toHaveCount(1);
+    await expect(page.locator('.lp .ex')).toHaveCount(0);
     await expectNoDemoLabels(page);
     if (await page.locator('#lp-f1').isVisible()) {
       const { lp } = url.startsWith('/ru/') ? ru : en;
-      if (exampleOffer) await expect(page.locator('#lp-f1 .resp')).toHaveText(lp.form.phoneHint);
-      else {
-        await expect(page.locator('#lp-f1 .resp')).toHaveCount(0);
-        await expect(page.locator('#lp-f1 button[type="submit"]')).toHaveText(lp.booking.selectService);
-      }
+      await expect(page.locator('#lp-f1 input[name="email"]')).toHaveAttribute('required', '');
+      await expect(page.locator('#lp-f1 button[type="submit"]')).toHaveText(lp.booking.selectService);
     }
     // §6: only the landing's static Manrope instances, never the site's variable font (LP root layout)
     expect(fonts.length).toBeGreaterThan(0);
@@ -220,8 +215,8 @@ for (const url of PAGES) {
  * Chromium (the drawing font comes from CDP CSS.getPlatformFontsForNode): 3 rounds × visits 2 and 3, 390 Android and 1280.
  */
 for (const [locale, { contacts }] of [['ru', ru], ['en', en]] as const) {
-  test(`15.4 / ${locale}: the landing map loads HDS Tower immediately`, async ({ page }, ti) => {
-    test.skip(ti.project.name !== 'A-pixel-7', 'one Chromium project with mobile and desktop viewports');
+  test(`Landing maps / ${locale}: the landing map loads HDS Tower immediately`, async ({ page }, ti) => {
+    test.skip(!['A-pixel-7', 'A-iphone-se'].includes(ti.project.name), 'one Chrome and one WebKit project');
     await seedConsent(page);
     const mapRequests: string[] = [];
     page.on('request', (request) => {
@@ -235,33 +230,35 @@ for (const [locale, { contacts }] of [['ru', ru], ['en', en]] as const) {
     expect(contactsEmbed).toBe(STUDIO_MAP.embedUrl);
     expect(address).toContain('HDS Tower');
 
-    for (const width of [320, 1280]) {
-      await page.setViewportSize({ width, height: 850 });
-      mapRequests.length = 0;
-      const [request] = await Promise.all([
-        page.waitForRequest(STUDIO_MAP.embedUrl),
-        page.goto(`/${locale}/lp/a/`, { waitUntil: 'networkidle' }),
-      ]);
-      expect(request.isNavigationRequest()).toBe(true);
-      const section = page.locator('#lp-directions');
-      await section.scrollIntoViewIfNeeded();
-      const map = section.getByRole('figure', { name: contacts.mapLabel });
-      const frame = map.locator('iframe');
-      await expect(section.locator('address')).toHaveText(address!);
-      await expect(section.locator(`a[href="${STUDIO_MAP.url}"]`)).toHaveCount(0);
-      await expect(map.getByRole('button')).toHaveCount(0);
-      await expect(frame).toHaveAttribute('src', contactsEmbed!);
-      await expect(frame).toHaveAttribute('title', contacts.mapLabel);
-      await expect(frame).toHaveAttribute('loading', 'eager');
-      await expect(frame).toHaveAttribute('allowfullscreen', '');
-      await expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-      await expect(frame.contentFrame().getByText('HDS Tower', { exact: true })).toBeVisible();
-      expect(mapRequests).toEqual([STUDIO_MAP.embedUrl]);
-      const bounds = (await map.boundingBox())!;
-      expect(bounds.height).toBeGreaterThanOrEqual(200);
-      expect(bounds.x).toBeGreaterThanOrEqual(0);
-      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-      expect(await frame.boundingBox()).toEqual(bounds);
+    for (const variant of ['a', 'b']) {
+      for (const width of [320, 1280]) {
+        await page.setViewportSize({ width, height: 850 });
+        mapRequests.length = 0;
+        const [request] = await Promise.all([
+          page.waitForRequest(STUDIO_MAP.embedUrl),
+          page.goto(`/${locale}/lp/${variant}/`, { waitUntil: 'networkidle' }),
+        ]);
+        expect(request.isNavigationRequest()).toBe(true);
+        const section = page.locator('#lp-directions');
+        await section.scrollIntoViewIfNeeded();
+        const map = section.getByRole('figure', { name: contacts.mapLabel });
+        const frame = map.locator('iframe');
+        await expect(section.locator('address')).toHaveText(address!);
+        await expect(section.locator(`a[href="${STUDIO_MAP.url}"]`)).toHaveCount(0);
+        await expect(map.getByRole('button')).toHaveCount(0);
+        await expect(frame).toHaveAttribute('src', contactsEmbed!);
+        await expect(frame).toHaveAttribute('title', contacts.mapLabel);
+        await expect(frame).toHaveAttribute('loading', 'eager');
+        await expect(frame).toHaveAttribute('allowfullscreen', '');
+        await expect(frame).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        await expect(frame.contentFrame().getByText('HDS Tower', { exact: true })).toBeVisible();
+        expect(mapRequests).toEqual([STUDIO_MAP.embedUrl]);
+        const bounds = (await map.boundingBox())!;
+        expect(bounds.height).toBeGreaterThanOrEqual(200);
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(await frame.boundingBox()).toEqual(bounds);
+      }
     }
   });
 }
@@ -393,46 +390,40 @@ for (const ts of TEXT_SCALE) {
   });
 }
 
-test('form: errors + summary, consent for the marks only with a chip, AA in states, one lead per key, thank-you', async ({ page }, ti) => {
+test('form: contact errors, focus and required email', async ({ page }, ti) => {
   test.skip(levelOf(ti.project.name) !== 'A', 'level A only');
   const errs = consoleGuard(page);
-  await testHook(page); // RC-9: the count of accepted leads comes through the gate's sink (no debug global in the build)
   await page.goto('/ru/lp/b/', { waitUntil: 'networkidle' });
-  const f = page.locator('#lp-f1');
-  await f.locator('button[type="submit"]').click();
-  await expect(f.locator('.form-errors[role="alert"]')).toBeVisible();
-  await expect(f.locator('[aria-invalid="true"]')).toHaveCount(2);
+  const form = page.locator('#lp-f1');
+  const submit = form.getByRole('button', { name: ru.lp.booking.selectService });
+  await submit.click();
+  await expect(form.locator('.form-errors[role="alert"]')).toBeFocused();
+  await expect(form.locator('[aria-invalid="true"]')).toHaveCount(3);
   expect(await aaFails(page)).toEqual([]);
-  await f.locator('input[name="name"]').fill('Анна');
-  await f.locator('input[name="phone"]').fill('+971 50 123 4567');
-  await f.locator('summary').click();
-  await f.locator('.chip').first().click();
-  await f.locator('button[type="submit"]').click();
-  await expect(f.locator('input[name="detailsConsent"]')).toHaveAttribute('aria-invalid', 'true');
-  await f.locator('.check').click();
-  await f.locator('button[type="submit"]').dblclick(); // a double tap → still one lead
-  await expect(page.locator('#lp-f1 .lp-thanks[role="status"]')).toBeVisible();
-  await expect(page.locator('#lp-f1 .lp-thanks')).toBeFocused(); // R-LP-03 M-02 (WebKit: focus after the render)
-  await expect(f.getByRole('heading', { name: ru.lp.result.title })).toBeVisible();
-  await expectNoDemoLabels(page);
-  expect(await page.evaluate(() => (window as unknown as { __lpLeads?: number }).__lpLeads)).toBe(1);
-  expect(await aaFails(page)).toEqual([]);
+  await form.locator('input[name="name"]').fill('Анна');
+  await form.locator('input[name="phone"]').fill('+971 50 123 4567');
+  await submit.click();
+  await expect(form.locator('input[name="email"]')).toBeFocused();
+  await expect(form.locator('#lp-f1-email-err')).toHaveText(ru.forms.error.required);
   expect(errs).toEqual([]);
 });
 
-test('server error: an alert, the form stays filled', async ({ page }, ti) => {
+test('catalog request error keeps the contact details when going back', async ({ page }, ti) => {
   test.skip(levelOf(ti.project.name) !== 'A', 'level A only');
-  await testHook(page); // ?mock= is the gate's only (RC-9, S-3)
-  await page.goto('/en/lp/b/?mock=server', { waitUntil: 'networkidle' });
-  const f = page.locator('#lp-f1');
-  await f.locator('input[name="name"]').fill('Anna');
-  await f.locator('input[name="phone"]').fill('+971 50 123 4567');
-  await f.locator('button[type="submit"]').click();
-  await expect(f.locator('.server-err[role="alert"]')).toBeVisible();
-  await expect(f.locator('input[name="name"]')).toHaveValue('Anna');
+  await page.route('**/api/catalog/services?*', (route) => route.fulfill({ status: 503, json: {} }));
+  await page.goto('/en/lp/b/', { waitUntil: 'networkidle' });
+  const form = page.locator('#lp-f1');
+  await form.locator('input[name="name"]').fill('Anna');
+  await form.locator('input[name="phone"]').fill('+971 50 123 4567');
+  await form.locator('input[name="email"]').fill('visitor@example.test');
+  await form.getByRole('button', { name: en.lp.booking.selectService }).click();
+  await expect(form.getByRole('alert')).toHaveText(en.booking.service.loadError);
+  await form.getByRole('button', { name: en.common.actions.back, exact: true }).click();
+  await expect(form.locator('input[name="name"]')).toHaveValue('Anna');
+  await expect(form.locator('input[name="email"]')).toHaveValue('visitor@example.test');
 });
 
-test('?form=sheet: the test button opens the sheet, «Назад» closes it and stays on the page, the form sends', async ({ page }, ti) => {
+test('?form=sheet: the test button opens the sheet, «Назад» closes it and stays on the page, the form starts booking', async ({ page }, ti) => {
   test.skip(levelOf(ti.project.name) !== 'A', 'level A only');
   await page.goto('/ru/lp/b/?form=sheet', { waitUntil: 'networkidle' });
   await expect(page.locator('#lp-f1')).toBeHidden();
@@ -440,7 +431,7 @@ test('?form=sheet: the test button opens the sheet, «Назад» closes it and
   const sheet = page.locator('dialog.lp-sheet');
   await btn.click();
   await expect(sheet).toHaveAttribute('open', '');
-  await expect(sheet.locator('.resp')).toHaveText(ru.lp.form.phoneHint);
+  await expect(sheet.locator('input[name="email"]')).toBeVisible();
   await page.goBack(); // Android hardware «Назад» / iOS edge swipe
   await expect(sheet).not.toHaveAttribute('open', '');
   expect(new URL(page.url()).pathname).toBe('/ru/lp/b/');
@@ -448,17 +439,18 @@ test('?form=sheet: the test button opens the sheet, «Назад» closes it and
   await sheet.locator('.lp-sheet__x').click(); // closed by ×: our history entry is gone too
   await expect(sheet).not.toHaveAttribute('open', '');
   await expect.poll(() => page.evaluate(() => !!(history.state && history.state.bmOverlay))).toBe(false);
-  await page.locator('.lp-cards').scrollIntoViewIfNeeded();
+  await page.locator('[aria-labelledby="lp-services"]').scrollIntoViewIfNeeded();
   const sticky = page.locator('.lp-sticky');
   await expect(sticky).toHaveAttribute('data-show', '');
   await expect(sticky.locator('a[href="#lp-f1"]')).toBeHidden();
-  await sticky.getByRole('button', { name: ru.lp.form.submit }).click();
+  await sticky.getByRole('button', { name: ru.lp.booking.selectService }).click();
   await expect(sheet).toHaveAttribute('open', '');
   await sheet.locator('input[name="name"]').fill('Анна');
   await sheet.locator('input[name="phone"]').fill('+971 50 123 4567');
-  await sheet.locator('button[type="submit"]').click();
-  await expect(sheet.locator('.lp-thanks')).toBeVisible();
-  await expect(sheet.getByRole('heading', { name: ru.lp.result.title })).toBeVisible();
+  await page.route('**/api/catalog/services?*', (route) => route.fulfill({ json: { data: { services: [], categories: [] } } }));
+  await sheet.locator('input[name="email"]').fill('visitor@example.test');
+  await sheet.getByRole('button', { name: ru.lp.booking.selectService }).click();
+  await expect(sheet.getByRole('heading', { name: ru.booking.service.heading })).toBeFocused();
   await expectNoDemoLabels(page);
   expect(await aaFails(page)).toEqual([]);
 });
@@ -660,49 +652,6 @@ test('desktop and tablet windows 1024–1920: the form button on the first scree
       });
       if (m.spare < 8) bad.push(`${width}×${height} ${url}: the form button ${Math.round(-m.spare)} px past the first screen (8 px spare needed)`);
       for (const s of m.split) bad.push(`${width}×${height} ${url}: ${s} split mid-word`);
-    }
-    await ctx.close();
-  }
-  expect(bad).toEqual([]);
-});
-
-/** On 320–1024 the cards stay inside the list and no word of the facts splits. Variant B keeps both prices on one line.
- * Live variant A card layout is also checked with a synthetic catalog in check-lp-catalog.mjs. */
-const CARD_WIDTHS = [[320, 640], [360, 640], [393, 852], [744, 1133], [768, 1024], [800, 1280], [820, 1180], [1024, 1366]];
-test('service cards on 320–1024: cards inside the list, no split words, demo prices on one line', async ({ browser }, ti) => {
-  test.skip(ti.project.name !== 'A-pixel-7', 'one Chromium project');
-  test.setTimeout(180_000);
-  const bad: string[] = [];
-  for (const [width, height] of CARD_WIDTHS) {
-    const ctx = await browser.newContext({ viewport: { width, height }, baseURL: ti.project.use.baseURL, reducedMotion: 'reduce' });
-    await stubStudioMap(ctx);
-    await ctx.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'gate' })));
-    const page = await ctx.newPage();
-    for (const url of PAGES) {
-      await page.goto(url, { waitUntil: 'networkidle' });
-      await page.evaluate(() => document.fonts.ready);
-      const found = await page.evaluate(() => {
-        const out: string[] = [];
-        const section = document.querySelector('[aria-labelledby="lp-services"]')!;
-        const list = section.querySelector('.car .track, .lp-cards');
-        const live = document.querySelector('.lp[data-variant="a"]');
-        if (!list) return live && section.querySelector('[role="status"]') ? out : ['missing service cards or catalog status'];
-        const lb = list.getBoundingClientRect();
-        const carousel = getComputedStyle(list).overflowX !== 'visible';
-        for (const card of list.querySelectorAll<HTMLElement>('.lp-card')) {
-          // the price and the old price on one line: their vertical centres meet (works with or without the .price-row wrapper)
-          const pr = card.querySelector('dd .price')?.getBoundingClientRect(), old = card.querySelector('dd s')?.getBoundingClientRect();
-          if (!live && pr && old && Math.abs((pr.top + pr.bottom) / 2 - (old.top + old.bottom) / 2) > 6) out.push(`price «${card.querySelector('dd')!.textContent!.replace(/\s+/g, ' ').trim()}»: the old price on another line`);
-          if (!carousel && card.getBoundingClientRect().right > lb.right + 0.5) out.push(`a card ends ${Math.round(card.getBoundingClientRect().right - lb.right)} px past the list`);
-          for (const el of card.querySelectorAll('dt, dd')) for (const w of (el.textContent || '').split(/[\s\u00a0]+/).filter(Boolean)) {
-            const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n: Node | null;
-            while ((n = tw.nextNode())) { const i = n.textContent!.indexOf(w); if (i < 0) continue; const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + w.length);
-              if (new Set([...r.getClientRects()].filter((x) => x.width > 1).map((x) => Math.round(x.top))).size > 1) out.push(`«${w}» split mid-word`); break; }
-          }
-        }
-        return [...new Set(out)];
-      });
-      bad.push(...found.map((x) => `${width}×${height} ${url}: ${x}`));
     }
     await ctx.close();
   }

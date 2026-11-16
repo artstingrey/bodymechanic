@@ -90,17 +90,13 @@ async function assertConfirmed(page, copy) {
   await expect(receipt).not.toContainText(copy.home.form.anyStaffOption);
 }
 
-async function checkLandingContacts(form, copy, variant) {
+async function checkLandingContacts(form, copy) {
   await form.locator('input[name="name"]').fill('Fixture visitor');
-  if (variant === 'a') await form.locator('input[name="email"]').fill('visitor@example.test');
+  await form.locator('input[name="email"]').fill('visitor@example.test');
   const submit = () => form.locator('button[type="submit"]').click();
   await checkPhoneField(form.locator('input[name="phone"]'), { copy: copy.forms, submit, invalid: copy.lp.error.phone });
   await submit();
-  if (variant === 'a') {
-    await expect(form.getByRole('heading', { name: copy.booking.service.heading })).toBeVisible();
-  } else {
-    await expect(form.getByRole('status')).toContainText(copy.lp.result.title);
-  }
+  await expect(form.getByRole('heading', { name: copy.booking.service.heading })).toBeVisible();
 }
 
 async function checkAccountAndLandings(origin, locale) {
@@ -120,15 +116,13 @@ async function checkAccountAndLandings(origin, locale) {
     await expect(page.getByTestId('account-record')).toHaveCount(3);
 
     for (const variant of ['a', 'b']) {
-      // Reset the mock lead limit before exercising the three forms.
-      await page.evaluate(() => sessionStorage.clear());
       const landing = `${origin}/${locale}/lp/${variant}/`;
       await page.goto(landing, { waitUntil: 'networkidle' });
-      await checkLandingContacts(page.locator('#lp-f1'), copy, variant);
-      await checkLandingContacts(page.locator('#lp-f2'), copy, variant);
+      await checkLandingContacts(page.locator('#lp-f1'), copy);
+      await checkLandingContacts(page.locator('#lp-f2'), copy);
       await page.goto(`${landing}?form=sheet`, { waitUntil: 'networkidle' });
       await page.locator('.lp-hero-cta button').click();
-      await checkLandingContacts(page.locator('#lp-fs'), copy, variant);
+      await checkLandingContacts(page.locator('#lp-fs'), copy);
     }
   } finally {
     await page.close();

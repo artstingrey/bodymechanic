@@ -195,7 +195,7 @@ export function LandingBookingFlow({ id, active, locale, contact, chips, privacy
               </div>
             </fieldset>
             {sending && <p role="status">{t('lp.booking.sending')}</p>}
-            {uncertain && <a className="btn btn--wa" href={waHref} target="_blank" rel="noopener noreferrer">{t('lp.form.whatsapp')}</a>}
+            {uncertain && <a className="btn btn--wa" href={waHref} target="_blank" rel="noopener noreferrer" data-track="whatsapp">{t('lp.form.whatsapp')}</a>}
           </form>
         )}
       </section>

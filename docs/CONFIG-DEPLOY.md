@@ -63,6 +63,8 @@
 
 ### Запись на production в Vercel
 
+На `localhost` в `next dev` маршрут выводит origin из локального запроса и проверяет loopback-адрес. На Vercel используются явные настройки production.
+
 В проекте с доменом `thebodymechanic.io` откройте **Settings → Environment Variables**, выберите **Production** и задайте серверные переменные.
 
 | Переменная | Значение |

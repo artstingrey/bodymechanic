@@ -4,7 +4,7 @@
  *   lp_view            the page was shown (GA4)
  *   lp_form_start      first focus in a form field (GA4)
  *   lp_form_error      a validation error — its type only (GA4)
- *   lp_lead            the BFF ACCEPTED the lead (ok | queued) — Meta Lead (Pixel + CAPI, same event_id), Google Ads «LP Lead», GA4
+ *   lp_lead            Altegio confirmed the booking — Meta Lead, Google Ads «LP Lead», GA4
  *   lp_whatsapp_click  WhatsApp button — Meta Contact (own event_id), Google Ads «LP WhatsApp click» (secondary), GA4
  * Parameters: ONLY lp_version (a | b), lang, placement (hero | sticky | final), offer_id, event_id, error_type. Never the
  * chips, free text, name or phone (Meta Business Tools Terms 1.h, Google health policy — M7): the types below have no
@@ -47,12 +47,12 @@ let started = false;
 /** lp_form_start — first focus in a field of any landing form */
 export function trackFormStart(placement: Placement) { if (!started && push('lp_form_start', { placement })) started = true; }
 
-/** lp_form_error — one event per failed field; the type only (name | phone | details | server) */
+/** lp_form_error — one event per failed field; the type only (name | phone | email) */
 export function trackFormError(types: string[], placement: Placement) {
   for (const t of types) push('lp_form_error', { error_type: t, placement });
 }
 
-/** lp_lead — only after the BFF accepted the lead (ok | queued); event_id = the request's idempotency key (Pixel ↔ CAPI dedup) */
+/** lp_lead — only after the booking is confirmed; event_id = the request's idempotency key */
 export function trackLead({ eventId, variant, locale, placement }: LeadEvent): void {
   if (!ctx) setLpContext(variant, locale);
   push('lp_lead', { event_id: eventId, placement: placement ?? 'hero', offer_id: CFG.offer.id });

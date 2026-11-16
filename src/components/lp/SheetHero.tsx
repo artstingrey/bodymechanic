@@ -1,6 +1,6 @@
 'use client';
 /**
- * A/B test variant of the hero (?form=sheet, lead): a button with the test label «Записаться на первый визит» and the same
+ * A/B test variant of the hero (?form=sheet, lead): a button that opens the same
  * form in a bottom sheet (native modal dialog: focus trap, Esc, focus back on the button). Rendered in the static HTML for
  * both variants; the inline flag script in the layout shows one of them before the first paint (no layout shift).
  */
@@ -36,18 +36,17 @@ export function SheetHero({ variant, chips, waMessage, privacyHref }: {
       <div className="lp-hero-cta">
         <div className="row">
           <button ref={btn} type="button" className="btn btn--p" aria-haspopup="dialog" data-lp-cta="" onClick={() => window.dispatchEvent(new Event('lp:open-sheet'))}>
-            {t(variant === 'a' ? 'booking.selectService' : 'form.submit')}<Icon name="arrow-right" />
+            {t('booking.selectService')}<Icon name="arrow-right" />
           </button>
           <a className="btn btn--wa btn--icon" href={whatsappUrl(waMessage)} target="_blank" rel="noopener noreferrer" aria-label={t('form.whatsapp')} data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span></a>
         </div>
-        {variant === 'b' && <p className="resp">{t('form.phoneHint')}</p>}
       </div>
       <dialog ref={dlg} className="lp-sheet" aria-labelledby="lp-sheet-title" onClick={(e) => { if (e.target === e.currentTarget) dlg.current?.close(); }}>
         <div className="lp-sheet__top">
           <h2 id="lp-sheet-title">{t('form.title')}</h2>
           <button type="button" className="lp-sheet__x" aria-label={tc('close')} onClick={() => dlg.current?.close()}><Icon name="x" /></button>
         </div>
-        <LeadForm id="lp-fs" variant={variant} chips={chips} submitLabel={t('form.submit')} waMessage={waMessage} privacyHref={privacyHref} cta={false} />
+        <LeadForm id="lp-fs" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} cta={false} />
       </dialog>
     </>
   );

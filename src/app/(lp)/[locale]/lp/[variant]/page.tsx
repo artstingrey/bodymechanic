@@ -10,7 +10,6 @@ import { pageUrl, SITE_URL } from '@/lib/site';
 import { STUDIO, whatsappUrl } from '@/lib/config';
 import CFG from '@/lib/lp/config.json';
 import HERO from '@/lib/lp/hero.json';
-import { Photo } from '@/components/ui/Photo';
 import { PhotoPlaceholder } from '@/components/ui/Cards';
 import { isTodo } from '@/components/ui/Todo';
 import { Icon } from '@/components/ui/Icon';
@@ -26,8 +25,7 @@ import { getCatalogServices } from '@/server/catalog/services';
 
 /**
  * Ad landing (FB/IG + Google, README-LP; frames site/landing/design/lp-frames.html): two versions on one frame — A «active
- * and athletes», B «office: neck, shoulders, lower back». Variant A reads the live service catalog.
- * The variant B service cards, offer and FAQ order come from lp-config.json.
+ * and athletes», B «office: neck, shoulders, lower back». Both use the live service catalog.
  */
 const VARIANTS = ['a', 'b'] as const;
 type Variant = (typeof VARIANTS)[number];
@@ -91,8 +89,6 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const t = await getTranslations();
   const vc = CFG.versions[variant];
   const off = CFG.offer;
-  const demoOffer = { percent: off.percent, salePrice: off.demoSalePrice, price: off.demoPrice, service: t(off.keys.service) };
-  const termsSet = !t(off.keys.terms).startsWith('TODO(content)');
   const legalEntity = t('footer.legalEntity');
   const chips = vc.chips.map((c) => ({ id: c.id, label: t(c.key) }));
   const waMessage = `${t(vc.waMessageKey)} ${vc.waTag}`;
@@ -100,21 +96,19 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const privacyHref = `/${locale}/privacy/`;
   const [h1a, h1b] = splitH1(t(vc.defaultH1));
   const bt = CFG.blockTitleKeys;
-  const [district, building, mapLink] = CFG.directions.keys.map((k) => t(k));
   const hero = HERO[variant] as Record<Crop, { ar: number[]; widths: number[]; co: CO[] }>;
   const src = (c: Crop, fmt: string) => hero[c].widths.map((w) => `/lp/${variant}-${c}-${w}.${fmt} ${w}w`).join(', ');
   const MEDIA = { none: '(max-width: 767px) and (max-height: 600px)', tall: '(min-width: 1024px) and (orientation: landscape)', short: '(max-width: 767px) and (max-height: 700px)', band: '(max-width: 1023px), (min-width: 1024px) and (orientation: portrait)' } as const;
   const SIZES = { tall: '(min-width: 1440px) 560px, 40vw', short: '100vw', band: '(min-width: 1024px) and (orientation: portrait) 960px, (min-width: 768px) 704px, 100vw' } as const;
-  const example = variant === 'b' && off.status === 'example';
   const badge = t(off.keys.badge, { percent: off.percent });
   const pendingOffer = t('lp.offer.catalogPendingBody');
   // The cards and all three offer slots share the catalog read. The random choice runs once per page.
-  const catalog = variant === 'a' ? loadLandingCatalog(locale) : null;
-  const selectedOffer = catalog?.then((data) => chooseLandingOffer(data, locale, off.percent, t, pendingOffer));
-  const catalogOffer = selectedOffer ? (
+  const catalog = loadLandingCatalog(locale);
+  const selectedOffer = catalog.then((data) => chooseLandingOffer(data, locale, off.percent, t, pendingOffer));
+  const catalogOffer = (
     <Suspense fallback={pendingOffer}><LandingCatalogOffer text={selectedOffer} /></Suspense>
-  ) : null;
-  const pill = <span className="offer-pill"><b>{badge}</b>{' '}<span>{catalogOffer ?? t(off.keys.body, demoOffer)}</span></span>;
+  );
+  const pill = <span className="offer-pill"><b>{badge}</b>{' '}<span>{catalogOffer}</span></span>;
 
   // LCP image (R-LP-03 F-04): preload the AVIF crop of the screen class with fetchpriority=high through ReactDOM.preload —
   // React writes such preloads into <head> right after the charset / viewport, before Next's async scripts (a JSX <link>
@@ -164,14 +158,12 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
               </span>
             )))}
             {pill}
-            {example ? <span className="ex ex--photo">{t(off.exampleBadge.shortKey)}</span> : null}
             <figcaption className="tag">{t('placeholder.illustrativePhoto')}</figcaption>
           </figure>
           <div className="lp-copy">
             <h1 id="lp-h1">{h1a} <span className="acc">{h1b}</span></h1>
             <p className="sub">{t(vc.subKey)}</p>
             {pill}
-            {example ? <span className="ex ex--copy">{t(off.exampleBadge.shortKey)}</span> : null}
           </div>
           <LeadForm id="lp-f1" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} />
           <SheetHero variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} />
@@ -208,32 +200,9 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
         <section className="lp-sec lp-rise" aria-labelledby="lp-services">
           <div className="w">
             <div className="head"><h2 id="lp-services">{t(bt.services)}</h2><p className="sub">{t('lp.services.note')}</p></div>
-            {catalog ? (
-              <Suspense fallback={<p className="sub" role="status">{t('home.services.loading')}</p>}>
-                <LandingCatalogCards catalog={catalog} locale={locale} percent={off.percent} t={t} />
-              </Suspense>
-            ) : <div className="lp-cards">
-              {vc.services.map((sv, i) => {
-                const sale = Math.round((sv.priceMin * (100 - off.percent)) / 100);
-                return (
-                  <article key={sv.id} className="lp-card">
-                    <div className="ph">
-                      <Photo set="services" id={sv.id} alt="" sizes="(min-width: 768px) 30vw, 78vw" />
-                      <span className="tag">{t('placeholder.illustrativePhoto')}</span>
-                    </div>
-                    <div className="bd">
-                      <span className="n">{String(i + 1).padStart(2, '0')}</span>
-                      <h3>{t(sv.titleKey)}</h3>
-                      <p>{t(sv.descriptionKey)}</p>
-                      <dl>
-                        <div><dt>{t('services.card.priceLabel')}</dt><dd><span className="price-row"><span className="price">{sale} {off.currency}</span> <s>{sv.priceMin}</s></span></dd></div>
-                        <div><dt>{t('services.card.durationLabel')}</dt><dd>{t('mock.duration.upTo')}</dd></div>
-                      </dl>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>}
+            <Suspense fallback={<p className="sub" role="status">{t('home.services.loading')}</p>}>
+              <LandingCatalogCards catalog={catalog} locale={locale} percent={off.percent} t={t} />
+            </Suspense>
           </div>
         </section>
 
@@ -247,27 +216,12 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
           </div>
         </section>
 
-        {/* R-LP-02 L-01: the address is never hidden (ads do not launch until district, building and map link are real) */}
         <section id="lp-directions" className="lp-sec lp-sec--tint lp-rise" aria-labelledby="lp-dir">
           <div className="w lp-two">
             <div className="fhead"><h2 id="lp-dir">{t(CFG.directions.titleKey)}</h2></div>
             <div className="lp-dirs">
-              {variant === 'a' ? (
-                <>
-                  <StudioMapFrame className="map map--live" title={t('contacts.mapLabel')} />
-                  <address>{STUDIO.streetAddress}</address>
-                </>
-              ) : (
-                <>
-                  <div className="map" aria-hidden="true"><span className="pin" /></div>
-                  {isTodo(district) && isTodo(building) && isTodo(mapLink) && t.has('lp.directions.pending')
-                    ? <p className="pending">{t('lp.directions.pending')}</p> : null}
-                  {!isTodo(district) || !isTodo(building) ? (
-                    <address>{[district, building].map((s, i) => isTodo(s) ? null : <span key={i}>{s}</span>)}</address>
-                  ) : null}
-                  {isTodo(mapLink) ? null : <a className="btn btn--wa" href={mapLink} target="_blank" rel="noopener noreferrer">{t('contacts.openMap')}<Icon name="arrow-up-right" /></a>}
-                </>
-              )}
+              <StudioMapFrame className="map map--live" title={t('contacts.mapLabel')} />
+              <address>{STUDIO.streetAddress}</address>
             </div>
           </div>
         </section>
@@ -300,16 +254,9 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
         <section className="lp-final" aria-labelledby="lp-final">
           <div className="w grid">
             <div style={{ display: 'grid', gap: 12 }}>
-              {/* L11 (BD, RC-4): at most three text blocks above the form — «Пример оффера — условия уточняются» qualifies the offer
-                  line, so it sits in it (one block), not on a line of its own */}
-              <p className="lbl">{catalogOffer ? <>{badge} {catalogOffer}</> : (
-                <>{t(off.keys.full, demoOffer)}{termsSet ? ` · ${t(off.keys.urgency)}` : ''}{example ? <> <span className="ex">{t(off.exampleBadge.key)}</span></> : null}</>
-              )}</p>
+              <p className="lbl">{badge} {catalogOffer}</p>
               <h2 id="lp-final">{t(bt.final)}</h2>
-              {/* design audit 6: no triple «Оставьте номер…» — one lead in its own words (deck, Market Analyst) and no card title;
-                  4: the example offer label already covers pending terms. */}
               <p className="sub">{t('lp.final.text')}</p>
-              {variant === 'b' && !termsSet && !example && t.has('lp.offer.termsPending') ? <p className="pending">{t('lp.offer.termsPending')}</p> : null}
             </div>
             <LeadForm id="lp-f2" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} />
           </div>
@@ -324,8 +271,8 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
         </div>
         <p>{t('disclaimer.general')}</p>
       </footer>
-      <StickyCta label={t(variant === 'a' ? 'lp.booking.selectService' : 'lp.form.submit')}
-        sheetLabel={t(variant === 'a' ? 'lp.booking.selectService' : 'lp.form.submit')} waLabel={t('lp.form.whatsapp')} waHref={waHref} />
+      <StickyCta label={t('lp.booking.selectService')}
+        sheetLabel={t('lp.booking.selectService')} waLabel={t('lp.form.whatsapp')} waHref={waHref} />
     </div>
   );
 }

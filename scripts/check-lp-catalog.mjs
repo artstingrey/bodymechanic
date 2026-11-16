@@ -3,7 +3,7 @@ import { randomInt } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { chromium, expect } from '@playwright/test';
+import { chromium, expect, webkit } from '@playwright/test';
 import en from '../messages/en.json' with { type: 'json' };
 import ru from '../messages/ru.json' with { type: 'json' };
 import { withProductionServer } from './check-server.mjs';
@@ -53,11 +53,10 @@ async function run(scenario, check, currency = 'USD') {
   } });
 }
 
-let browser;
-try {
-  browser = await chromium.launch({ channel: 'chrome' });
+async function checkCatalog(browser, variant, isChrome) {
   const page = await browser.newPage({ reducedMotion: 'reduce', hasTouch: true });
-  await page.route(/^https:\/\/www\.google\.com\/maps\/embed\?pb=/, (route) => route.fulfill({
+  const mapUrl = /^https:\/\/www\.google\.com\/maps\/embed\?pb=.*HDS%20Tower/;
+  await page.route(mapUrl, (route) => route.fulfill({
     contentType: 'text/html',
     body: '<!doctype html><title>HDS Tower</title><p>HDS Tower</p>',
   }));
@@ -96,21 +95,30 @@ try {
   await run('lp-slow', async (origin, logs) => {
     for (const [locale, { messages, language, viewport, crop, sale, original, neutralOffer }] of Object.entries(locales)) {
       await page.setViewportSize(viewport);
-      await page.goto(`${origin}/${locale}/lp/a/`, { waitUntil: 'commit' });
-      await expect(section.getByRole('status')).toHaveText(messages.home.services.loading);
-      await expect(hero.locator('#lp-h1')).toHaveText(messages.lp.h1.a1);
-      await expect(hero.locator('.lp-copy > .sub')).toHaveText(messages.lp.a.sub);
-      await expectOffer(neutralOffer);
+      if (!isChrome) await fs.writeFile(release, '');
+      await page.goto(`${origin}/${locale}/lp/${variant}/`, { waitUntil: isChrome ? 'commit' : 'load' });
+      if (isChrome) {
+        await expect(section.getByRole('status')).toHaveText(messages.home.services.loading);
+        await expectOffer(neutralOffer);
+      }
+      await expect(hero.locator('#lp-h1')).toHaveText(messages.lp.h1[variant + '1']);
+      await expect(hero.locator('.lp-copy > .sub')).toHaveText(messages.lp[variant].sub);
+      await expect(page).toHaveTitle(messages.lp[variant].seo.title);
+      await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', messages.lp[variant].seo.description);
+      assert.equal(new URL(await page.locator('meta[property="og:image"]').getAttribute('content')).pathname, `/og/og-lp-${variant}-${locale}.png`);
       await expect(photo).toHaveAttribute('fetchpriority', 'high');
-      await expect(page.locator('link[rel="preload"][as="image"][fetchpriority="high"][imagesrcset*="/lp/a-"]')).toHaveCount(3);
-      await expect.poll(() => photo.evaluate((img) => img.naturalWidth > 1 && img.currentSrc)).toMatch(new RegExp(`/lp/a-${crop}-.*\\.avif$`));
-      await page.evaluate(() => document.fonts.ready);
-      const before = await snapshot();
-
-      await fs.writeFile(release, '');
+      await expect(page.locator(`link[rel="preload"][as="image"][fetchpriority="high"][imagesrcset*="/lp/${variant}-"]`)).toHaveCount(3);
+      const format = isChrome ? 'avif' : '(?:avif|webp)';
+      await expect.poll(() => photo.evaluate((img) => img.naturalWidth > 1 && img.currentSrc)).toMatch(new RegExp(`/lp/${variant}-${crop}-.*\\.${format}$`));
+      if (isChrome) {
+        await page.evaluate(() => document.fonts.ready);
+        const before = await snapshot();
+        await fs.writeFile(release, '');
+        await expect(cards).toHaveCount(5);
+        assert.deepEqual(await snapshot(), before);
+      }
       await expect(cards).toHaveCount(5);
       assert.deepEqual(await cardIds(), ids);
-      assert.deepEqual(await snapshot(), before);
       await expect(finalOffer).not.toHaveText(neutralOffer);
       const selected = (await finalOffer.textContent()).replace(/\s+/g, ' ').trim();
       await expectOffer(selected);
@@ -172,20 +180,22 @@ try {
         await expect.poll(() => track.evaluate((el) => el.scrollLeft), { message: `${locale} ${width}px previous arrow returns to start` }).toBe(0);
       }
 
-      await page.setViewportSize({ width: 390, height: 850 });
-      await track.scrollIntoViewIfNeeded();
-      const box = await track.boundingBox();
-      const y = Math.round(box.y + box.height / 2);
-      const client = await page.context().newCDPSession(page);
-      try {
-        await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y }] });
-        for (const x of [250, 200, 150, 100, 50]) {
-          await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+      if (isChrome) {
+        await page.setViewportSize({ width: 390, height: 850 });
+        await track.scrollIntoViewIfNeeded();
+        const box = await track.boundingBox();
+        const y = Math.round(box.y + box.height / 2);
+        const client = await page.context().newCDPSession(page);
+        try {
+          await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y }] });
+          for (const x of [250, 200, 150, 100, 50]) {
+            await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+          }
+          await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+          await expect.poll(() => track.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+        } finally {
+          await client.detach();
         }
-        await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-        await expect.poll(() => track.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
-      } finally {
-        await client.detach();
       }
 
       const response = await fetch(`${origin}/api/catalog/services?locale=${locale}`);
@@ -194,25 +204,33 @@ try {
       assert.equal(logs().split(`[catalog-fixture] lp-slow ${language}`).length - 1, 1);
       await fs.unlink(release);
     }
-    for (const locale of Object.keys(locales)) {
-      await page.goto(`${origin}/${locale}/lp/b/`);
-      await expect(cards).toHaveCount(3);
-      await expect(section.locator('[data-service-id]')).toHaveCount(0);
-      await expect(carousel).toHaveCount(0);
-    }
     assert.equal(logs().match(/\[catalog-fixture\]/g)?.length, 2);
   });
 
   await run('lp-unlisted', async (origin, logs) => {
     for (const [locale, { messages, outsideOffer, language }] of Object.entries(locales)) {
-      await page.goto(`${origin}/${locale}/lp/a/`);
+      const [mapRequest] = await Promise.all([
+        page.waitForRequest(mapUrl),
+        page.goto(`${origin}/${locale}/lp/${variant}/`),
+      ]);
+      assert.equal(mapRequest.isNavigationRequest(), true);
+      const directions = page.locator('#lp-directions');
+      const map = directions.locator('iframe');
+      await expect(directions.locator('address')).toContainText('HDS Tower Cluster F, 16 floor, 1606');
+      await expect(map).toHaveAttribute('src', mapUrl);
+      await expect(map).toHaveAttribute('loading', 'eager');
+      for (const width of [320, 1280]) {
+        await page.setViewportSize({ width, height: 850 });
+        const bounds = await map.boundingBox();
+        assert.ok(bounds && bounds.height >= 200 && bounds.x >= 0 && bounds.x + bounds.width <= width);
+      }
       for (const { width, height, slot } of layouts) {
         await page.setViewportSize({ width, height });
         await expectOffer(outsideOffer);
-        await expect(hero.locator(`${slot} .offer-pill`)).toBeVisible();
+        await expect(hero.locator(`${variant === 'b' ? '.lp-copy' : slot} .offer-pill`)).toBeVisible();
         assert.equal(await hero.locator('.offer-pill:visible').count(), 1);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-        if (slot === '.lp-media') {
+        if (variant === 'a' && slot === '.lp-media') {
           const pill = await hero.locator('.lp-media .offer-pill').boundingBox();
           const markers = await hero.locator('.lp-media :is(.tag, .co span):visible').all();
           for (const marker of markers) {
@@ -225,7 +243,7 @@ try {
       }
       await expect(section.getByRole('status')).toHaveText(messages.home.services.empty);
       await expect(cards).toHaveCount(0);
-      await page.goto(`${origin}/${locale}/lp/a/?form=sheet`);
+      await page.goto(`${origin}/${locale}/lp/${variant}/?form=sheet`);
       await expect(hero.locator('.lp-hero-cta')).toBeVisible();
       await expectOffer(outsideOffer);
       assert.equal(logs().split(`[catalog-fixture] lp-unlisted ${language}`).length - 1, 1);
@@ -234,7 +252,7 @@ try {
 
   await run('lp-missing', async (origin) => {
     for (const [locale, { messages, neutralOffer }] of Object.entries(locales)) {
-      await page.goto(`${origin}/${locale}/lp/a/`);
+      await page.goto(`${origin}/${locale}/lp/${variant}/`);
       await expect(cards).toHaveCount(4);
       assert.deepEqual(await cardIds(), ids.filter((id) => id !== '13982363'));
       await expect(section.locator('dd')).toHaveText([
@@ -249,7 +267,7 @@ try {
   for (const [scenario, state] of [['empty', 'empty'], ['500', 'errorLoad']]) {
     await run(scenario, async (origin) => {
       for (const [locale, { messages, neutralOffer }] of Object.entries(locales)) {
-        await page.goto(`${origin}/${locale}/lp/a/`);
+        await page.goto(`${origin}/${locale}/lp/${variant}/`);
         await expect(section.getByRole('status')).toHaveText(messages.home.services[state]);
         await expect(cards).toHaveCount(0);
         await expect(hero.locator('#lp-h1')).toBeVisible();
@@ -259,15 +277,28 @@ try {
   }
   await run('lp-unpriced', async (origin) => {
     for (const [locale, { messages, neutralOffer }] of Object.entries(locales)) {
-      await page.goto(`${origin}/${locale}/lp/a/`);
+      await page.goto(`${origin}/${locale}/lp/${variant}/`);
       await expect(cards).toHaveCount(1);
       await expect(cards.locator('dd')).toHaveText(messages.home.services.priceUnknown);
       await expectOffer(neutralOffer);
     }
   });
   assert.deepEqual(browserRequests, []);
-  console.log('Landing A catalog: RU/EN cards, prices, shared offer, fallbacks, cache and responsive layouts: OK');
+  await page.context().close();
+}
+
+try {
+  for (const [engine, options] of [[chromium, { channel: 'chrome' }], [webkit, {}]]) {
+    const browser = await engine.launch(options);
+    try {
+      for (const variant of ['a', 'b']) {
+        await checkCatalog(browser, variant, engine === chromium);
+        console.log(`Landing ${variant.toUpperCase()} catalog (${options.channel ?? engine.name()}): RU/EN cards, prices, shared offer, fallbacks, cache and responsive layouts: OK`);
+      }
+    } finally {
+      await browser.close();
+    }
+  }
 } finally {
-  await browser?.close();
   await fs.rm(directory, { recursive: true, force: true });
 }
