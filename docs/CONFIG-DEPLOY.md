@@ -61,6 +61,19 @@
 
 Лендинг A использует тот же `POST /api/booking/record`. Для публичной записи с лендинга нужны настройки Altegio, `BOOKING_ORIGIN` и доверенный заголовок `BOOKING_CLIENT_IP_HEADER`.
 
+### Запись на production в Vercel
+
+В проекте с доменом `thebodymechanic.io` откройте **Settings → Environment Variables**, выберите **Production** и задайте серверные переменные.
+
+| Переменная | Значение |
+|---|---|
+| `BOOKING_ORIGIN` | `https://thebodymechanic.io` без завершающего слеша |
+| `BOOKING_CLIENT_IP_HEADER` | `x-vercel-forwarded-for` |
+
+После сохранения выполните **Redeploy** для production-деплоя. Переменные применяются к новым деплоям. [Переменные Vercel](https://vercel.com/docs/environment-variables) · [Заголовки запросов Vercel](https://vercel.com/docs/headers/request-headers#x-vercel-forwarded-for)
+
+Для проверки отправьте `{}` как JSON в `POST /api/booking/record` с `Origin: https://thebodymechanic.io`. Ответ `400 INVALID_FIELDS` подтверждает, что запрос дошёл до проверки полей. Такой запрос не создаёт запись. Ответ `503 BOOKING_UNAVAILABLE` на этот запрос означает, что `BOOKING_ORIGIN` отсутствует в активном деплое. При `403 INVALID_ORIGIN` проверьте точное совпадение origin и заголовок IP.
+
 ### Переменные тестов и локальных скриптов
 
 На собранный сайт они не влияют.
