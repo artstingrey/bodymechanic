@@ -62,15 +62,15 @@ export async function checkServer(origin) {
   for (const path of ['/de', '/de/']) await get(path, 404, /id="nf-root"/);
   await get('/en/no-such-page/', 404, /<h1/);
   await get('/en/services/no-such-service', 404, /container page nf/);
-  await get('/ru/lp/unknown', 404, /<h1/);
+  for (const path of ['/ru/lp/unknown', '/ru/lp/unknown/']) await get(path, 404, /id="nf-root"/);
   const fontLinks = (html) => [...html.matchAll(/<link(?=[^>]*rel="preload")(?=[^>]*href="\/fonts\/v1\/([^"]+)")[^>]*>/g)];
+  const headerFontLinks = (headers) => [...(headers.get('link') ?? '').matchAll(/<\/fonts\/v1\/([^>]+)>;\s*rel=preload;\s*as="font"[^,]*/g)];
   for (const locale of ['en', 'ru']) {
     await redirect(`/${locale}`, `/${locale}/`);
     const { body, headers } = await get(`/${locale}/`, 200, new RegExp(`<html lang="${locale}"`));
     assert.equal(headers.get('x-robots-tag'), 'noindex, nofollow');
     // Streaming puts resource hints in the HTTP Link header; prerendered HTML can carry them in the document.
-    const headerPreloads = [...(headers.get('link') ?? '').matchAll(/<\/fonts\/v1\/([^>]+)>;\s*rel=preload;\s*as="font"/g)];
-    assert.deepEqual([...fontLinks(body), ...headerPreloads].map((link) => link[1]), ['Manrope.woff2']);
+    assert.deepEqual([...fontLinks(body), ...headerFontLinks(headers)].map((link) => link[1]), ['Manrope.woff2']);
     for (const path of ['services', 'services/sports', 'services/manual', 'team/specialist-1', 'journal/demo-article-1']) {
       await redirect(`/${locale}/${path}`, `/${locale}/${path}/`);
       await get(`/${locale}/${path}/`, 200, /<h1/);
@@ -82,9 +82,11 @@ export async function checkServer(origin) {
       await redirect(`/${locale}/lp/${variant}${query}`, `/${locale}/lp/${variant}/${query}`);
       const lp = await get(`/${locale}/lp/${variant}/`, 200, /data-lp-form=/);
       const links = fontLinks(lp.body);
-      assert.deepEqual(links.map((link) => link[1]).sort(),
+      const headerLinks = headerFontLinks(lp.headers);
+      assert.deepEqual([...links, ...headerLinks].map((link) => link[1]).sort(),
         [400, 600, 700, 800].map((weight) => `Manrope-${weight}.woff2`));
       assert.ok(links.every((link) => link[0].includes('fetchPriority="low"')));
+      assert.ok(headerLinks.every((link) => link[0].includes('fetchpriority="low"')));
     }
     for (const path of ['account/', 'account/record/', 'account/record/777/abc123/']) {
       await redirect(`/${locale}/${path.slice(0, -1)}`, `/${locale}/${path}`);

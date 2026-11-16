@@ -28,13 +28,14 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
-    // Keep the branded global 404 for unsupported single-segment locales now that the home route renders on demand.
+    // Keep the branded global 404 for unmatched paths handled by request-time routes.
     const unsupportedLocale = '/:locale((?!ru(?:/|$)|en(?:/|$))[^/]+)';
+    const unsupportedLanding = '/:locale(ru|en)/lp/:variant((?![ab](?:/|$))[^/]+)';
     return {
-      afterFiles: ['', '/'].map((slash) => ({
-        source: unsupportedLocale + slash,
-        destination: '/unsupported-locale/:locale/',
-      })),
+      afterFiles: ['', '/'].flatMap((slash) => [
+        { source: unsupportedLocale + slash, destination: '/unsupported-locale/:locale/' },
+        { source: unsupportedLanding + slash, destination: '/unsupported-locale/:locale/lp/:variant/' },
+      ]),
     };
   },
   async headers() {

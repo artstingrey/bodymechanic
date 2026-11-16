@@ -20,6 +20,7 @@
     "test:service-details": "node scripts/check-service-details.mjs",
     "test:services-list": "node scripts/check-services-list.mjs",
     "test:prices": "node scripts/check-prices.mjs",
+    "test:lp-catalog": "node scripts/check-lp-catalog.mjs",
     "test:service-staff": "node scripts/check-service-staff.mjs",
     "test:staff-profile": "node scripts/check-staff-profile.mjs",
     "test:booking-services": "node scripts/check-booking-services.mjs",

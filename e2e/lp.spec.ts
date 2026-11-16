@@ -153,11 +153,15 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
     // §6: only the landing's static Manrope instances, never the site's variable font (LP root layout)
     expect(fonts.length).toBeGreaterThan(0);
     expect(fonts.filter((f) => !/^Manrope-[4678]00\.woff2$/.test(f)), 'fonts other than the static LP instances').toEqual([]);
-    // RC-7 (A): the 4 static faces are preloaded with fetchpriority="low" (LP root layout) — in the HTML as served
-    const served = await (await page.request.get(url)).text();
-    const pre = [...served.matchAll(/<link(?=[^>]*\brel="preload")(?=[^>]*\bhref="\/fonts\/v1\/([^"]+\.woff2)")[^>]*>/g)];
+    // RC-7 (A): both streamed and prerendered landings preload the four static faces at low priority.
+    const response = await page.request.get(url);
+    const served = await response.text();
+    const pre = [
+      ...served.matchAll(/<link(?=[^>]*\brel="preload")(?=[^>]*\bhref="\/fonts\/v1\/([^"]+\.woff2)")[^>]*>/g),
+      ...(response.headers().link ?? '').matchAll(/<\/fonts\/v1\/([^>]+\.woff2)>;\s*rel=preload;\s*as="font"[^,]*/g),
+    ];
     expect(pre.map((m) => m[1]).sort(), 'the landing font preloads').toEqual(['Manrope-400.woff2', 'Manrope-600.woff2', 'Manrope-700.woff2', 'Manrope-800.woff2']);
-    expect(pre.filter((m) => !m[0].includes('fetchPriority="low"')).map((m) => m[1]), 'landing font preloads without fetchpriority="low"').toEqual([]);
+    expect(pre.filter((m) => !/fetchpriority="low"/i.test(m[0])).map((m) => m[1]), 'landing font preloads without fetchpriority="low"').toEqual([]);
     expect(await page.locator('h1').count()).toBe(1);
     expect(await page.locator('meta[name="robots"]').first().getAttribute('content')).toMatch(/noindex/);
     expect(await page.locator('meta[name="color-scheme"]').getAttribute('content')).toBe('only light'); // Samsung Internet forced dark
@@ -407,7 +411,7 @@ test('sticky CTA: shown mid-page, hidden at the final form; the keyboard never c
   test.skip(levelOf(ti.project.name) !== 'A', 'level A only');
   await page.goto('/ru/lp/a/', { waitUntil: 'networkidle' });
   const bar = page.locator('.lp-sticky');
-  await page.evaluate(() => document.querySelector('.lp-cards')!.scrollIntoView());
+  await page.locator('[aria-labelledby="lp-services"]').scrollIntoViewIfNeeded();
   await expect(bar).toHaveAttribute('data-show', '');
   await page.evaluate(() => document.querySelector('#lp-f2 button[type="submit"]')!.scrollIntoView({ block: 'center' }));
   await expect(bar).not.toHaveAttribute('data-show', '');
@@ -605,11 +609,10 @@ test('desktop and tablet windows 1024–1920: the form button on the first scree
   expect(bad).toEqual([]);
 });
 
-/** «Что можно выбрать» (desktop audit R1 + HR, RC-4): on 320–1024 the price and the old price stay on one line («520 AED
- * 650»; «Демо» may wrap — it went «520 AED / 650 / ДЕМО» on 360 / 800 / 820), every card ends inside the list (the third
- * card ran into the page margin on 768), no word of the card facts is split. One Chromium project, own contexts. */
+/** On 320–1024 the cards stay inside the list and no word of the facts splits. Variant B keeps both prices on one line.
+ * Live variant A card layout is also checked with a synthetic catalog in check-lp-catalog.mjs. */
 const CARD_WIDTHS = [[320, 640], [360, 640], [393, 852], [744, 1133], [768, 1024], [800, 1280], [820, 1180], [1024, 1366]];
-test('service cards on 320–1024: the price row on one line, the cards inside the list, no split words', async ({ browser }, ti) => {
+test('service cards on 320–1024: cards inside the list, no split words, demo prices on one line', async ({ browser }, ti) => {
   test.skip(ti.project.name !== 'A-pixel-7', 'one Chromium project');
   test.setTimeout(180_000);
   const bad: string[] = [];
@@ -621,12 +624,17 @@ test('service cards on 320–1024: the price row on one line, the cards inside t
       await page.goto(url, { waitUntil: 'networkidle' });
       await page.evaluate(() => document.fonts.ready);
       const found = await page.evaluate(() => {
-        const out: string[] = []; const list = document.querySelector('.lp-cards')!; const lb = list.getBoundingClientRect();
+        const out: string[] = [];
+        const section = document.querySelector('[aria-labelledby="lp-services"]')!;
+        const list = section.querySelector('.lp-cards');
+        const live = document.querySelector('.lp[data-variant="a"]');
+        if (!list) return live && section.querySelector('[role="status"]') ? out : ['missing service cards or catalog status'];
+        const lb = list.getBoundingClientRect();
         const carousel = getComputedStyle(list).overflowX !== 'visible';
         for (const card of document.querySelectorAll<HTMLElement>('.lp-cards .lp-card')) {
           // the price and the old price on one line: their vertical centres meet (works with or without the .price-row wrapper)
           const pr = card.querySelector('dd .price')?.getBoundingClientRect(), old = card.querySelector('dd s')?.getBoundingClientRect();
-          if (pr && old && Math.abs((pr.top + pr.bottom) / 2 - (old.top + old.bottom) / 2) > 6) out.push(`price «${card.querySelector('dd')!.textContent!.replace(/\s+/g, ' ').trim()}»: the old price on another line`);
+          if (!live && pr && old && Math.abs((pr.top + pr.bottom) / 2 - (old.top + old.bottom) / 2) > 6) out.push(`price «${card.querySelector('dd')!.textContent!.replace(/\s+/g, ' ').trim()}»: the old price on another line`);
           if (!carousel && card.getBoundingClientRect().right > lb.right + 0.5) out.push(`a card ends ${Math.round(card.getBoundingClientRect().right - lb.right)} px past the list`);
           for (const el of card.querySelectorAll('dt, dd')) for (const w of (el.textContent || '').split(/[\s\u00a0]+/).filter(Boolean)) {
             const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n: Node | null;

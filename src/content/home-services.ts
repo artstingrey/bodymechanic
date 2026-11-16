@@ -6,5 +6,10 @@ export function homeServiceTitle(locale: CatalogLocale, service: Pick<CatalogSer
   return (locale === 'ru' && service.title) || translations[service.id]?.title || service.title;
 }
 
+export function homeServiceDescription(locale: CatalogLocale, service: CatalogService, translations: HomeServiceTranslations) {
+  const editorial = translations[service.id]?.description;
+  return locale === 'en' ? editorial ?? service.description : service.description ?? editorial;
+}
+
 // Map Altegio service IDs to approved entries in the local photo manifest.
 export const homeServiceIllustrations: ReadonlyMap<number, string> = new Map();

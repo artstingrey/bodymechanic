@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { preload } from 'react-dom';
 import { notFound } from 'next/navigation';
 import { locale as rootLocale } from 'next/root-params';
@@ -17,11 +18,12 @@ import { SheetHero } from '@/components/lp/SheetHero';
 import { StickyCta } from '@/components/lp/StickyCta';
 import { LpTracking } from '@/components/lp/LpTracking';
 import { LpConsent } from '@/components/lp/LpConsent';
+import { LandingCatalogCards } from '@/components/lp/LandingCatalogCards';
 
 /**
  * Ad landing (FB/IG + Google, README-LP; frames site/landing/design/lp-frames.html): two versions on one frame — A «active
- * and athletes», B «office: neck, shoulders, lower back». Strings only from the deck (lp.*), versions, services, offer and
- * the FAQ order only from lp-config.json (Market Analyst). No 3D, no GSAP; client islands: the forms, the sticky CTA, the sheet.
+ * and athletes», B «office: neck, shoulders, lower back». Variant A reads the live service catalog.
+ * The variant B service cards, offer and FAQ order come from lp-config.json.
  */
 const VARIANTS = ['a', 'b'] as const;
 type Variant = (typeof VARIANTS)[number];
@@ -193,7 +195,11 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
         <section className="lp-sec lp-rise" aria-labelledby="lp-services">
           <div className="w">
             <div className="head"><h2 id="lp-services">{t(bt.services)}</h2><p className="sub">{t('lp.services.note')}</p></div>
-            <div className="lp-cards">
+            {variant === 'a' ? (
+              <Suspense fallback={<p className="sub" role="status">{t('home.services.loading')}</p>}>
+                <LandingCatalogCards locale={locale} percent={off.percent} t={t} />
+              </Suspense>
+            ) : <div className="lp-cards">
               {vc.services.map((sv, i) => {
                 const sale = Math.round((sv.priceMin * (100 - off.percent)) / 100);
                 return (
@@ -214,7 +220,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
                   </article>
                 );
               })}
-            </div>
+            </div>}
           </div>
         </section>
 

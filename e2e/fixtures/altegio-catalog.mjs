@@ -187,12 +187,28 @@ globalThis.fetch = async (input, init) => {
     { id: 13982355, title: 'Спортивный массаж' },
     { id: 91206, title: 'Новая услуга', comment: 'Описание новой услуги из каталога.' },
   ] } });
-  if (['home-slow', 'catalog-list-slow', 'team-list-slow'].includes(scenario)) {
+  if (['home-slow', 'catalog-list-slow', 'team-list-slow', 'lp-slow'].includes(scenario)) {
     const release = `${scenarioFile}.release`;
     while (!(await fs.stat(release).catch(() => null))) {
       const signal = init?.signal ?? input.signal;
       await delay(30, undefined, { signal });
     }
+  }
+  if (['lp-slow', 'lp-missing', 'lp-unlisted'].includes(scenario)) {
+    assert.equal(staff, false);
+    const services = [
+      { id: 91201, title: 'Outside landing', price_min: 50, price_max: 50 },
+      { id: 13983057, title: 'Mobility CRM', price_min: 99 },
+      { id: 13982353, title: 'Ice bath CRM', price_min: 0, price_max: 0 },
+      { id: 13982355, title: 'Спортивный массаж из CRM', comment: 'Описание из CRM.',
+        price_min: 80, price_max: 160, seance_length: 4500, image: 'https://images.example.test/live.webp' },
+      { id: 13982363, title: 'Infrared CRM', image: 'https://api.alteg.io/api/v1/private' },
+      { id: 13982356, title: 'Classic CRM', price_min: 125.5, price_max: 125.5,
+        image: 'https://images.example.test/broken.webp' },
+    ];
+    return Response.json({ success: true, data: { services: services.filter(({ id }) =>
+      scenario === 'lp-unlisted' ? id === 91201 : scenario !== 'lp-missing' || id !== 13982363,
+    ) } });
   }
   if (scenario === 'catalog-list-slow') {
     assert.equal(staff, false);

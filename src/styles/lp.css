@@ -249,7 +249,8 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-card:nth-child(2) { background: var(--card-lavender); } .lp-card:nth-child(3) { background: var(--card-sky); }
 .lp-card .ph { position: relative; aspect-ratio: 4 / 4.6; border-radius: var(--r-photo); overflow: hidden; }
 .lp-card .ph picture, .lp-card .ph img { width: 100%; height: 100%; object-fit: cover; }
-.lp-card .ph .tag { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; background: rgba(247, 244, 240, .88); font-size: 13px; }
+.lp-card .ph :is(.tag, .home-service-image__caption) { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; background: rgba(247, 244, 240, .88); font-size: 13px; }
+.lp-card .home-service-image { height: 100%; }
 .lp-card .bd { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 14px 6px 0; }
 .lp-card .n { font-size: 13px; font-weight: 800; color: var(--accent-ink-card); font-variant-numeric: tabular-nums; }
 .lp-card h3 { font-size: var(--fs-h3); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }
@@ -265,6 +266,10 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-card dd .price { white-space: nowrap; }
 .lp-card dd .price-row { display: inline-flex; align-items: baseline; gap: 8px; white-space: nowrap; } /* the price and the old price never part — «520 AED / 650 / ДЕМО» in three lines on 360 / 800 / 820 (HR, RC-4); «Демо» may wrap */
 .lp-card dl div:first-child { padding-right: 12px; }
+.lp[data-variant="a"] .lp-card dl:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.lp[data-variant="a"] .lp-card dl > :only-child { padding-right: 0; }
+.lp[data-variant="a"] .lp-card .price-row { max-width: 100%; flex-wrap: wrap; gap: 2px 8px; }
+.lp[data-variant="a"] .lp-card .price-row > * { max-width: 100%; white-space: normal; }
 .lp-studio { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .lp-studio figure { position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-card); background: var(--card-sand); overflow: hidden; display: flex; align-items: flex-end; justify-content: center; color: color-mix(in srgb, var(--accent) 22%, var(--card-sand)); }
 .lp-studio figure svg { width: 80%; height: auto; }
@@ -476,12 +481,12 @@ html[data-lp-form="sheet"] .lp-sticky .l-sheet { display: inline-flex; }
 .lp-faq-wrap .fhead { margin-bottom: 20px; }
 /* 9 · «Специалисты и студия»: the brand placeholder with a caption. */
 .lp-studio { grid-template-columns: minmax(0, 1fr); }
-.lp-studio .ph { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: var(--r-card); background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
-.lp-studio .ph::before { content: ""; position: absolute; inset: 12% 30% 30%; background: color-mix(in srgb, var(--text) 8%, transparent);
+.lp-studio .ph { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: var(--r-card); }
+:is(.lp-studio, .lp-card) .ph[role="img"] { background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
+:is(.lp-studio, .lp-card) .ph[role="img"]::before { content: ""; position: absolute; inset: 12% 30% 30%; background: color-mix(in srgb, var(--text) 8%, transparent);
   -webkit-mask: url(/brand/bm-full-mono-dark.svg) center / contain no-repeat; mask: url(/brand/bm-full-mono-dark.svg) center / contain no-repeat; }
-.lp-studio .ph__cap { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; line-height: 1.3; color: var(--muted); }
+:is(.lp-studio, .lp-card) .ph__cap { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; line-height: 1.3; color: var(--muted); }
 @media (min-width: 768px) { .lp-studio .ph { aspect-ratio: 21 / 9; } }
-/* (scoped to .lp-studio: the service cards' photo boxes are .ph too) */
 /* 10 · form errors: a short summary in a light box — no heavy dark ring; the field errors stay under the fields */
 .form-errors { box-shadow: none; background: color-mix(in srgb, var(--error) 6%, var(--surface)); }
 .form-errors:focus { outline: none; }
