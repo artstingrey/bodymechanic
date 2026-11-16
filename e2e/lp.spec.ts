@@ -143,9 +143,10 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
   if (foot.shown) expect(foot.barTop, 'sticky bar over the footer disclaimer').toBeGreaterThanOrEqual(foot.disclaimerBottom);
   await page.evaluate(() => window.scrollTo(0, 0));
   if (full) {
-    // R-LP-03 F-02: while lp-config offer.status = example, the offer carries «Пример оффера» in the first screen and the final block
-    expect(await page.locator('.lp-hero .ex').evaluateAll((els) => els.some((e) => e.getBoundingClientRect().width > 0)), 'example badge on the hero offer').toBe(true);
-    await expect(page.locator('.lp-final .ex')).toHaveCount(1);
+    // Variant B still uses the example offer from lp-config.
+    const exampleOffer = url.endsWith('/b/');
+    expect(await page.locator('.lp-hero .ex').evaluateAll((els) => els.some((e) => e.getBoundingClientRect().width > 0)), 'example badge on the hero offer').toBe(exampleOffer);
+    await expect(page.locator('.lp-final .ex')).toHaveCount(exampleOffer ? 1 : 0);
     await expectNoDemoLabels(page);
     if (await page.locator('#lp-f1').isVisible()) {
       await expect(page.locator('#lp-f1 .resp')).toHaveText((url.startsWith('/ru/') ? ru : en).lp.form.phoneHint);

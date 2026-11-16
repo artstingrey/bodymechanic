@@ -194,10 +194,12 @@ globalThis.fetch = async (input, init) => {
       await delay(30, undefined, { signal });
     }
   }
-  if (['lp-slow', 'lp-missing', 'lp-unlisted'].includes(scenario)) {
+  if (['lp-slow', 'lp-missing', 'lp-unlisted', 'lp-unpriced'].includes(scenario)) {
     assert.equal(staff, false);
     const services = [
-      { id: 91201, title: 'Outside landing', price_min: 50, price_max: 50 },
+      { id: 91201, title: language === 'ru-RU' ? 'Комбинированный массаж с инфракрасной капсулой'
+        : 'Massage with an infrared capsule and stretching', price_min: 125.5, price_max: 249.5 },
+      { id: 91202, title: 'Unconfirmed session' },
       { id: 13983057, title: 'Mobility CRM', price_min: 99 },
       { id: 13982353, title: 'Ice bath CRM', price_min: 0, price_max: 0 },
       { id: 13982355, title: 'Спортивный массаж из CRM', comment: 'Описание из CRM.',
@@ -206,9 +208,12 @@ globalThis.fetch = async (input, init) => {
       { id: 13982356, title: 'Classic CRM', price_min: 125.5, price_max: 125.5,
         image: 'https://images.example.test/broken.webp' },
     ];
-    return Response.json({ success: true, data: { services: services.filter(({ id }) =>
-      scenario === 'lp-unlisted' ? id === 91201 : scenario !== 'lp-missing' || id !== 13982363,
-    ) } });
+    const selected = services.filter(({ id }) => {
+      if (scenario === 'lp-unlisted') return id === 91201 || id === 91202;
+      if (scenario === 'lp-unpriced') return id === 13982363 || id === 91202;
+      return scenario !== 'lp-missing' || id !== 13982363;
+    });
+    return Response.json({ success: true, data: { services: selected } });
   }
   if (scenario === 'catalog-list-slow') {
     assert.equal(staff, false);

@@ -17,11 +17,22 @@ const ids = ['13982355', '13982356', '13982353', '13982363', '13983057'];
 const locales = {
   ru: { messages: ru, language: 'ru-RU', viewport: { width: 390, height: 844 }, crop: 'band',
     sale: ['64–128 USD', '100,4 USD', '0 USD', 'От 79,2 USD'],
-    original: ['80–160 USD', '125,5 USD', '0 USD', 'От 99 USD'] },
+    original: ['80–160 USD', '125,5 USD', '0 USD', 'От 99 USD'],
+    outsideOffer: '−20% на первый визит: Комбинированный массаж с инфракрасной капсулой · 100,4–199,6 USD вместо 125,5–249,5 USD',
+    neutralOffer: '−20% на первый визит · стоимость уточняется' },
   en: { messages: en, language: 'en-US', viewport: { width: 1280, height: 850 }, crop: 'tall',
     sale: ['USD 64–128', 'USD 100.4', 'USD 0', 'From USD 79.2'],
-    original: ['USD 80–160', 'USD 125.5', 'USD 0', 'From USD 99'] },
+    original: ['USD 80–160', 'USD 125.5', 'USD 0', 'From USD 99'],
+    outsideOffer: '20% off your first visit: Massage with an infrared capsule and stretching · USD 100.4–199.6 instead of USD 125.5–249.5',
+    neutralOffer: '20% off your first visit · price to be confirmed' },
 };
+const layouts = [
+  { width: 390, height: 844, slot: '.lp-media' },
+  { width: 390, height: 650, slot: '.lp-media' },
+  { width: 375, height: 548, slot: '.lp-copy' },
+  { width: 768, height: 960, slot: '.lp-copy' },
+  { width: 1280, height: 850, slot: '.lp-copy' },
+];
 
 async function run(scenario, check, currency = 'USD') {
   await fs.writeFile(scenarioFile, scenario);
@@ -64,21 +75,28 @@ try {
   const track = carousel.locator('.track');
   const hero = page.locator('.lp-hero');
   const photo = hero.locator('picture img');
+  const heroOffers = hero.locator('.offer-pill');
+  const finalOffer = page.locator('.lp-final .lbl');
+  const expectOffer = async (text) => {
+    await expect(heroOffers).toHaveText([text, text]);
+    await expect(finalOffer).toHaveText(text);
+  };
   const cardIds = () => cards.evaluateAll((elements) => elements.map((card) => card.dataset.serviceId));
   const snapshot = () => hero.evaluate((element) => {
-    return ['#lp-h1', '.lp-copy > .sub', '.lp-media', '#lp-f1'].map((selector) => {
+    return ['#lp-h1', '.lp-copy > .sub', '.lp-media'].map((selector) => {
       const { x, y, width, height } = element.querySelector(selector).getBoundingClientRect();
       return [x, y, width, height];
     });
   });
 
   await run('lp-slow', async (origin, logs) => {
-    for (const [locale, { messages, language, viewport, crop, sale, original }] of Object.entries(locales)) {
+    for (const [locale, { messages, language, viewport, crop, sale, original, neutralOffer }] of Object.entries(locales)) {
       await page.setViewportSize(viewport);
       await page.goto(`${origin}/${locale}/lp/a/`, { waitUntil: 'commit' });
       await expect(section.getByRole('status')).toHaveText(messages.home.services.loading);
       await expect(hero.locator('#lp-h1')).toHaveText(messages.lp.h1.a1);
       await expect(hero.locator('.lp-copy > .sub')).toHaveText(messages.lp.a.sub);
+      await expectOffer(neutralOffer);
       await expect(photo).toHaveAttribute('fetchpriority', 'high');
       await expect(page.locator('link[rel="preload"][as="image"][fetchpriority="high"][imagesrcset*="/lp/a-"]')).toHaveCount(3);
       await expect.poll(() => photo.evaluate((img) => img.naturalWidth > 1 && img.currentSrc)).toMatch(new RegExp(`/lp/a-${crop}-.*\\.avif$`));
@@ -89,6 +107,10 @@ try {
       await expect(cards).toHaveCount(5);
       assert.deepEqual(await cardIds(), ids);
       assert.deepEqual(await snapshot(), before);
+      await expect(finalOffer).not.toHaveText(neutralOffer);
+      const selected = (await finalOffer.textContent()).replace(/\s+/g, ' ').trim();
+      await expectOffer(selected);
+      assert.match(selected, /USD/);
       const colors = await cards.evaluateAll((elements) => elements.map((card) => getComputedStyle(card).backgroundColor));
       assert.equal(new Set(colors.slice(0, 3)).size, 3);
       assert.deepEqual(colors.slice(3), [colors[0], colors[0]]);
@@ -164,7 +186,7 @@ try {
 
       const response = await fetch(`${origin}/api/catalog/services?locale=${locale}`);
       assert.equal(response.status, 200);
-      assert.equal((await response.json()).data.services.length, 6);
+      assert.equal((await response.json()).data.services.length, 7);
       assert.equal(logs().split(`[catalog-fixture] lp-slow ${language}`).length - 1, 1);
       await fs.unlink(release);
     }
@@ -177,8 +199,37 @@ try {
     assert.equal(logs().match(/\[catalog-fixture\]/g)?.length, 2);
   });
 
+  await run('lp-unlisted', async (origin, logs) => {
+    for (const [locale, { messages, outsideOffer, language }] of Object.entries(locales)) {
+      await page.goto(`${origin}/${locale}/lp/a/`);
+      for (const { width, height, slot } of layouts) {
+        await page.setViewportSize({ width, height });
+        await expectOffer(outsideOffer);
+        await expect(hero.locator(`${slot} .offer-pill`)).toBeVisible();
+        assert.equal(await hero.locator('.offer-pill:visible').count(), 1);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        if (slot === '.lp-media') {
+          const pill = await hero.locator('.lp-media .offer-pill').boundingBox();
+          const markers = await hero.locator('.lp-media :is(.tag, .co span):visible').all();
+          for (const marker of markers) {
+            const box = await marker.boundingBox();
+            const overlaps = pill.x < box.x + box.width && pill.x + pill.width > box.x &&
+              pill.y < box.y + box.height && pill.y + pill.height > box.y;
+            assert.equal(overlaps, false, `${locale} ${width}×${height}: offer overlaps ${await marker.textContent()}`);
+          }
+        }
+      }
+      await expect(section.getByRole('status')).toHaveText(messages.home.services.empty);
+      await expect(cards).toHaveCount(0);
+      await page.goto(`${origin}/${locale}/lp/a/?form=sheet`);
+      await expect(hero.locator('.lp-hero-cta')).toBeVisible();
+      await expectOffer(outsideOffer);
+      assert.equal(logs().split(`[catalog-fixture] lp-unlisted ${language}`).length - 1, 1);
+    }
+  });
+
   await run('lp-missing', async (origin) => {
-    for (const [locale, { messages }] of Object.entries(locales)) {
+    for (const [locale, { messages, neutralOffer }] of Object.entries(locales)) {
       await page.goto(`${origin}/${locale}/lp/a/`);
       await expect(cards).toHaveCount(4);
       assert.deepEqual(await cardIds(), ids.filter((id) => id !== '13982363'));
@@ -187,21 +238,31 @@ try {
         ...Array(3).fill(messages.home.services.priceUnknown),
       ]);
       await expect(cards.locator('s')).toHaveCount(0);
+      await expectOffer(neutralOffer);
     }
   }, '');
 
-  for (const [scenario, state] of [['empty', 'empty'], ['lp-unlisted', 'empty'], ['500', 'errorLoad']]) {
+  for (const [scenario, state] of [['empty', 'empty'], ['500', 'errorLoad']]) {
     await run(scenario, async (origin) => {
-      for (const [locale, { messages }] of Object.entries(locales)) {
+      for (const [locale, { messages, neutralOffer }] of Object.entries(locales)) {
         await page.goto(`${origin}/${locale}/lp/a/`);
         await expect(section.getByRole('status')).toHaveText(messages.home.services[state]);
         await expect(cards).toHaveCount(0);
         await expect(hero.locator('#lp-h1')).toBeVisible();
+        await expectOffer(neutralOffer);
       }
     });
   }
+  await run('lp-unpriced', async (origin) => {
+    for (const [locale, { messages, neutralOffer }] of Object.entries(locales)) {
+      await page.goto(`${origin}/${locale}/lp/a/`);
+      await expect(cards).toHaveCount(1);
+      await expect(cards.locator('dd')).toHaveText(messages.home.services.priceUnknown);
+      await expectOffer(neutralOffer);
+    }
+  });
   assert.deepEqual(browserRequests, []);
-  console.log('Landing A catalog: RU/EN order, prices, cache, responsive hero and carousel controls: OK');
+  console.log('Landing A catalog: RU/EN cards, prices, shared offer, fallbacks, cache and responsive layouts: OK');
 } finally {
   await browser?.close();
   await fs.rm(directory, { recursive: true, force: true });

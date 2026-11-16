@@ -1082,6 +1082,8 @@
       "full": "−{percent}% на первый визит: {service} {salePrice} AED вместо {price}",
       "badge": "−{percent}%",
       "body": "на первый визит: {service} {salePrice} AED вместо {price}",
+      "catalogBody": "на первый визит: {service} · {salePrice} вместо {price}",
+      "catalogPendingBody": "на первый визит · стоимость уточняется",
       "urgency": "Для первых клиентов студии",
       "exampleBadge": "Пример оффера — условия уточняются",
       "exampleBadgeShort": "Пример оффера",

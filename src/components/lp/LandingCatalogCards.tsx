@@ -1,25 +1,23 @@
-import { connection } from 'next/server';
 import type { getTranslations } from 'next-intl/server';
 import { CatalogServicePhoto } from '@/components/services/CatalogServicePhoto';
 import { Carousel } from '@/components/ui/Carousel';
 import { homeServiceDescription, homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
 import { formatCatalogServiceDiscount } from '@/lib/catalog-service-price';
-import type { CatalogLocale } from '@/lib/contracts/catalog';
-import { getCatalogServices } from '@/server/catalog/services';
+import type { CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/catalog';
 
 const SERVICE_IDS = [13982355, 13982356, 13982353, 13982363, 13983057];
 const PHOTO_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
 
-export async function LandingCatalogCards({ locale, percent, t }: {
+export async function LandingCatalogCards({ catalog, locale, percent, t }: {
+  catalog: Promise<CatalogServicesResponse | null>;
   locale: CatalogLocale;
   percent: number;
   t: Awaited<ReturnType<typeof getTranslations>>;
 }) {
-  await connection();
-  const catalog = await getCatalogServices(locale).catch(() => null);
-  if (!catalog) return <p className="sub" role="status">{t('home.services.errorLoad')}</p>;
+  const result = await catalog;
+  if (!result) return <p className="sub" role="status">{t('home.services.errorLoad')}</p>;
 
-  const byId = new Map(catalog.data.services.map((service) => [service.id, service]));
+  const byId = new Map(result.data.services.map((service) => [service.id, service]));
   const services = SERVICE_IDS.map((id) => byId.get(id)).filter((service) => service !== undefined);
   if (!services.length) return <p className="sub" role="status">{t('home.services.empty')}</p>;
 

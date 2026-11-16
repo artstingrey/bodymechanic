@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { preload } from 'react-dom';
 import { notFound } from 'next/navigation';
 import { locale as rootLocale } from 'next/root-params';
+import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import { isLocale, type Locale } from '@/i18n/routing';
 import { pageUrl, SITE_URL } from '@/lib/site';
@@ -19,6 +20,8 @@ import { StickyCta } from '@/components/lp/StickyCta';
 import { LpTracking } from '@/components/lp/LpTracking';
 import { LpConsent } from '@/components/lp/LpConsent';
 import { LandingCatalogCards } from '@/components/lp/LandingCatalogCards';
+import { chooseLandingOffer, LandingCatalogOffer } from '@/components/lp/LandingCatalogOffer';
+import { getCatalogServices } from '@/server/catalog/services';
 
 /**
  * Ad landing (FB/IG + Google, README-LP; frames site/landing/design/lp-frames.html): two versions on one frame — A «active
@@ -75,6 +78,11 @@ function splitH1(s: string): [string, string] {
   return f ? [s.slice(0, f.index + f[0].length - 1), s.slice(f.index + f[0].length)] : [s, ''];
 }
 
+async function loadLandingCatalog(locale: Locale) {
+  await connection();
+  return getCatalogServices(locale).catch(() => null);
+}
+
 export default async function LandingPage({ params }: { params: Promise<{ variant: string }> }) {
   const { variant } = await params;
   const locale = (await rootLocale()) as Locale;
@@ -82,8 +90,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const t = await getTranslations();
   const vc = CFG.versions[variant];
   const off = CFG.offer;
-  const offerVals = { percent: off.percent, salePrice: off.demoSalePrice, price: off.demoPrice, service: t(off.keys.service) };
-  const offerFull = t(off.keys.full, offerVals);
+  const demoOffer = { percent: off.percent, salePrice: off.demoSalePrice, price: off.demoPrice, service: t(off.keys.service) };
   const termsSet = !t(off.keys.terms).startsWith('TODO(content)');
   const legalEntity = t('footer.legalEntity');
   const chips = vc.chips.map((c) => ({ id: c.id, label: t(c.key) }));
@@ -96,12 +103,16 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const src = (c: Crop, fmt: string) => hero[c].widths.map((w) => `/lp/${variant}-${c}-${w}.${fmt} ${w}w`).join(', ');
   const MEDIA = { none: '(max-width: 767px) and (max-height: 600px)', tall: '(min-width: 1024px) and (orientation: landscape)', short: '(max-width: 767px) and (max-height: 700px)', band: '(max-width: 1023px), (min-width: 1024px) and (orientation: portrait)' } as const;
   const SIZES = { tall: '(min-width: 1440px) 560px, 40vw', short: '100vw', band: '(min-width: 1024px) and (orientation: portrait) 960px, (min-width: 768px) 704px, 100vw' } as const;
-  // lp-config splitRule: badge = lp.offer.badge, text = lp.offer.body (RU «−20%» + «на первый визит…», EN «20% off» + «your first visit…»)
-  // R-LP-03 F-02: until the client confirms the offer (lp-config offer.status = example) it carries «Пример оффера»
-  const example = off.status === 'example';
-  // R-LP-03 F-05: the badge never sits inside the pill (it wrapped to three lines on the pill's rounded ends) — on the photo
-  // it is a corner tag, in the copy column a line under the pill
-  const pill = <span className="offer-pill"><b>{t(off.keys.badge, offerVals)}</b><span>{t(off.keys.body, offerVals)}</span></span>;
+  const example = variant === 'b' && off.status === 'example';
+  const badge = t(off.keys.badge, { percent: off.percent });
+  const pendingOffer = t('lp.offer.catalogPendingBody');
+  // The cards and all three offer slots share the catalog read. The random choice runs once per page.
+  const catalog = variant === 'a' ? loadLandingCatalog(locale) : null;
+  const selectedOffer = catalog?.then((data) => chooseLandingOffer(data, locale, off.percent, t, pendingOffer));
+  const catalogOffer = selectedOffer ? (
+    <Suspense fallback={pendingOffer}><LandingCatalogOffer text={selectedOffer} /></Suspense>
+  ) : null;
+  const pill = <span className="offer-pill"><b>{badge}</b>{' '}<span>{catalogOffer ?? t(off.keys.body, demoOffer)}</span></span>;
 
   // LCP image (R-LP-03 F-04): preload the AVIF crop of the screen class with fetchpriority=high through ReactDOM.preload —
   // React writes such preloads into <head> right after the charset / viewport, before Next's async scripts (a JSX <link>
@@ -195,9 +206,9 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
         <section className="lp-sec lp-rise" aria-labelledby="lp-services">
           <div className="w">
             <div className="head"><h2 id="lp-services">{t(bt.services)}</h2><p className="sub">{t('lp.services.note')}</p></div>
-            {variant === 'a' ? (
+            {catalog ? (
               <Suspense fallback={<p className="sub" role="status">{t('home.services.loading')}</p>}>
-                <LandingCatalogCards locale={locale} percent={off.percent} t={t} />
+                <LandingCatalogCards catalog={catalog} locale={locale} percent={off.percent} t={t} />
               </Suspense>
             ) : <div className="lp-cards">
               {vc.services.map((sv, i) => {
@@ -280,12 +291,14 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
             <div style={{ display: 'grid', gap: 12 }}>
               {/* L11 (BD, RC-4): at most three text blocks above the form — «Пример оффера — условия уточняются» qualifies the offer
                   line, so it sits in it (one block), not on a line of its own */}
-              <p className="lbl">{offerFull}{termsSet ? ` · ${t(off.keys.urgency)}` : ''}{example ? <> <span className="ex">{t(off.exampleBadge.key)}</span></> : null}</p>
+              <p className="lbl">{catalogOffer ? <>{badge} {catalogOffer}</> : (
+                <>{t(off.keys.full, demoOffer)}{termsSet ? ` · ${t(off.keys.urgency)}` : ''}{example ? <> <span className="ex">{t(off.exampleBadge.key)}</span></> : null}</>
+              )}</p>
               <h2 id="lp-final">{t(bt.final)}</h2>
               {/* design audit 6: no triple «Оставьте номер…» — one lead in its own words (deck, Market Analyst) and no card title;
                   4: the example offer label already covers pending terms. */}
               <p className="sub">{t('lp.final.text')}</p>
-              {!termsSet && !example && t.has('lp.offer.termsPending') ? <p className="pending">{t('lp.offer.termsPending')}</p> : null}
+              {variant === 'b' && !termsSet && !example && t.has('lp.offer.termsPending') ? <p className="pending">{t('lp.offer.termsPending')}</p> : null}
             </div>
             <LeadForm id="lp-f2" variant={variant} chips={chips} waHref={waHref} privacyHref={privacyHref} />
           </div>

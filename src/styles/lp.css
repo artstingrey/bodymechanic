@@ -348,6 +348,8 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
   .lp-media { aspect-ratio: 390 / 132; /* room for one call-out between the photo tag and the offer pill */ }
   .lp-media .co[data-crop="band"][data-phone="true"] { display: none; }
   .lp-media .co[data-crop="short"][data-phone="true"] { display: block; }
+  /* The short crop has limited room for a wrapped catalog offer. */
+  .lp[data-variant="a"] .lp-media .co[data-crop="short"] { display: none; }
   .lp-media .offer-pill { bottom: 6px; } /* = the tags' 6 px from the top: 4 px more room for the call-out (393×659, lead) */
 }
 /* the short band's one call-out from 390 px (BD's recheck N1, lead: 393×659 = iPhone 14 Pro / 15 / 16): with the pill 6 px off the

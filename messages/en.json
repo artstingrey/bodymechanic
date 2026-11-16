@@ -1082,6 +1082,8 @@
       "full": "{percent}% off your first visit: {service} AED {salePrice} instead of {price}",
       "badge": "{percent}% off",
       "body": "your first visit: {service} AED {salePrice} instead of {price}",
+      "catalogBody": "your first visit: {service} · {salePrice} instead of {price}",
+      "catalogPendingBody": "your first visit · price to be confirmed",
       "urgency": "For the studio’s first clients",
       "exampleBadge": "Example offer: terms to be confirmed",
       "exampleBadgeShort": "Example offer",
