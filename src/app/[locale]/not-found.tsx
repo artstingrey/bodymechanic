@@ -3,12 +3,12 @@ import { Link } from '@/i18n/navigation';
 import assets from '@/lib/body3d/assets.json';
 import '@/styles/nf.css';
 
-/** 404 inside a locale (notFound() from a page): styled like the site, with links home / services / booking (PG-12). */
+/** 404 inside a locale (notFound() from a page): styled like the site, with links to home and booking. */
 export default async function LocaleNotFound() {
   const t = await getTranslations();
   const p = assets.posters.male;
   return (
-    <section className="container page nf">
+    <section className="container page nf" data-localized-not-found="">
       <div className="nf__text">
         <p className="nf__code tn" aria-hidden="true">{t('notFound.code')}</p>
         <h1 className="h1">{t('notFound.title')}</h1>

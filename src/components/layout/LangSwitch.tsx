@@ -22,11 +22,12 @@ export function LangSwitch({ variant = 'short' }: { variant?: 'short' | 'long' }
       {locales.map((l, i) => {
         const path = `/${l}${pathname === '/' ? '/' : `${pathname.replace(/\/$/, '')}/`}`;
         const label = variant === 'long' ? t(`footer.lang.${l}`) : t(`nav.langSwitch.${l}`);
+        const linkAttrs = { hrefLang: l, lang: l, 'aria-label': `${label}. ${t(l === 'ru' ? 'nav.langSwitch.toRu' : 'nav.langSwitch.toEn')}` };
         const sep = i > 0 && variant === 'short' ? <span className="sep" aria-hidden="true">·</span> : null;
         return l === locale ? (
           <span key={l} style={{ display: 'contents' }}>{sep}<span aria-current="true" lang={l}>{label}</span></span>
         ) : (
-          <span key={l} style={{ display: 'contents' }}>{sep}<a href={path} hrefLang={l} lang={l} aria-label={`${label}. ${t(l === 'ru' ? 'nav.langSwitch.toRu' : 'nav.langSwitch.toEn')}`} /* WCAG 2.5.3: the name starts with the visible «EN» */
+          <span key={l} style={{ display: 'contents' }}>{sep}<a href={path} {...linkAttrs} className="lang-switch__page"
             onClick={(e) => {
               rememberLocale(l);
               // Ж-9: a booking opened with a service keeps that word for the entry in the other language (it used to be ?service=)
@@ -34,7 +35,9 @@ export function LangSwitch({ variant = 'short' }: { variant?: 'short' | 'long' }
               e.currentTarget.href = path + window.location.search + window.location.hash;
             }}>
             {label}
-          </a></span>
+          </a>{pathname !== '/' && (
+            <a href={`/${l}/`} {...linkAttrs} className="lang-switch__home" onClick={() => rememberLocale(l)}>{label}</a>
+          )}</span>
         );
       })}
     </nav>

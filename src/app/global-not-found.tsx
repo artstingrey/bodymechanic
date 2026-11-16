@@ -39,7 +39,7 @@ function variant(l: L, m: typeof ru): string {
   // the site's section menu as a native <details> (static page, no React): same round button on the right edge as the burger
   // everywhere else, the same links (design audit F22: the 404 header looked different, «RU · EN» stood on the right edge)
   const menu = ([['services/', 'nav.burger.services'], ['prices/', 'nav.main.prices'], ['team/', 'nav.main.team'], ['#approach', 'nav.main.approach'],
-    ['#reviews', 'nav.main.reviews'], ['#faq', 'nav.main.faq'], ['journal/', 'nav.burger.journal'], ['contacts/', 'nav.burger.contacts']] as const)
+    ['#faq', 'nav.main.faq'], ['contacts/', 'nav.burger.contacts']] as const)
     .map(([href, key]) => { const [g, k] = key.split('.').slice(1) as ['burger' | 'main', string]; return `<li><a href="/${l}/${href}">${esc((m.nav[g] as Record<string, string>)[k])}</a></li>`; }).join('');
   return `<header data-nf="${l}" lang="${l}" class="site-header"><div class="site-header__bar"><div class="site-header__bg" aria-hidden="true"></div>`
     + `<div class="site-header__row"><a href="/${l}/" aria-label="${esc(m.nav.logoAria)}" class="site-logo">`
@@ -49,9 +49,6 @@ function variant(l: L, m: typeof ru): string {
     + `<a href="/${l}/booking/" class="btn btn--primary btn--sm btn-book">${esc(m.nav.book)}</a>`
     + `<details class="nf-menu"><summary class="burger" aria-label="${esc(m.nav.burger.open)}"><svg viewBox="0 0 18 14" aria-hidden="true" focusable="false"><line x1="1" x2="17" y1="1" y2="1"/><line x1="1" x2="17" y1="7" y2="7"/><line x1="1" x2="17" y1="13" y2="13"/></svg></summary>`
     + `<div class="nf-menu__panel"><nav aria-label="${esc(m.nav.burger.sections)}"><ul>${menu}</ul></nav>`
-    // the rest of the menu (BD, RC-8: not a cut-down version): the account, the language, the action
-    + `<a class="acct" href="/${l}/account/"><span class="av" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></svg></span>`
-    + `<span><b>${esc(m.nav.burger.account)}</b><small>${esc(m.nav.burger.accountHint)}</small></span><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></a>`
     + `<div class="meta"><nav aria-label="${esc(ls.label)}" class="lang-switch lang-switch--long">${langItems(m.footer.lang, false)}</nav></div>`
     + `<div class="nf-menu__cta"><a class="btn btn--primary" href="/${l}/booking/">${esc(m.nav.book)}</a></div></div></details></div></div></header>`
     + `<main id="main" lang="${l}"><section data-nf="${l}" class="container page nf"><div class="nf__text">`

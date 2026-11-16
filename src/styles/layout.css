@@ -50,6 +50,9 @@
 .lang-switch { display: inline-flex; align-items: center; white-space: nowrap; font-size: 13px; font-weight: 700; }
 .lang-switch a, .lang-switch [aria-current] { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0 2px; color: var(--muted); text-decoration: none; border-radius: var(--r-pill); }
 .lang-switch a { min-width: 44px; }
+/* On an in-layout 404, expose the language's home URL even before hydration. */
+.lang-switch .lang-switch__home, body:has([data-localized-not-found]) .lang-switch .lang-switch__page { display: none; }
+body:has([data-localized-not-found]) .lang-switch .lang-switch__home { display: inline-flex; }
 .lang-switch [aria-current="true"] { color: var(--text); min-width: 28px; }
 .lang-switch .sep { color: var(--muted); padding: 0 2px; } /* R-CODE-01 N-01: text contrast ≥ 4.5 */
 @media (hover: hover) { .lang-switch a:hover { color: var(--text); } }

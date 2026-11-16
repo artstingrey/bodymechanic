@@ -464,7 +464,7 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 /* 2 · one action, one name: the sticky bar shows the hero button's label of the form mode */
 .lp-sticky .l-sheet { display: none; }
 html[data-lp-form="sheet"] .lp-sticky .l-form { display: none; }
-html[data-lp-form="sheet"] .lp-sticky .l-sheet { display: inline; }
+html[data-lp-form="sheet"] .lp-sticky .l-sheet { display: inline-flex; }
 /* 3 · «Что можно выбрать»: the cards snap to the 16 px field, not to the screen edge */
 .lp-cards { scroll-padding-inline: var(--lp-g); }
 /* 4 · Pending address and offer terms. */

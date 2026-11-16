@@ -158,28 +158,25 @@ async function browserChecks(origin) {
       await page.goto(origin + paths.page('en', slug));
       await expect(facts).toHaveText([price, '']);
     }
-    for (const [section, slugs] of [
-      ['services', ['sports', 'lfk-kinesio']],
-      ['prices', ['sports', 'lfk-kinesio', 'manual']],
-    ]) {
-      for (const slug of slugs) {
+    for (const section of ['services', 'prices']) {
+      for (const [slug, title] of [['sports', 'Sports massage'], ['lfk-kinesio', 'Functional training and mobility']]) {
         await page.goto(`${origin}/en/${section}/`);
-        await page.locator(`main a[href="${paths.page('en', slug)}"]`).first().click();
+        const serviceLink = page.locator(`main a[href="${paths.page('en', slug)}"]`).first();
+        await expect(serviceLink).toBeVisible();
+        await expect(page.locator(`main a[href="${paths.page('en', 'manual')}"]`)).toHaveCount(0);
+        await serviceLink.click();
         await expect(page).toHaveURL(origin + paths.page('en', slug));
-        if (slug === 'sports') await expect(heading).toHaveText('Sports massage');
-        else if (slug === 'lfk-kinesio') {
-          await expect(heading).toHaveText('Functional training and mobility');
-          await expect(hero.getByRole('link', { name: 'Book' })).toHaveAttribute('href', '/en/booking/');
-        } else {
-          const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
-          await expect(demoCta).toHaveAttribute('href', '/en/booking/');
-          await expect(hero.locator('.facts .badge')).toHaveCount(0);
-          await checkSectionVisibility('en');
-          await expect(wideSections.first().locator('.staff a[href^="/en/team/"]').first()).toBeVisible();
-        }
+        await expect(heading).toHaveText(title);
+        await expect(hero.getByRole('link', { name: 'Book' })).toHaveAttribute('href', '/en/booking/');
       }
     }
-    await hero.getByRole('link', { name: 'Book', exact: true }).click();
+    await page.goto(origin + paths.page('en', 'manual'));
+    const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
+    await expect(demoCta).toHaveAttribute('href', '/en/booking/');
+    await expect(hero.locator('.facts .badge')).toHaveCount(0);
+    await checkSectionVisibility('en');
+    await expect(wideSections.first().locator('.staff a[href^="/en/team/"]').first()).toBeVisible();
+    await demoCta.click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
     await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
     assert.deepEqual(unexpectedRequests, []);

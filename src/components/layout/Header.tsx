@@ -23,7 +23,6 @@ export async function Header() {
     { key: 'approach', href: '/#approach' },
     { key: 'team', href: '/team' },
     { key: 'prices', href: '/prices' },
-    { key: 'reviews', href: '/#reviews' },
     { key: 'faq', href: '/#faq' },
     { key: 'contacts', href: '/contacts' },
   ];

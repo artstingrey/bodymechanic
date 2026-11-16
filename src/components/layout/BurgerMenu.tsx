@@ -144,7 +144,7 @@ export function BurgerButton() {
 //['/journal', 'nav.burger.journal']
 const ITEMS: [string, string][] = [
   ['/services', 'nav.burger.services'], ['/prices', 'nav.main.prices'], ['/team', 'nav.main.team'], ['/#approach', 'nav.main.approach'],
-  ['/#reviews', 'nav.main.reviews'], ['/#faq', 'nav.main.faq'], ['/contacts', 'nav.burger.contacts'],
+  ['/#faq', 'nav.main.faq'], ['/contacts', 'nav.burger.contacts'],
 ];
 /** the first four are the large tier: what, how much, who, how */
 const MAJOR = 4;

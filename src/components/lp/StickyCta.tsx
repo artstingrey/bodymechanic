@@ -64,7 +64,6 @@ export function StickyCta({ label, sheetLabel, waLabel, waHref }: { label: strin
 
   const go = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (document.documentElement.dataset.lpForm === 'sheet') { window.dispatchEvent(new Event('lp:open-sheet')); return; }
     const form = document.getElementById('lp-f1'); if (!form) return;
     const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
     form.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
@@ -75,7 +74,10 @@ export function StickyCta({ label, sheetLabel, waLabel, waHref }: { label: strin
     <div className="lp-sticky" ref={bar}>
       {/* one action, one name (design audit 2): the bar repeats the hero button of the form mode — «Подобрать время» with the
           form in the hero, «Записаться на первый визит» with ?form=sheet (lp.css switches by html[data-lp-form], set before paint) */}
-      <a className="btn btn--p" href="#lp-f1" onClick={go}><span className="l-form">{label}</span><span className="l-sheet">{sheetLabel}</span><Icon name="arrow-right" /></a>
+      <a className="btn btn--p l-form" href="#lp-f1" onClick={go}>{label}<Icon name="arrow-right" /></a>
+      <button type="button" className="btn btn--p l-sheet" aria-haspopup="dialog" onClick={() => window.dispatchEvent(new Event('lp:open-sheet'))}>
+        {sheetLabel}<Icon name="arrow-right" />
+      </button>
       <a className="btn btn--wa btn--icon" href={waHref} target="_blank" rel="noopener noreferrer" aria-label={waLabel} data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span></a>
     </div>
   );

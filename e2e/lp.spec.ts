@@ -388,7 +388,12 @@ test('?form=sheet: the test button opens the sheet, «Назад» closes it and
   await sheet.locator('.lp-sheet__x').click(); // closed by ×: our history entry is gone too
   await expect(sheet).not.toHaveAttribute('open', '');
   await expect.poll(() => page.evaluate(() => !!(history.state && history.state.bmOverlay))).toBe(false);
-  await btn.click();
+  await page.locator('.lp-cards').scrollIntoViewIfNeeded();
+  const sticky = page.locator('.lp-sticky');
+  await expect(sticky).toHaveAttribute('data-show', '');
+  await expect(sticky.locator('a[href="#lp-f1"]')).toBeHidden();
+  await sticky.getByRole('button', { name: ru.lp.form.submit }).click();
+  await expect(sheet).toHaveAttribute('open', '');
   await sheet.locator('input[name="name"]').fill('Анна');
   await sheet.locator('input[name="phone"]').fill('+971 50 123 4567');
   await sheet.locator('button[type="submit"]').click();

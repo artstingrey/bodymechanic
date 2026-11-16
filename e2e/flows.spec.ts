@@ -76,6 +76,32 @@ test.describe('404 (DEL-12)', () => {
       expectClean((await g.problems()).filter((p) => !/console\.error: Failed to load resource: .*404/.test(p)), u);
     });
   }
+
+  for (const [locale, other] of [['ru', 'en'], ['en', 'ru']]) {
+    test(`/${locale}/ 404 menus and language-switch destinations`, async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      const global = await page.goto(`/${locale}/no-such-page/`);
+      expect(global?.status()).toBe(404);
+      await page.locator('.nf-menu summary').click();
+      const globalMenu = page.locator('.nf-menu[open] .nf-menu__panel');
+      await expect(globalMenu.locator('a[href$="#faq"]')).toBeVisible();
+      await expect(globalMenu.locator('a[href$="#reviews"], a[href$="/journal/"], a[href$="/account/"]')).toHaveCount(0);
+      await expect(globalMenu.locator(`a[hreflang="${other}"]`)).toHaveAttribute('href', `/${other}/`);
+
+      const localized = await page.goto(`/${locale}/services/no-such-service/`);
+      expect(localized?.status()).toBe(404);
+      const languageLink = `a[hreflang="${other}"]:visible`;
+      await expect(page.locator(`.site-header__row ${languageLink}`)).toHaveAttribute('href', `/${other}/`);
+      await expect(page.locator(`.site-footer ${languageLink}`)).toHaveAttribute('href', `/${other}/`);
+      await page.locator('button.burger').click();
+      const menu = page.locator('dialog.burger-dialog[open]');
+      await expect(menu.locator('a[href$="#faq"]')).toBeVisible();
+      await expect(page.locator('a[href$="#reviews"]')).toHaveCount(0);
+      await menu.locator(languageLink).click();
+      await expect(page).toHaveURL(`/${other}/`);
+      await expect(page.locator('html')).toHaveAttribute('lang', other);
+    });
+  }
 });
 
 test('deep links open directly and survive F5 (DEL-12)', async ({ page, baseURL }) => {

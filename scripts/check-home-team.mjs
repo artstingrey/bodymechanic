@@ -225,11 +225,11 @@ try {
         const cards = block.locator('.staff');
         await expect(cards.locator('b')).toHaveText(names);
         await expect(cards.locator('.cap')).toHaveCount(0);
-        await expect(block.locator('.sec-head a')).toHaveAttribute('href', '#');
+        await expect(block.locator('.sec-head a')).toHaveAttribute('href', `/${locale}/team/`);
         await expect(block.locator('.team-intro p')).toHaveText(locale === 'en'
           ? 'Meet our specialists and choose who you’d like to book with.'
           : 'Познакомьтесь со специалистами студии и выберите того, к кому хотите записаться.');
-        await expect(block.locator('.team-intro a')).toHaveAttribute('href', '#');
+        await expect(block.locator('.team-intro a')).toHaveAttribute('href', `/${locale}/booking/`);
         assert.equal(await block.locator('.team-intro').evaluate((el) => el.scrollWidth <= el.clientWidth
           && el.getBoundingClientRect().right <= el.parentElement.getBoundingClientRect().right + 1), true);
         const nameLinks = cards.locator('b a');
@@ -237,7 +237,7 @@ try {
         for (const [index, { id }] of dataFor(locale).staff.entries()) {
           await expect(nameLinks.nth(index)).toHaveAttribute('href', `/${locale}/team/staff-${id}/`);
         }
-        await expect(block.locator('a:not([href="#"]), .go, .badge')).toHaveCount(names.length);
+        await expect(block.locator('.staff .go, .staff .badge')).toHaveCount(0);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.equal(await cards.first().locator('b').evaluate((el) => el.scrollWidth <= el.clientWidth), true);
         await cards.first().scrollIntoViewIfNeeded();
@@ -278,6 +278,14 @@ try {
           await expect.poll(scrollLeft).toBeGreaterThan(0);
           await client.detach();
         }
+        await block.locator('.sec-head a').click();
+        await expect(page).toHaveURL(`${origin}/${locale}/team/`);
+        await expect(page.locator('main h1')).toHaveText(locale === 'en' ? 'Team' : 'Команда');
+        await expect(page.locator('main .staff b')).toHaveText(names);
+        await page.goto(`${origin}/${locale}/`);
+        await block.locator('.team-intro a').click();
+        await expect(page).toHaveURL(`${origin}/${locale}/booking/`);
+        await expect(page.locator('main #st1')).toBeVisible();
       });
     }
   }, env);
@@ -324,7 +332,7 @@ try {
       const services = page.locator('[aria-labelledby="services-title"]');
       await expect(services.getByText('Loading services…')).toBeVisible();
       await expect(block.locator('.staff')).toHaveCount(1);
-      await expect(block.locator('.team-intro a')).toHaveAttribute('href', '#');
+      await expect(block.locator('.team-intro a')).toHaveAttribute('href', '/en/booking/');
       await expect(block.locator('.arr button')).toHaveCount(2);
       await release(servicesScenario);
       await expect(services.locator('article')).toHaveCount(5);

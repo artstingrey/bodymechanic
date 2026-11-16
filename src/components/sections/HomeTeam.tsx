@@ -25,7 +25,7 @@ async function HomeTeamCards({ locale, t }: { locale: CatalogLocale; t: Awaited<
         }}>
           <div className="team-intro">
             <p>{t('home.team.intro')}</p>
-            <ButtonLink href="#" variant="secondary" size="sm" prefetch={false} scroll={false}>
+            <ButtonLink href="/booking" variant="secondary" size="sm" prefetch={false}>
               {t('home.team.cta')}
             </ButtonLink>
           </div>
@@ -46,7 +46,7 @@ export async function HomeTeam({ locale }: { locale: CatalogLocale }) {
       <div className="container">
         <div className="sec-head">
           <h2 id="team-title" className="h2" data-split="" tabIndex={-1}>{t('home.team.title')}</h2>
-          <ButtonLink href="#" variant="text" prefetch={false} scroll={false}>{t('nav.main.team')}</ButtonLink>
+          <ButtonLink href="/team" variant="text" prefetch={false}>{t('nav.main.team')}</ButtonLink>
         </div>
         <Suspense fallback={<div className="home-catalog-state" role="status">{t('home.team.loading')}</div>}>
           <HomeTeamCards locale={locale} t={t} />

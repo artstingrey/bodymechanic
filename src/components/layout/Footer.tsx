@@ -39,7 +39,6 @@ export async function Footer() {
           <div><h2>{t('footer.col.studio')}</h2><ul>
             <li><Link prefetch={false} href="/#approach">{t('footer.links.approach')}</Link></li>
             <li><Link prefetch={false} href="/team">{t('footer.links.team')}</Link></li>
-            <li><Link prefetch={false} href="/#reviews">{t('footer.links.reviews')}</Link></li>
             {/* <li><Link prefetch={false} href="/journal">{t('footer.links.journal')}</Link></li> */}
             <li><Link prefetch={false} href="/#faq">{t('footer.links.faq')}</Link></li>
           </ul></div>
