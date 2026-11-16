@@ -350,6 +350,7 @@
 .home-sec .svc:active { transform: scale(0.985); transition-duration: 90ms; }
 
 [aria-labelledby="services-title"] .svc .photo { aspect-ratio: 4 / 5; }
+[aria-labelledby="services-title"] .ph.home-service-image { border-radius: var(--r-photo); }
 [aria-labelledby="services-title"] .svc .head > div { width: 100%; }
 [aria-labelledby="services-title"] .svc .data:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
 [aria-labelledby="services-title"] .svc:active { transform: none; }
