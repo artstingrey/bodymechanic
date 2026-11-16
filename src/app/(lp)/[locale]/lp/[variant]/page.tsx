@@ -94,7 +94,8 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const termsSet = !t(off.keys.terms).startsWith('TODO(content)');
   const legalEntity = t('footer.legalEntity');
   const chips = vc.chips.map((c) => ({ id: c.id, label: t(c.key) }));
-  const waHref = whatsappUrl(`${t(vc.waMessageKey)} ${vc.waTag}`);
+  const waMessage = `${t(vc.waMessageKey)} ${vc.waTag}`;
+  const waHref = whatsappUrl(waMessage);
   const privacyHref = `/${locale}/privacy/`;
   const [h1a, h1b] = splitH1(t(vc.defaultH1));
   const bt = CFG.blockTitleKeys;
@@ -171,8 +172,8 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
             {pill}
             {example ? <span className="ex ex--copy">{t(off.exampleBadge.shortKey)}</span> : null}
           </div>
-          <LeadForm id="lp-f1" variant={variant} chips={chips} waHref={waHref} privacyHref={privacyHref} />
-          <SheetHero variant={variant} chips={chips} waHref={waHref} privacyHref={privacyHref} />
+          <LeadForm id="lp-f1" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} />
+          <SheetHero variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} />
         </section>
 
         <section className="lp-sec lp-sec--first lp-rise" aria-labelledby="lp-why">
@@ -300,7 +301,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
               <p className="sub">{t('lp.final.text')}</p>
               {variant === 'b' && !termsSet && !example && t.has('lp.offer.termsPending') ? <p className="pending">{t('lp.offer.termsPending')}</p> : null}
             </div>
-            <LeadForm id="lp-f2" variant={variant} chips={chips} waHref={waHref} privacyHref={privacyHref} />
+            <LeadForm id="lp-f2" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} />
           </div>
         </section>
       </main>

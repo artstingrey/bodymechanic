@@ -1131,6 +1131,11 @@
       "submit": "Подобрать время",
       "submitFirstVisit": "Записаться на первый визит",
       "whatsapp": "Написать в WhatsApp",
+      "whatsappMessage": {
+        "name": "Имя: {name}",
+        "phone": "Телефон: {phone}",
+        "details": "Что важно: {details}"
+      },
       "privacyNote": "Номер нужен только для ответа по записи",
       "details": {
         "toggle": "Уточнить (необязательно)",

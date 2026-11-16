@@ -7,8 +7,9 @@
  * with its attribution).
  */
 import { createHash } from 'node:crypto';
-import { test, expect, type Page, type TestInfo } from '@playwright/test';
+import { test, expect, type Locator, type Page, type TestInfo } from '@playwright/test';
 import ru from '../messages/ru.json';
+import en from '../messages/en.json';
 import { guard, expectClean, fillPhone, testHook } from './helpers';
 
 const GTM = 'GTM-LPTEST1';
@@ -290,6 +291,90 @@ test.describe('LP tracking (lp-brief §5)', () => {
     expect(lead.placement).toBe('final');
     for (const e of ev) expect(Object.keys(e).filter((k) => !ALLOWED.includes(k)), `${e.event}: only allowed parameters`).toEqual([]);
   });
+
+  for (const { locale, messages, nameLabel, phoneLabel, detailsLabel } of [
+    { locale: 'ru', messages: ru, nameLabel: 'Имя', phoneLabel: 'Телефон', detailsLabel: 'Что важно' },
+    { locale: 'en', messages: en, nameLabel: 'Name', phoneLabel: 'Phone', detailsLabel: 'What matters' },
+  ]) {
+    test(`15.3 / ${locale}: WhatsApp uses the active form, respects marks consent and records only a click`, async ({ page, context }) => {
+      const trackers = await setup(page, { analytics: true, marketing: false });
+      const base = 'https://wa.me/971585172380';
+      const greeting = `${messages.lp.a.wa.message} [LP-A]`;
+      await context.route('https://wa.me/**', (route) => route.fulfill({ contentType: 'text/plain', body: 'WhatsApp intercepted by Playwright' }));
+
+      const fill = async (id: string, name: string, phone: string, indexes: number[]) => {
+        const form = page.locator(`#${id}`);
+        await form.locator('input[name="name"]').fill(name);
+        await form.locator('input[name="phone"]').fill(phone);
+        await form.locator('summary').click();
+        const selected = form.locator('.chip[aria-pressed="true"]');
+        for (const index of indexes) await form.locator('.chip').nth(index).click();
+        await expect(selected).toHaveCount(indexes.length);
+        return {
+          form, consent: form.locator('input[name="detailsConsent"]'),
+          details: `${detailsLabel}: ${(await selected.allTextContents()).join(', ')}`,
+          contact: [greeting, `${nameLabel}: ${name}`, `${phoneLabel}: ${phone.replace(/[ ().-]/g, '')}`],
+        };
+      };
+      const open = async (form: Locator, lines: string[], placement: 'hero' | 'final') => {
+        const count = (await lpEvents(page, 'lp_whatsapp_click')).length;
+        const link = form.getByRole('link', { name: messages.lp.form.whatsapp });
+        await expect(link).toHaveAttribute('href', base);
+        const [chat] = await Promise.all([context.waitForEvent('page'), link.click()]);
+        try {
+          await chat.waitForLoadState();
+          const url = new URL(chat.url());
+          expect(url.origin + url.pathname).toBe(base);
+          expect([...url.searchParams]).toEqual([['text', lines.join('\n')]]);
+        } finally {
+          await chat.close();
+        }
+        await expect(link).toHaveAttribute('href', base);
+        const events = await lpEvents(page, 'lp_whatsapp_click');
+        expect(events).toHaveLength(count + 1);
+        expect(events[count]).toMatchObject({ placement, lp_version: 'a', lang: locale, event_id: expect.any(String) });
+        expect(Object.keys(events[count]).filter((k) => !ALLOWED.includes(k))).toEqual([]);
+      };
+
+      await page.goto(`/${locale}/lp/a/`, { waitUntil: 'networkidle' });
+      const hero = await fill('lp-f1', 'Анна Романова', '+971 50 123-4567', [0, 2]);
+      const final = await fill('lp-f2', 'Даниэль Ли', '+44 (7700) 900 246', [1, 3]);
+      await hero.consent.check();
+      await open(hero.form, [...hero.contact, hero.details], 'hero');
+      await open(final.form, final.contact, 'final');
+      expect(await lpEvents(page, 'lp_lead')).toHaveLength(0);
+      expect((await bff(page)).requests).toHaveLength(0);
+
+      await final.consent.check();
+      for (const { form } of [hero, final]) {
+        const submit = form.getByRole('button', { name: messages.lp.form.submit });
+        await submit.click();
+        await expect(form.getByRole('heading', { name: messages.lp.result.title })).toBeVisible();
+      }
+      expect((await bff(page)).requests.map((request) => request.interests)).toEqual([
+        ['recovery', 'neckShoulders'], ['event', 'lowerBack'],
+      ]);
+      await open(hero.form, [...hero.contact, hero.details], 'hero');
+      const mainPageEvents = await dataLayer(page);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`/${locale}/lp/a/?form=sheet`, { waitUntil: 'networkidle' });
+      await page.locator('.lp-hero-cta').getByRole('button', { name: messages.lp.form.submit }).click();
+      await expect(page.locator('dialog.lp-sheet')).toBeVisible();
+      const sheet = await fill('lp-fs', 'Мира & О’Нил', '+1 (202) 555-0136', [2, 4]);
+      await sheet.consent.check();
+      await open(sheet.form, [...sheet.contact, sheet.details], 'hero');
+      await sheet.consent.uncheck();
+      await open(sheet.form, sheet.contact, 'hero');
+      expect((await bff(page)).requests).toHaveLength(0);
+
+      const publicData = JSON.stringify([mainPageEvents, await dataLayer(page)]) + trackers.join('\n') + page.url();
+      for (const value of ['Анна Романова', 'Даниэль Ли', 'Мира & О’Нил', '501234567', '7700900246', '2025550136', ...Object.values(messages.lp.chips)]) {
+        expect(publicData).not.toContain(value);
+        expect(publicData).not.toContain(encodeURIComponent(value));
+      }
+    });
+  }
 
   test('T-05 / T-06: chips, name and phone never reach dataLayer, trackers or URLs; CAPI = same event id, hashed ph / fn, no query', async ({ page }) => {
     const trackers = await setup(page, { analytics: true, marketing: true });

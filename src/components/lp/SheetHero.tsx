@@ -7,11 +7,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Icon } from '@/components/ui/Icon';
+import { whatsappUrl } from '@/lib/config';
 import { useBackCloses } from '@/lib/ui/useBackCloses';
 import { LeadForm } from './LeadForm';
 
-export function SheetHero({ variant, chips, waHref, privacyHref }: {
-  variant: 'a' | 'b'; chips: { id: string; label: string }[]; waHref: string; privacyHref: string;
+export function SheetHero({ variant, chips, waMessage, privacyHref }: {
+  variant: 'a' | 'b'; chips: { id: string; label: string }[]; waMessage: string; privacyHref: string;
 }) {
   const t = useTranslations('lp');
   const tc = useTranslations('common.actions');
@@ -37,7 +38,7 @@ export function SheetHero({ variant, chips, waHref, privacyHref }: {
           <button ref={btn} type="button" className="btn btn--p" aria-haspopup="dialog" data-lp-cta="" onClick={() => window.dispatchEvent(new Event('lp:open-sheet'))}>
             {t('form.submit')}<Icon name="arrow-right" />
           </button>
-          <a className="btn btn--wa btn--icon" href={waHref} target="_blank" rel="noopener noreferrer" aria-label={t('form.whatsapp')} data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span></a>
+          <a className="btn btn--wa btn--icon" href={whatsappUrl(waMessage)} target="_blank" rel="noopener noreferrer" aria-label={t('form.whatsapp')} data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span></a>
         </div>
         <p className="resp">{t('form.phoneHint')}</p>
       </div>
@@ -46,7 +47,7 @@ export function SheetHero({ variant, chips, waHref, privacyHref }: {
           <h2 id="lp-sheet-title">{t('form.title')}</h2>
           <button type="button" className="lp-sheet__x" aria-label={tc('close')} onClick={() => dlg.current?.close()}><Icon name="x" /></button>
         </div>
-        <LeadForm id="lp-fs" variant={variant} chips={chips} submitLabel={t('form.submit')} waHref={waHref} privacyHref={privacyHref} cta={false} />
+        <LeadForm id="lp-fs" variant={variant} chips={chips} submitLabel={t('form.submit')} waMessage={waMessage} privacyHref={privacyHref} cta={false} />
       </dialog>
     </>
   );

@@ -11,6 +11,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import { PhoneField, TextField } from '@/components/ui/Field';
 import { Checkbox } from '@/components/ui/Choice';
 import { Icon } from '@/components/ui/Icon';
+import { PrefilledLink } from '@/components/ui/PrefilledLink';
+import { WHATSAPP_BASE, whatsappUrl } from '@/lib/config';
 import { normalizePhone, rules } from '@/lib/forms/validate';
 import { afterPress } from '@/lib/forms/useFieldErrors';
 import { newKey, postLead } from '@/lib/lp/lead';
@@ -18,9 +20,9 @@ import { placementOf, trackFormError, trackLead } from '@/lib/lp/track';
 
 type Err = { name?: string; phone?: string; details?: string };
 
-export function LeadForm({ id, variant, chips, title, submitLabel, waHref, privacyHref, cta = true }: {
+export function LeadForm({ id, variant, chips, title, submitLabel, waMessage, privacyHref, cta = true }: {
   id: string; variant: 'a' | 'b'; chips: { id: string; label: string }[]; title?: string; submitLabel?: string;
-  waHref: string; privacyHref: string; /** marks the submit button for the sticky-CTA observer */ cta?: boolean;
+  waMessage: string; privacyHref: string; /** marks the submit button for the sticky-CTA observer */ cta?: boolean;
 }) {
   const t = useTranslations('lp');
   const tf = useTranslations('forms');
@@ -33,6 +35,7 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState<'idle' | 'busy' | 'done' | 'error'>('idle');
   const [key] = useState(newKey);
+  const form = useRef<HTMLFormElement>(null);
   const thanks = useRef<HTMLDivElement>(null);
   const summary = useRef<HTMLDivElement>(null);
   const busy = useRef(false); // a second tap lands before React re-renders the busy state
@@ -89,13 +92,35 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
 
   useEffect(() => { if (status === 'done') thanks.current?.focus(); }, [status]);
 
+  const prefillWhatsApp = () => {
+    const fields = form.current ? new FormData(form.current) : null;
+    const contactName = String(fields?.get('name') ?? name).trim();
+    const contactPhone = normalizePhone(String(fields?.get('phone') ?? phone));
+    const includeDetails = fields?.has('detailsConsent') ?? detailsConsent;
+    const details = includeDetails ? chips.filter(({ id }) => picked.includes(id)).map(({ label }) => label).join(', ') : '';
+    return whatsappUrl([
+      waMessage,
+      contactName && t('form.whatsappMessage.name', { name: contactName }),
+      contactPhone && t('form.whatsappMessage.phone', { phone: contactPhone }),
+      details && t('form.whatsappMessage.details', { details }),
+    ].filter(Boolean).join('\n'));
+  };
+
+  const whatsappLink = (full = false) => {
+    const label = t('form.whatsapp');
+    const props = { className: `btn btn--wa ${full ? 'btn--full' : 'btn--icon'}`, 'aria-label': full ? undefined : label, 'data-track': 'whatsapp' };
+    const content = <><span className="wa"><Icon name="whatsapp" /></span>{full ? label : null}</>;
+    if (variant === 'a') return <PrefilledLink href={WHATSAPP_BASE} full={prefillWhatsApp} {...props}>{content}</PrefilledLink>;
+    return <a href={whatsappUrl(waMessage)} target="_blank" rel="noopener noreferrer" {...props}>{content}</a>;
+  };
+
   if (status === 'done') {
     return (
       <div className="lp-form" id={id}>
         <div className="lp-thanks" role="status" tabIndex={-1} ref={thanks} data-lp-cta="">
           <h3>{t('result.title')}</h3>
           <p className="sub">{t('result.text')}</p>
-          <a className="btn btn--wa btn--full" href={waHref} target="_blank" rel="noopener noreferrer" data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span>{t('form.whatsapp')}</a>
+          {whatsappLink(true)}
         </div>
       </div>
     );
@@ -107,7 +132,7 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
   // «Проверьте поля: {fields}» (lp.error.summary, Market Analyst) — the field names are links, so the string is split at {fields}
   const [sumPre, sumPost] = t.has('error.summary') ? t('error.summary', { fields: '\u0000' }).split('\u0000') : [`${tf('error.summary')}: `, ''];
   return (
-    <form className="lp-form" id={id} noValidate onSubmit={submit} aria-busy={status === 'busy' || undefined}>
+    <form className="lp-form" id={id} ref={form} noValidate onSubmit={submit} aria-busy={status === 'busy' || undefined}>
       {title ? <h3 className="ftitle">{title}</h3> : null}
       {attempt && errList.length > 1 ? (
         // design audit 10: a short summary — «Проверьте отмеченные поля: Имя, Телефон» with links to the fields; the full texts
@@ -134,7 +159,7 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
         <button className="btn btn--p" type="submit" aria-busy={status === 'busy' || undefined} data-lp-cta={cta ? '' : undefined}>
           {submitText}{status === 'busy' ? <span className="spin" aria-hidden="true" /> : <Icon name="arrow-right" />}
         </button>
-        <a className="btn btn--wa btn--icon" href={waHref} target="_blank" rel="noopener noreferrer" aria-label={t('form.whatsapp')} data-track="whatsapp"><span className="wa"><Icon name="whatsapp" /></span></a>
+        {whatsappLink()}
       </div>
       {status === 'error' ? (
         <div className="server-err" role="alert">
