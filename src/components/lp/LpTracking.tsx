@@ -7,7 +7,7 @@
  *     the choice, then GTM — never before the page's `load` (T-11), never without «Аналитика» or «Маркетинг» (T-01);
  *     a later change sends another update; bm_utm cookie follows the consent (J-04);
  *  3. events (lib/lp/track): lp_view once measuring is allowed; lp_form_start on the first focus in a form field;
- *     lp_whatsapp_click on any WhatsApp button (its own event id). lp_lead / lp_form_error come from the form.
+ *     lp_whatsapp_click on WhatsApp navigation (its own event id). Forms validate before recording the navigation.
  * No queue before consent: events of a visit before the choice are dropped on purpose (as on the site).
  */
 import { useEffect } from 'react';

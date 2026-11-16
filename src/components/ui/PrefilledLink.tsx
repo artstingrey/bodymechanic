@@ -22,14 +22,17 @@ type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | '
   full: () => string;
 };
 
+export function openPrefilledUrl(url: string) {
+  const w = window.open(url, '_blank');
+  if (w) { try { w.opener = null; } catch { /* cross-origin already */ } } else window.location.assign(url);
+}
+
 export function PrefilledLink({ href, full, onClick, children, ...rest }: Props) {
   const click = (e: MouseEvent<HTMLAnchorElement>) => {
     onClick?.(e);
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    const url = full();
-    const w = window.open(url, '_blank');
-    if (w) { try { w.opener = null; } catch { /* cross-origin already */ } } else window.location.assign(url);
+    openPrefilledUrl(full());
   };
   return <a href={href} target="_blank" rel="noopener noreferrer" onClick={click} {...rest}>{children}</a>;
 }

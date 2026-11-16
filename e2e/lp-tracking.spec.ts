@@ -298,7 +298,7 @@ test.describe('LP tracking (lp-brief §5)', () => {
     { locale: 'ru', messages: ru, nameLabel: 'Имя', phoneLabel: 'Телефон', detailsLabel: 'Что важно' },
     { locale: 'en', messages: en, nameLabel: 'Name', phoneLabel: 'Phone', detailsLabel: 'What matters' },
   ]) {
-    test(`15.3 / ${locale}: WhatsApp uses the active form, respects marks consent and records only a click`, async ({ page, context }) => {
+    test(`15.3 / ${locale}: WhatsApp validates the active form and respects marks consent`, async ({ page, context }) => {
       const trackers = await setup(page, { analytics: true, marketing: false });
       const base = 'https://wa.me/971585172380';
       const greeting = `${messages.lp.a.wa.message} [LP-A]`;
@@ -320,9 +320,10 @@ test.describe('LP tracking (lp-brief §5)', () => {
       };
       const open = async (form: Locator, lines: string[], placement: 'hero' | 'final') => {
         const count = (await lpEvents(page, 'lp_whatsapp_click')).length;
-        const link = form.getByRole('link', { name: messages.lp.form.whatsapp });
-        await expect(link).toHaveAttribute('href', base);
-        const [chat] = await Promise.all([context.waitForEvent('page'), link.click()]);
+        const done = await form.locator('.lp-thanks').count() === 1;
+        const control = form.getByRole(done ? 'link' : 'button', { name: messages.lp.form.whatsapp });
+        expect(await control.getAttribute('href')).toBe(done ? base : null);
+        const [chat] = await Promise.all([context.waitForEvent('page'), control.click()]);
         try {
           await chat.waitForLoadState();
           const url = new URL(chat.url());
@@ -331,14 +332,31 @@ test.describe('LP tracking (lp-brief §5)', () => {
         } finally {
           await chat.close();
         }
-        await expect(link).toHaveAttribute('href', base);
+        expect(await control.getAttribute('href')).toBe(done ? base : null);
         const events = await lpEvents(page, 'lp_whatsapp_click');
         expect(events).toHaveLength(count + 1);
         expect(events[count]).toMatchObject({ placement, lp_version: 'a', lang: locale, event_id: expect.any(String) });
         expect(Object.keys(events[count]).filter((k) => !ALLOWED.includes(k))).toEqual([]);
       };
+      const expectBlocked = async (id: string, fields: ('name' | 'phone')[]) => {
+        const form = page.locator(`#${id}`);
+        const start = page.url();
+        const count = (await lpEvents(page, 'lp_whatsapp_click')).length;
+        const first = fields.length > 1 ? form.getByRole('alert') : form.locator(`input[name="${fields[0]}"]`);
+        await form.getByRole('button', { name: messages.lp.form.whatsapp }).click();
+        await expect(first).toBeFocused();
+        for (const field of fields) await expect(form.locator(`input[name="${field}"]`)).toHaveAttribute('aria-invalid', 'true');
+        expect(context.pages()).toEqual([page]);
+        expect(page.url()).toBe(start);
+        expect(await lpEvents(page, 'lp_whatsapp_click')).toHaveLength(count);
+      };
 
       await page.goto(`/${locale}/lp/a/`, { waitUntil: 'networkidle' });
+      await expectBlocked('lp-f1', ['name', 'phone']);
+      await page.locator('#lp-f2 input[name="name"]').fill('Даниэль Ли');
+      await expectBlocked('lp-f2', ['phone']);
+      await page.locator('#lp-f2 input[name="phone"]').fill('+44 77');
+      await expectBlocked('lp-f2', ['phone']);
       const hero = await fill('lp-f1', 'Анна Романова', '+971 50 123-4567', [0, 2]);
       const final = await fill('lp-f2', 'Даниэль Ли', '+44 (7700) 900 246', [1, 3]);
       await hero.consent.check();
@@ -363,6 +381,8 @@ test.describe('LP tracking (lp-brief §5)', () => {
       await page.goto(`/${locale}/lp/a/?form=sheet`, { waitUntil: 'networkidle' });
       await page.locator('.lp-hero-cta').getByRole('button', { name: messages.lp.form.submit }).click();
       await expect(page.locator('dialog.lp-sheet')).toBeVisible();
+      await page.locator('#lp-fs input[name="phone"]').fill('+1 (202) 555-0136');
+      await expectBlocked('lp-fs', ['name']);
       const sheet = await fill('lp-fs', 'Мира & О’Нил', '+1 (202) 555-0136', [2, 4]);
       await sheet.consent.check();
       await open(sheet.form, [...sheet.contact, sheet.details], 'hero');

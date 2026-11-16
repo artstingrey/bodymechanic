@@ -11,12 +11,12 @@ import { useLocale, useTranslations } from 'next-intl';
 import { PhoneField, TextField } from '@/components/ui/Field';
 import { Checkbox } from '@/components/ui/Choice';
 import { Icon } from '@/components/ui/Icon';
-import { PrefilledLink } from '@/components/ui/PrefilledLink';
+import { openPrefilledUrl, PrefilledLink } from '@/components/ui/PrefilledLink';
 import { WHATSAPP_BASE, whatsappUrl } from '@/lib/config';
 import { normalizePhone, rules } from '@/lib/forms/validate';
 import { afterPress } from '@/lib/forms/useFieldErrors';
 import { newKey, postLead } from '@/lib/lp/lead';
-import { placementOf, trackFormError, trackLead } from '@/lib/lp/track';
+import { placementOf, trackFormError, trackLead, trackWhatsapp } from '@/lib/lp/track';
 
 type Err = { name?: string; phone?: string; details?: string };
 
@@ -53,30 +53,36 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waMessage, pr
     else showError();
   };
 
-  const validate = (): Err => {
+  const validateContacts = (contactName: string, contactPhone: string): Err => {
     const e: Err = {};
-    if (rules.name(name)) e.name = t('error.name');
-    const invalidPhone = phoneError(phone);
+    if (rules.name(contactName)) e.name = t('error.name');
+    const invalidPhone = phoneError(contactPhone);
     if (invalidPhone) e.phone = invalidPhone;
-    if (picked.length && !detailsConsent) e.details = t('error.consentDetails');
     return e;
+  };
+
+  const reportErrors = (nextErrors: Err) => {
+    setErrors(nextErrors);
+    setAttempt((n) => n + 1);
+    const first = (['name', 'phone', 'details'] as const).find((k) => nextErrors[k]);
+    if (!first) return false;
+
+    const errorFields = Object.keys(nextErrors);
+    trackFormError(errorFields, placementOf(document.getElementById(id)));
+    if (first === 'details') document.getElementById(`${id}-details-box`)?.setAttribute('open', '');
+    requestAnimationFrame(() => {
+      if (errorFields.length > 1) summary.current?.focus();
+      else document.getElementById(`${id}-${first}`)?.focus();
+    });
+    return true;
   };
 
   const submit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (busy.current) return; // double tap
-    const e = validate();
-    setErrors(e); setAttempt((n) => n + 1);
-    const first = (['name', 'phone', 'details'] as const).find((k) => e[k]);
-    if (first) {
-      trackFormError(Object.keys(e), placementOf(document.getElementById(id))); // lp_form_error: the type only (Frontend Builder)
-      if (first === 'details') (document.getElementById(`${id}-details-box`) as HTMLDetailsElement | null)?.setAttribute('open', '');
-      requestAnimationFrame(() => {
-        if (Object.keys(e).length > 1) summary.current?.focus();
-        else document.getElementById(`${id}-${first}`)?.focus();
-      });
-      return;
-    }
+    const nextErrors = validateContacts(name, phone);
+    if (picked.length && !detailsConsent) nextErrors.details = t('error.consentDetails');
+    if (reportErrors(nextErrors)) return;
     busy.current = true; setStatus('busy');
     try {
       await postLead({ name: name.trim(), phone: normalizePhone(phone), details: picked, detailsConsent, variant, locale, idempotencyKey: key });
@@ -92,11 +98,16 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waMessage, pr
 
   useEffect(() => { if (status === 'done') thanks.current?.focus(); }, [status]);
 
-  const prefillWhatsApp = () => {
+  const readContactFields = () => {
     const fields = form.current ? new FormData(form.current) : null;
-    const contactName = String(fields?.get('name') ?? name).trim();
-    const contactPhone = normalizePhone(String(fields?.get('phone') ?? phone));
-    const includeDetails = fields?.has('detailsConsent') ?? detailsConsent;
+    return {
+      contactName: String(fields?.get('name') ?? name).trim(),
+      contactPhone: normalizePhone(String(fields?.get('phone') ?? phone)),
+      includeDetails: fields?.has('detailsConsent') ?? detailsConsent,
+    };
+  };
+
+  const prefillWhatsApp = ({ contactName, contactPhone, includeDetails }: ReturnType<typeof readContactFields>) => {
     const details = includeDetails ? chips.filter(({ id }) => picked.includes(id)).map(({ label }) => label).join(', ') : '';
     return whatsappUrl([
       waMessage,
@@ -106,11 +117,21 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waMessage, pr
     ].filter(Boolean).join('\n'));
   };
 
+  const openWhatsApp = () => {
+    const fields = readContactFields();
+    if (reportErrors(validateContacts(fields.contactName, fields.contactPhone))) return;
+    trackWhatsapp(placementOf(form.current), newKey());
+    openPrefilledUrl(prefillWhatsApp(fields));
+  };
+
   const whatsappLink = (full = false) => {
     const label = t('form.whatsapp');
     const props = { className: `btn btn--wa ${full ? 'btn--full' : 'btn--icon'}`, 'aria-label': full ? undefined : label, 'data-track': 'whatsapp' };
     const content = <><span className="wa"><Icon name="whatsapp" /></span>{full ? label : null}</>;
-    if (variant === 'a') return <PrefilledLink href={WHATSAPP_BASE} full={prefillWhatsApp} {...props}>{content}</PrefilledLink>;
+    if (variant === 'a') {
+      if (!full) return <button type="button" onClick={openWhatsApp} {...props}>{content}</button>;
+      return <PrefilledLink href={WHATSAPP_BASE} full={() => prefillWhatsApp(readContactFields())} {...props}>{content}</PrefilledLink>;
+    }
     return <a href={whatsappUrl(waMessage)} target="_blank" rel="noopener noreferrer" {...props}>{content}</a>;
   };
 
