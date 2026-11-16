@@ -1,13 +1,14 @@
 import { connection } from 'next/server';
 import type { getTranslations } from 'next-intl/server';
 import { CatalogServicePhoto } from '@/components/services/CatalogServicePhoto';
+import { Carousel } from '@/components/ui/Carousel';
 import { homeServiceDescription, homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
 import { formatCatalogServiceDiscount } from '@/lib/catalog-service-price';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { getCatalogServices } from '@/server/catalog/services';
 
 const SERVICE_IDS = [13982355, 13982356, 13982353, 13982363, 13983057];
-const PHOTO_SIZES = '(min-width: 768px) 30vw, 78vw';
+const PHOTO_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
 
 export async function LandingCatalogCards({ locale, percent, t }: {
   locale: CatalogLocale;
@@ -29,7 +30,10 @@ export async function LandingCatalogCards({ locale, percent, t }: {
   };
 
   return (
-    <div className="lp-cards">
+    <Carousel label={t('lp.services.title')} hideCount t={{
+      label: t('a11y.carousel.label'), prev: t('a11y.carousel.prev'), next: t('a11y.carousel.next'),
+      goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string,
+    }}>
       {services.map((service, i) => {
         const title = homeServiceTitle(locale, service, translations);
         const description = homeServiceDescription(locale, service, translations);
@@ -58,6 +62,6 @@ export async function LandingCatalogCards({ locale, percent, t }: {
           </article>
         );
       })}
-    </div>
+    </Carousel>
   );
 }

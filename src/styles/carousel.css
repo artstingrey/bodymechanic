@@ -1,0 +1,25 @@
+/* Native scroll-snap carousel. */
+.car { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.car .track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 0 6px; margin: 0; list-style: none; overscroll-behavior-x: contain; }
+.car .track::-webkit-scrollbar { display: none; }
+/* Let the next card peek past the content column. The page supplies the available side margin. */
+@media (max-width: 1439px) {
+  .car .track {
+    margin-inline: calc(var(--carousel-edge, var(--edge)) * -1);
+    padding-inline: var(--carousel-edge, var(--edge));
+    scroll-padding-inline: var(--carousel-edge, var(--edge));
+  }
+}
+.car .track > * { scroll-snap-align: start; flex: none; width: min(76vw, 320px); display: flex; }
+.car .track > * > * { flex: 1; }
+@media (min-width: 768px) { .car .track > * { width: min(45vw, 360px); } }
+@media (min-width: 1024px) { .car .track > * { width: calc((100% - 32px) / 3); } }
+@media (min-width: 1440px) { .car .track > * { width: calc((100% - 32px) / 3.2); } }
+@media (min-width: 2560px) { .car .track > * { width: calc((100% - 48px) / 4.2); } }
+.car .ctl { display: flex; align-items: center; gap: 16px; }
+.car .prog { flex: 1; min-width: 0; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.car .prog i { display: block; width: 20%; height: 100%; border-radius: 3px; background: var(--text); transition: transform 160ms var(--e-out); }
+.car [data-pos] { min-width: 7.5em; font-size: var(--fs-small); color: var(--muted); }
+.car[data-nocount] [data-pos] { position: absolute; width: 1px; height: 1px; min-width: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.car .ctl .arr { display: flex; gap: 8px; }
+.car .ctl .arr .i { width: 22px; height: 22px; stroke-width: 1.75; }

@@ -6,6 +6,8 @@
    Motion: CSS only, 300–500 ms, 12–24 px (README п.15).
    ===================================================================== */
 @import "./tokens.css";
+@import "./icon-button.css";
+@import "./carousel.css";
 
 @font-face { font-family: ManropeLP; src: url("/fonts/v1/Manrope-400.woff2") format("woff2"); font-weight: 400; font-display: optional; }
 @font-face { font-family: ManropeLP; src: url("/fonts/v1/Manrope-600.woff2") format("woff2"); font-weight: 600; font-display: optional; }
@@ -245,8 +247,11 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-steps p { font-size: 14px; color: var(--muted-card); margin-top: 4px; }
 .lp-cards { display: grid; grid-auto-flow: column; grid-auto-columns: 78%; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: calc(var(--lp-g) * -1); padding-inline: var(--lp-g); scrollbar-width: none; }
 .lp-cards::-webkit-scrollbar { display: none; }
-.lp-card { scroll-snap-align: start; display: flex; flex-direction: column; border-radius: var(--r-card); padding: 12px 12px 20px; background: var(--card-sand); } /* as the reference's service card: the facts sit on the card's bottom, no gap under the photo */
-.lp-card:nth-child(2) { background: var(--card-lavender); } .lp-card:nth-child(3) { background: var(--card-sky); }
+.lp-cards > .lp-card { scroll-snap-align: start; }
+.lp-card { display: flex; flex-direction: column; border-radius: var(--r-card); padding: 12px 12px 20px; background: var(--card-sand); } /* as the reference's service card: the facts sit on the card's bottom, no gap under the photo */
+.lp .car { --carousel-edge: var(--lp-gx); }
+.lp-card:nth-child(2), .lp .car .track > :nth-child(2) > .lp-card { background: var(--card-lavender); }
+.lp-card:nth-child(3), .lp .car .track > :nth-child(3) > .lp-card { background: var(--card-sky); }
 .lp-card .ph { position: relative; aspect-ratio: 4 / 4.6; border-radius: var(--r-photo); overflow: hidden; }
 .lp-card .ph picture, .lp-card .ph img { width: 100%; height: 100%; object-fit: cover; }
 .lp-card .ph :is(.tag, .home-service-image__caption) { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; background: rgba(247, 244, 240, .88); font-size: 13px; }
@@ -451,6 +456,7 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
    audit L4); the <picture> media in page.tsx follow the same split ---------- */
 @media (min-width: 1024px) and (orientation: landscape) {
   .lp .w { width: min(1320px, calc(100% - 96px)); }
+  .lp .car { --carousel-edge: 48px; }
   .lp-hero { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); grid-template-rows: auto 1fr; column-gap: 64px; row-gap: 28px; align-items: start; padding: 24px 0 56px; }
   .lp-copy { grid-column: 1; grid-row: 1; gap: 16px; }
   .lp-hero > .lp-form, .lp-hero > .lp-hero-cta { grid-column: 1; grid-row: 2; }

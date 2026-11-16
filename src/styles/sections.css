@@ -232,8 +232,6 @@
 .section > .container > .h2 { margin-bottom: 28px; }
 @media (min-width: 1024px) { .section > .container > .h2 { margin-bottom: 40px; } }
 
-/* 2K: one more card in carousels (lead brief) */
-@media (min-width: 2560px) { .car .track > * { width: calc((100% - 48px) / 4.2); } }
 
 /* ---------- 3 Approach (dark, C hairlines) ---------- */
 .approach__title { max-width: 820px; }

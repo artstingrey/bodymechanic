@@ -45,7 +45,7 @@ async function run(scenario, check, currency = 'USD') {
 let browser;
 try {
   browser = await chromium.launch({ channel: 'chrome' });
-  const page = await browser.newPage({ reducedMotion: 'reduce' });
+  const page = await browser.newPage({ reducedMotion: 'reduce', hasTouch: true });
   const browserRequests = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
@@ -60,6 +60,8 @@ try {
   await page.route('https://images.example.test/broken.webp', (route) => route.fulfill({ status: 404 }));
   const section = page.locator('[aria-labelledby="lp-services"]');
   const cards = section.locator('.lp-card');
+  const carousel = section.locator('.car');
+  const track = carousel.locator('.track');
   const hero = page.locator('.lp-hero');
   const photo = hero.locator('picture img');
   const cardIds = () => cards.evaluateAll((elements) => elements.map((card) => card.dataset.serviceId));
@@ -87,6 +89,9 @@ try {
       await expect(cards).toHaveCount(5);
       assert.deepEqual(await cardIds(), ids);
       assert.deepEqual(await snapshot(), before);
+      const colors = await cards.evaluateAll((elements) => elements.map((card) => getComputedStyle(card).backgroundColor));
+      assert.equal(new Set(colors.slice(0, 3)).size, 3);
+      assert.deepEqual(colors.slice(3), [colors[0], colors[0]]);
       const pricedCards = [0, 1, 2, 4];
       for (const [i, cardIndex] of pricedCards.entries()) {
         await expect(cards.nth(cardIndex).locator('dd .price')).toHaveText(sale[i]);
@@ -110,12 +115,51 @@ try {
 
       for (const width of [320, 390, 768, 1280]) {
         await page.setViewportSize({ width, height: 850 });
+        await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.deepEqual(await cards.evaluateAll((elements) => elements.flatMap((card) => {
           const bounds = card.getBoundingClientRect();
           const content = card.querySelectorAll('.bd h3, .bd p, dl, dt, dd, .price, s');
-          return Array.from(content).some((element) => element.getBoundingClientRect().right > bounds.right + 1 ||
-            element.scrollWidth > element.clientWidth + 1 && element.clientWidth > 0) ? [card.dataset.serviceId] : [];
+          return Array.from(content).flatMap((element) => {
+            const outside = element.getBoundingClientRect().right - bounds.right;
+            const overflow = element.scrollWidth - element.clientWidth;
+            return outside > 1 || overflow > 1 && element.clientWidth > 0
+              ? [{ id: card.dataset.serviceId, tag: element.tagName, outside, overflow }] : [];
+          });
         })), [], `${locale} ${width}px card overflow`);
+        await expect.poll(async () => track.evaluate((el) => {
+          el.scrollTo({ left: 0, behavior: 'instant' });
+          return el.scrollLeft;
+        }), { message: `${locale} ${width}px carousel starts at the first card` }).toBe(0);
+        const prev = carousel.getByRole('button', { name: messages.a11y.carousel.prev });
+        const next = carousel.getByRole('button', { name: messages.a11y.carousel.next });
+        const progress = carousel.locator('.prog i');
+        await expect(prev, `${locale} ${width}px previous arrow at start`).toBeDisabled();
+        await expect(next).toBeEnabled();
+        await expect.poll(() => progress.evaluate((el) => el.style.width)).not.toBe('');
+        const initialProgress = await progress.evaluate((el) => el.style.transform);
+        await next.press('Enter');
+        await expect.poll(() => track.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+        await expect.poll(() => progress.evaluate((el) => el.style.transform)).not.toBe(initialProgress);
+        await expect(prev).toBeEnabled();
+        await prev.press('Space');
+        await expect.poll(() => track.evaluate((el) => el.scrollLeft), { message: `${locale} ${width}px previous arrow returns to start` }).toBe(0);
+      }
+
+      await page.setViewportSize({ width: 390, height: 850 });
+      await track.scrollIntoViewIfNeeded();
+      const box = await track.boundingBox();
+      const y = Math.round(box.y + box.height / 2);
+      const client = await page.context().newCDPSession(page);
+      try {
+        await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 300, y }] });
+        for (const x of [250, 200, 150, 100, 50]) {
+          await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+        }
+        await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await expect.poll(() => track.evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+      } finally {
+        await client.detach();
       }
 
       const response = await fetch(`${origin}/api/catalog/services?locale=${locale}`);
@@ -128,6 +172,7 @@ try {
       await page.goto(`${origin}/${locale}/lp/b/`);
       await expect(cards).toHaveCount(3);
       await expect(section.locator('[data-service-id]')).toHaveCount(0);
+      await expect(carousel).toHaveCount(0);
     }
     assert.equal(logs().match(/\[catalog-fixture\]/g)?.length, 2);
   });
@@ -156,7 +201,7 @@ try {
     });
   }
   assert.deepEqual(browserRequests, []);
-  console.log('Landing A catalog: RU/EN order, prices, fallbacks, shared cache and responsive hero: OK');
+  console.log('Landing A catalog: RU/EN order, prices, cache, responsive hero and carousel controls: OK');
 } finally {
   await browser?.close();
   await fs.rm(directory, { recursive: true, force: true });

@@ -626,12 +626,12 @@ test('service cards on 320–1024: cards inside the list, no split words, demo p
       const found = await page.evaluate(() => {
         const out: string[] = [];
         const section = document.querySelector('[aria-labelledby="lp-services"]')!;
-        const list = section.querySelector('.lp-cards');
+        const list = section.querySelector('.car .track, .lp-cards');
         const live = document.querySelector('.lp[data-variant="a"]');
         if (!list) return live && section.querySelector('[role="status"]') ? out : ['missing service cards or catalog status'];
         const lb = list.getBoundingClientRect();
         const carousel = getComputedStyle(list).overflowX !== 'visible';
-        for (const card of document.querySelectorAll<HTMLElement>('.lp-cards .lp-card')) {
+        for (const card of list.querySelectorAll<HTMLElement>('.lp-card')) {
           // the price and the old price on one line: their vertical centres meet (works with or without the .price-row wrapper)
           const pr = card.querySelector('dd .price')?.getBoundingClientRect(), old = card.querySelector('dd s')?.getBoundingClientRect();
           if (!live && pr && old && Math.abs((pr.top + pr.bottom) / 2 - (old.top + old.bottom) / 2) > 6) out.push(`price «${card.querySelector('dd')!.textContent!.replace(/\s+/g, ' ').trim()}»: the old price on another line`);
