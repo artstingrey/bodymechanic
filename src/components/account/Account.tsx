@@ -164,7 +164,7 @@ const RESEND_S = 60;
 export function Account() {
   const t = useTranslations();
   const locale = useLocale() as Locale;
-  const [phone, setPhone] = useState(''); // PhoneField puts «+971 » on focus
+  const [phone, setPhone] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState('');
   const [now, setNow] = useState(() => Date.now());
@@ -203,9 +203,9 @@ export function Account() {
       <form noValidate onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
         <p>{t('account.login.lead')}</p>
         <PhoneField id="acc-phone" label={t('forms.field.phone')} required placeholder={t('forms.field.phonePlaceholder')} hint={t('forms.field.phoneHint')}
-          value={phone} disabled={codeSent} error={msg('acc-phone')} onPrefill={setPhone}
+          value={phone} disabled={codeSent} error={msg('acc-phone')}
           onChange={(e) => { setPhone(e.target.value); if (v.errors['acc-phone']) v.field('acc-phone', rules.phone(e.target.value)); }}
-          onBlur={(e) => { const c = rules.phone(e.target.value); v.field('acc-phone', c, c !== 'required'); }} />
+          onBlur={(e) => v.field('acc-phone', rules.phone(e.target.value))} />
         {codeSent ? (
           <>
             <p role="status">{t('account.login.codeNotice')}</p>

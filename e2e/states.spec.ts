@@ -571,7 +571,7 @@ test.describe('form validation (R-CODE-02 F-05)', () => {
     await expect(email).not.toHaveAttribute('aria-invalid', 'true');
     await page.locator('#qf-phone').fill('+971 5012');
     await page.locator('#qf-phone').blur();
-    await expectFieldError(page, 'qf-phone', E.phoneInvalid.split('+')[0].trim());
+    await expectFieldError(page, 'qf-phone', E.phoneInvalid);
     expectClean(await g.problems(), 'home form validation');
   });
 
@@ -593,7 +593,7 @@ test.describe('form validation (R-CODE-02 F-05)', () => {
     for (const id of ['c-consent', 'c-health']) await page.locator(`#${id}`).check();
     await next.click();
     await expect(page.locator('#c-phone')).toBeFocused();
-    await expectFieldError(page, 'c-phone', E.phoneInvalid.split('+')[0].trim());
+    await expectFieldError(page, 'c-phone', E.phoneInvalid);
     await expectFieldError(page, 'c-age', E.ageRange.replace('{min}', '1').replace('{max}', '120'));
     await page.locator('#c-phone').fill('+971 50 123 45 67');
     await page.locator('#c-age').fill('34');
@@ -612,7 +612,7 @@ test.describe('form validation (R-CODE-02 F-05)', () => {
     await expectFieldError(page, 'acc-phone', E.required);
     await page.locator('#acc-phone').fill('123');
     await page.getByRole('button', { name: en.account.login.getCode }).click();
-    await expectFieldError(page, 'acc-phone', E.phoneInvalid.split('+')[0].trim());
+    await expectFieldError(page, 'acc-phone', E.phoneInvalid);
     await page.locator('#acc-phone').fill('+971501234567');
     await page.getByRole('button', { name: en.account.login.getCode }).click();
     await page.getByRole('button', { name: en.account.login.submit }).click();

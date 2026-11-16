@@ -35,8 +35,8 @@ export function StepContacts({ flow }: { flow: Flow }) {
             onChange={(e) => { updateContact({ fullname: e.target.value }); live('c-name', rules.name(e.target.value)); }}
             onBlur={(e) => contactField('c-name', rules.name(e.target.value), !!e.target.value)} />
           <PhoneField label={t('forms.field.phone')} required maxLength={32} placeholder={t('forms.field.phonePlaceholder')} hint={t('forms.field.phoneHint')} id="c-phone" error={contactMsg('c-phone')} value={c.phone}
-            onChange={(e) => { updateContact({ phone: e.target.value }); live('c-phone', rules.phone(e.target.value)); }} onPrefill={(v) => updateContact({ phone: v })}
-            onBlur={(e) => contactField('c-phone', rules.phone(e.target.value), !!rules.phone(e.target.value) && rules.phone(e.target.value) !== 'required')} />
+            onChange={(e) => { updateContact({ phone: e.target.value }); live('c-phone', rules.phone(e.target.value)); }}
+            onBlur={(e) => contactField('c-phone', rules.phone(e.target.value))} />
         </div>
         <div className="row2">
           <TextField label={t('forms.field.email')} type="email" required maxLength={254} autoComplete="email" placeholder={t('forms.field.emailPlaceholder')} id="c-email" error={contactMsg('c-email')} value={c.email ?? ''}

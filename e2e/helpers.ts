@@ -271,17 +271,12 @@ export async function testHook(page: Page, opts: { gtmId?: string } = {}) {
   }, opts);
 }
 
-/** Zones from the list → service → any specialist → first free day, first non-13:30 slot → contacts → step 6 */
-/**
- * Fill a PhoneField: it puts «+971 » on focus (state update) — under heavy parallel load that render can land after a
- * fill done in the same breath and swallow it. Focus, wait for the prefix, fill, check the value.
- */
 export async function fillPhone(field: import('@playwright/test').Locator, value: string) {
-  await expect(async () => { await field.focus(); await expect(field).toHaveValue(/^\+971/, { timeout: 1000 }); }).toPass();
   await field.fill(value);
   await expect(field).toHaveValue(value);
 }
 
+/** Zones from the list → service → any specialist → first free day, first non-13:30 slot → contacts → step 6 */
 export async function toReview(page: Page, opts: { zones?: number; slot1330?: boolean } = {}) {
   const boxes = page.locator('#zone-list input[type="checkbox"]');
   for (let i = 0; i < (opts.zones ?? 1); i++) await boxes.nth(i).check();

@@ -2,7 +2,7 @@
 /**
  * Error state of one form (R-CODE-02 F-05): `submit(errors)` shows all errors at once and moves the focus to the first
  * invalid field; after the first attempt every `field(id, code)` call (blur / change) keeps that field's error current.
- * Before the first attempt only a filled-in field is checked on blur (no «required» nagging while the visitor tabs through).
+ * Callers can defer errors for empty fields until the first submit attempt by passing filled=false.
  *
  * A blur caused by a mouse / touch press (clicking the next checkbox…) must not move the layout under the pointer: a new
  * error line above the target would shift it between pointerdown and pointerup and the click would be lost. While a
@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pointercancel', up, true);
 }
 /** run after the current click (bubble phase on window = after React's handlers), with a fallback when no click comes */
-function afterPress(run: () => void) {
+export function afterPress(run: () => void) {
   if (!pressed) { run(); return; }
   let done = false;
   const go = () => { if (done) return; done = true; window.removeEventListener('click', go); window.clearTimeout(tm); run(); };

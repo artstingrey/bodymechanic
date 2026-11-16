@@ -133,7 +133,9 @@ globalThis.fetch = async (input, init) => {
   if (needsConcreteStaff) assert.equal(appointment.staff_id, 91601);
   assert.deepEqual(Object.keys(payload).sort(), ['appointments', ...('comment' in payload ? ['comment'] : []), 'email', 'fullname', 'phone']);
   assert.match(payload.email, /^visitor\d*@example\.test$/);
-  assert.match(payload.phone, /^\+97150\d{7}$/);
+  if (scenario === 'phone-uae') assert.equal(payload.phone, '+971501234567');
+  else if (scenario === 'phone-uk') assert.equal(payload.phone, '+442079460958');
+  else assert.match(payload.phone, /^\+97150\d{7}$/);
   assert.equal(payload.fullname, 'fixture-private-fullname');
   if ('comment' in payload) {
     assert.ok(typeof payload.comment === 'string' && payload.comment.length <= 1000);

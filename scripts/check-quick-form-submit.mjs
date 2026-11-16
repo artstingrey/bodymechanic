@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import { checkPhoneField } from '../e2e/fixtures/phone-field.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-quick-form-submit-'));
@@ -68,7 +69,12 @@ async function openForm(browser, origin, locale, analytics, staffId, suffix, sel
   const phone = `+97150${String(suffix).padStart(7, '0')}`;
   const email = `visitor${suffix}@example.test`;
   await form.locator('#qf-name').fill('fixture-private-fullname');
-  await form.locator('#qf-phone').fill(phone);
+  const field = form.locator('#qf-phone');
+  if (suffix === 1 || suffix === 2) {
+    await checkPhoneField(field, { copy: copy.forms, submit: () => button.click() });
+    assert.deepEqual(requests, []);
+  }
+  await field.fill(phone);
   await form.locator('#qf-age').fill('38');
   await form.locator('textarea').fill('fixture-private-note');
   await form.locator('#qf-consent').check();
@@ -82,6 +88,46 @@ async function assertConfirmed(page, copy) {
   await expect(receipt).toContainText('00:20');
   await expect(receipt).toContainText('Example specialist');
   await expect(receipt).not.toContainText(copy.home.form.anyStaffOption);
+}
+
+async function checkLeadForm(form, copy) {
+  await form.locator('input[name="name"]').fill('Fixture visitor');
+  const submit = () => form.locator('button[type="submit"]').click();
+  await checkPhoneField(form.locator('input[name="phone"]'), { copy: copy.forms, submit, invalid: copy.lp.error.phone });
+  await submit();
+  await expect(form.getByRole('status')).toContainText(copy.lp.result.title);
+}
+
+async function checkAccountAndLandings(origin, locale) {
+  const copy = messages[locale];
+  const page = await browser.newPage({ viewport: { width: 390, height: 850 } });
+  try {
+    await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({
+      necessary: true, analytics: false, marketing: false, at: 'fixture',
+    })));
+    await page.route((url) => url.origin !== origin, (route) => route.abort());
+    await page.goto(`${origin}/${locale}/account/`, { waitUntil: 'networkidle' });
+    const getCode = page.getByRole('button', { name: copy.account.login.getCode });
+    await checkPhoneField(page.locator('#acc-phone'), { copy: copy.forms, submit: () => getCode.click() });
+    await getCode.click();
+    await page.locator('#acc-code').fill('1234');
+    await page.getByRole('button', { name: copy.account.login.submit }).click();
+    await expect(page.getByTestId('account-record')).toHaveCount(3);
+
+    for (const variant of ['a', 'b']) {
+      // Each variant exercises three submissions. Reset the mock's per-tab limit between variants.
+      await page.evaluate(() => sessionStorage.clear());
+      const landing = `${origin}/${locale}/lp/${variant}/`;
+      await page.goto(landing, { waitUntil: 'networkidle' });
+      await checkLeadForm(page.locator('#lp-f1'), copy);
+      await checkLeadForm(page.locator('#lp-f2'), copy);
+      await page.goto(`${landing}?form=sheet`, { waitUntil: 'networkidle' });
+      await page.locator('.lp-hero-cta button').click();
+      await checkLeadForm(page.locator('#lp-fs'), copy);
+    }
+  } finally {
+    await page.close();
+  }
 }
 
 function run(check) {
@@ -109,6 +155,10 @@ try {
   await scenario('empty-201');
   browser = await chromium.launch({ channel: 'chrome', args: ['--enable-unsafe-swiftshader'] });
   await run(async (origin) => {
+    for (const locale of ['en', 'ru']) {
+      await checkAccountAndLandings(origin, locale);
+      console.log(`Account and landing phone fields: manual entry, paste, autofill and validation passed in ${locale.toUpperCase()}`);
+    }
     const en = await openForm(browser, origin, 'en', true, 0, 1);
     await en.button.click();
     await expect(en.form.locator('#qf-email-err')).toHaveText(en.copy.forms.error.required);

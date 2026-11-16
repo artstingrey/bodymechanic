@@ -18,7 +18,7 @@ const date = new Date(Date.now() + 7 * day).toISOString().slice(0, 10);
 const datetime = `${new Date(Date.now() + 6 * day).toISOString().slice(0, 10)}T23:20:00.123+03:00`;
 const bookingOrigin = 'https://booking.fixture.test';
 const ipHeader = 'x-fixture-ip';
-const secrets = /fixture-partner-token|fixture-record-hash-secret|fixture-private-|visitor\d*@example\.test|\+97150\d{7}/;
+const secrets = /fixture-partner-token|fixture-record-hash-secret|fixture-private-|visitor\d*@example\.test|\+97150\d{7}|\+442079460958/;
 const env = {
   ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
   ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
@@ -171,6 +171,12 @@ try {
       const result = await post(origin, input, { status: 400, code: 'INVALID_FIELDS' });
       assert.deepEqual(result.error.fields, ['email']);
     }
+    for (const phone of ['', '0501234567', '+971', '+44 20', '123+442079460958', '+971+442079460958']) {
+      const input = request();
+      input.contact.phone = phone;
+      const result = await post(origin, input, { status: 400, code: 'INVALID_FIELDS' });
+      assert.deepEqual(result.error.fields, ['phone']);
+    }
     const invalid = await post(origin, request({ consent: false, datetime: '2026-02-31T10:00:00+04:00', age: 121, condition: 'x'.repeat(1001) }), {
       status: 400, code: 'INVALID_FIELDS',
     });
@@ -184,6 +190,14 @@ try {
     assert.deepEqual((await post(origin, successful, { status: 201 })).data, confirmed);
     await post(origin, { ...successful, locale: 'ru' }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
     assert.equal((await history()).filter((call) => call === createCall).length, 1);
+
+    for (const [fixture, phone] of [['phone-uae', '+971 50 123-45-67'], ['phone-uk', '+44 20 7946-0958']]) {
+      await scenario(fixture);
+      const input = request();
+      input.contact.phone = phone;
+      assert.deepEqual((await post(origin, input, { status: 201 })).data, confirmed);
+      assert.equal((await history()).filter((call) => call === createCall).length, 1);
+    }
 
     await scenario('empty-201');
     const details = request({ age: 33, condition: 'fixture-private-note ' + '😀x'.repeat(325) });

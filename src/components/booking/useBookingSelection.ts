@@ -22,7 +22,7 @@ export interface Selection {
 }
 const KEY = 'bm.bookingSteps';
 const VERSION = 2;
-const EMPTY: Selection = { serviceId: null, staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false, health: false } }; // phone: PhoneField puts «+971 » on focus
+const EMPTY: Selection = { serviceId: null, staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false, health: false } };
 /** every write stamps the time of the change: the name and the phone are dropped a day after it (lib/booking/draft-ttl, Ж-5) */
 const persist = (next: Selection) => { try { sessionStorage.setItem(KEY, JSON.stringify({ ...next, version: VERSION, savedAt: Date.now() })); } catch { /* ignore */ } };
 

@@ -158,7 +158,9 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-form .field { display: grid; gap: 5px; align-content: start; } /* two columns (≥ 768): an error under one field must not push the other field's input down */
 .lp-form .field label { font-size: 14px; font-weight: 700; }
 .lp-form .input input { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: var(--r-field); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--field-border); font: 400 16px/1 var(--font-sans); color: var(--text); transition: box-shadow var(--d-fade) var(--e-out); }
+.lp-form .input input[type="tel"] { padding-inline: 8px; }
 .lp-form .input input::placeholder { color: var(--muted); opacity: 1; }
+.lp-form .input input[type="tel"]::placeholder { font-size: .8125rem; letter-spacing: -.02em; }
 @media (hover: hover) { .lp-form .input input:hover { box-shadow: inset 0 0 0 1.5px var(--text); } }
 .lp-form .input input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .lp-form .input[data-invalid="true"] input { box-shadow: inset 0 0 0 2px var(--error); }
@@ -413,7 +415,7 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
   .lp-media .tag { top: auto; right: auto; left: 12px; bottom: 10px; }
   .lp-copy .offer-pill, .lp-copy .ex--copy { display: inline-flex; }
   .lp h1 { font-size: 44px; }
-  .lp-form .fields { grid-template-columns: 1fr 1fr; }
+  .lp-form .fields { grid-template-columns: minmax(0, 1fr) minmax(min(14.5rem, 66%), 1fr); }
   .lp-why { grid-template-columns: repeat(3, 1fr); column-gap: 24px; border-top: 0; }
   .lp-why li { border-top: 1px solid var(--line); border-bottom: 0; }
   .lp-cards { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr); overflow: visible; margin-inline: 0; padding-inline: 0; }

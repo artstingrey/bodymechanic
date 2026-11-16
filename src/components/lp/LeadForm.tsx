@@ -1,6 +1,6 @@
 'use client';
 /**
- * Landing lead form (lp-brief §2, task 01a1b325): name + «Телефон / WhatsApp» (+971 on focus) → «Подобрать время»; the
+ * Landing lead form (lp-brief §2, task 01a1b325): name + «Телефон / WhatsApp» → «Подобрать время»; the
  * optional chips are folded after the button in «Уточнить (необязательно)», with the consent for the marks required only
  * when a chip is selected. Validation like the site (rules from lib/forms): aria-invalid + error text per field, a summary
  * role=alert for two or more errors, focus on the first error. One idempotency key per form (a double tap or a retry never
@@ -12,6 +12,7 @@ import { PhoneField, TextField } from '@/components/ui/Field';
 import { Checkbox } from '@/components/ui/Choice';
 import { Icon } from '@/components/ui/Icon';
 import { normalizePhone, rules } from '@/lib/forms/validate';
+import { afterPress } from '@/lib/forms/useFieldErrors';
 import { newKey, postLead } from '@/lib/lp/lead';
 import { placementOf, trackFormError, trackLead } from '@/lib/lp/track';
 
@@ -36,10 +37,24 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
   const summary = useRef<HTMLDivElement>(null);
   const busy = useRef(false); // a second tap lands before React re-renders the busy state
 
+  const phoneError = (value: string) => {
+    const code = rules.phone(value);
+    if (code === 'required') return tf('error.required');
+    if (code) return t('error.phone');
+  };
+
+  const validatePhoneField = (value: string) => {
+    const error = phoneError(value);
+    const showError = () => setErrors((current) => ({ ...current, phone: error }));
+    if (error) afterPress(showError);
+    else showError();
+  };
+
   const validate = (): Err => {
     const e: Err = {};
     if (rules.name(name)) e.name = t('error.name');
-    if (rules.phone(phone)) e.phone = t('error.phone');
+    const invalidPhone = phoneError(phone);
+    if (invalidPhone) e.phone = invalidPhone;
     if (picked.length && !detailsConsent) e.details = t('error.consentDetails');
     return e;
   };
@@ -108,10 +123,11 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
           value={name} onChange={(e) => { setName(e.target.value); if (errors.name) setErrors((x) => ({ ...x, name: undefined })); }}
           onBlur={() => { if (attempt) setErrors((x) => ({ ...x, name: rules.name(name) ? t('error.name') : undefined })); }}
           error={errors.name} />
-        <PhoneField id={`${id}-phone`} name="phone" label={t('form.phone')} placeholder={tf('field.phonePlaceholder')} aria-required="true"
-          value={phone} onPrefill={setPhone}
-          onChange={(e) => { setPhone(e.target.value); if (errors.phone) setErrors((x) => ({ ...x, phone: undefined })); }}
-          onBlur={() => { if (attempt) setErrors((x) => ({ ...x, phone: rules.phone(phone) ? t('error.phone') : undefined })); }}
+        <PhoneField id={`${id}-phone`} name="phone" label={t('form.phone')} placeholder={tf('field.phonePlaceholder')} required
+          {...(!errors.phone && { 'aria-describedby': `${id}-phone-hint` })}
+          value={phone}
+          onChange={(e) => { setPhone(e.target.value); if (errors.phone) validatePhoneField(e.target.value); }}
+          onBlur={(e) => validatePhoneField(e.target.value)}
           error={errors.phone} />
       </div>
       <div className="acts">
@@ -125,6 +141,7 @@ export function LeadForm({ id, variant, chips, title, submitLabel, waHref, priva
           <p>{t('error.server')}</p>
         </div>
       ) : null}
+      <p className="hint" id={`${id}-phone-hint`}>{tf('field.phoneHint')}</p>
       <p className="resp">{t('form.phoneHint')}</p>{/* no WhatsApp icon here: two mentions on the first screen are enough (design audit 12) */}
       <details className="chips-d" id={`${id}-details-box`}>
         <summary>{t('form.details.toggle')}</summary>

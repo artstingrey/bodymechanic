@@ -213,8 +213,8 @@
       "name": "Name",
       "namePlaceholder": "What should we call you?",
       "phone": "Phone",
-      "phonePlaceholder": "+971 XX XXX XXXX",
-      "phoneHint": "International format, +971 by default",
+      "phonePlaceholder": "+[country code][phone number]",
+      "phoneHint": "Start with + and your country code.",
       "email": "Email",
       "emailPlaceholder": "name@example.com",
       "age": "Age",
@@ -237,7 +237,7 @@
     "error": {
       "required": "Please fill in this field",
       "nameShort": "Enter your name (at least 2 characters)",
-      "phoneInvalid": "Check the number: enter it in international format, for example +971…",
+      "phoneInvalid": "Enter a complete phone number with + and your country code.",
       "emailInvalid": "Check your email address",
       "ageInvalid": "Enter your age as a number",
       "ageRange": "Age must be between {min} and {max}",
@@ -1149,7 +1149,7 @@
     },
     "error": {
       "name": "Please tell us what to call you",
-      "phone": "Please check the number: international format, for example +971 50 123 4567",
+      "phone": "Enter a complete phone number with + and your country code.",
       "consent": "We need your consent to reply",
       "consentDetails": "Please confirm consent to share your selections, or clear them",
       "summary": "Please check these fields: {fields}",

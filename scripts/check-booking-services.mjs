@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import { checkPhoneField } from '../e2e/fixtures/phone-field.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bm-booking-services-'));
@@ -319,13 +320,17 @@ async function checkContacts(page, booking, messages) {
   await page.goto(`${booking}?step=7&service=${sports}&staff=91602&date=2026-12-01&time=00:20`);
   await expect(page).toHaveURL(`${booking}?step=5`);
   await expect(page.locator('#c-email')).toHaveAttribute('required', '');
+  const phone = page.locator('#c-phone');
+  await checkPhoneField(phone, { copy: messages.forms, submit: () => save.click() });
+  await phone.fill('');
   await save.click();
   await expect(page.locator('#c-name')).toBeFocused();
   for (const id of ['name', 'phone', 'email', 'consent', 'health']) {
     await expect(page.locator(`#c-${id}`)).toHaveAttribute('aria-invalid', 'true');
   }
   await page.locator('#c-name').fill('  Fixture visitor  ');
-  await page.locator('#c-phone').fill('+971 50 123 4567');
+  const number = booking.includes('/ru/') ? '+971 50 123-45-67' : '+44 20 7946-0958';
+  await phone.fill(number);
   await page.locator('#c-email').fill('invalid');
   await page.locator('#c-consent').check();
   await page.locator('#c-health').check();
@@ -342,7 +347,7 @@ async function checkContacts(page, booking, messages) {
   await expect(page).toHaveURL(`${booking}?step=5`);
   await page.reload();
   await expect(page.locator('#c-name')).toHaveValue('Fixture visitor');
-  await expect(page.locator('#c-phone')).toHaveValue('+971501234567');
+  await expect(phone).toHaveValue(number.replace(/[ -]/g, ''));
   await expect(page.locator('#c-age')).toHaveValue('');
   await expect(page.locator('#c-health')).toBeChecked();
 }

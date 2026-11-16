@@ -39,7 +39,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
   const fieldText = (id: string) => errors[id] ? t(`forms.error.${errors[id]}`, messageArgs(errors[id])) : undefined;
   const bind = (id: string, rule: (el: HTMLInputElement) => ErrorCode | null) => ({
     id, disabled: locked, error: fieldText(id),
-    onBlur: (e: FocusEvent<HTMLInputElement>) => field(id, rule(e.currentTarget), !!e.currentTarget.value || id === 'qf-email'),
+    onBlur: (e: FocusEvent<HTMLInputElement>) => field(id, rule(e.currentTarget), !!e.currentTarget.value || id === 'qf-email' || id === 'qf-phone'),
     onChange: (e: ChangeEvent<HTMLInputElement>) => { if (errors[id]) field(id, rule(e.currentTarget)); },
   });
   const labels = {
