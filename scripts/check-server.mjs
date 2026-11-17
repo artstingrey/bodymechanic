@@ -5,7 +5,7 @@ import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
-export async function withProductionServer(check, { env = {}, preload, cwd = process.cwd() } = {}) {
+export async function withProductionServer(check, { env = {}, preload = '', cwd = process.cwd() } = {}) {
   const socket = createServer().listen(0, '127.0.0.1');
   await once(socket, 'listening');
   const { port } = socket.address();

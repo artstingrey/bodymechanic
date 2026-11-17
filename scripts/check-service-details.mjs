@@ -281,11 +281,11 @@ try {
     assert.equal(calls(logs), 4, 'two failures and one shared catalog load per locale');
     const sitemap = (await request(origin, '/sitemap.xml', 200)).text;
     for (const locale of ['en', 'ru']) {
-      for (const slug of ['sports', ...newPins.map(([, slug]) => slug)]) {
+      for (const slug of ['sports', 'service-91201', ...newPins.map(([, slug]) => slug)]) {
         assert.ok(sitemap.includes(`${paths.page(locale, slug)}</loc>`), slug);
       }
     }
-    assert.doesNotMatch(sitemap, /service-13982355|service-91201/);
+    assert.doesNotMatch(sitemap, /service-13982355/);
     await browserChecks(origin);
   });
 

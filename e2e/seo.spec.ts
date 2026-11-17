@@ -8,6 +8,11 @@
  *  - UTM of the first visit → sessionStorage without consent, cookie for 30 days after consent → the record comment.
  */
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+import { randomInt } from 'node:crypto';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import en from '../messages/en.json';
 import ru from '../messages/ru.json';
 import { LOCALES, builtPages, templateOf, guard, expectClean, seedConsent, toReview, plainSpaces, testHook, entryProbe, withChoice, CHOICE_IN_URL, type EntrySeen } from './helpers';
@@ -151,24 +156,148 @@ test('meta: one canonical, hreflang ru / en / x-default, unique title and descri
   expect([...origins], 'one origin for every canonical').toHaveLength(1);
 });
 
-test('sitemap.xml: every public page in both languages with ru / en / x-default; robots.txt points to it', async ({ request }) => {
-  const xml = await html(request, '/sitemap.xml');
-  const urls = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => ({
-    loc: m[1].match(/<loc>(.*?)<\/loc>/)![1],
-    alt: Object.fromEntries([...m[1].matchAll(/hreflang="([^"]+)" href="([^"]+)"/g)].map((a) => [a[1], a[2]])),
-  }));
-  const origin = new URL(urls[0].loc).origin;
-  const realDetails = SERVICES.filter(({ slug }) => catalogServiceId(slug) !== undefined).map(({ slug }) => `services/${slug}/`);
-  const expected = LOCALES.flatMap((l) => [...builtPages(l), ...realDetails]
-    .filter((p) => !p.startsWith('account/') && !p.startsWith('lp/')).map((p) => `${origin}/${l}/${p}`));
-  expect(urls.map((u) => u.loc).sort()).toEqual(expected.sort());
-  for (const u of urls) {
-    const p = u.loc.slice(origin.length).replace(/^\/(en|ru)\//, '');
-    expect(u.alt, u.loc).toEqual({ ru: `${origin}/ru/${p}`, en: `${origin}/en/${p}`, 'x-default': `${origin}/en/${p}` });
+const sitemapPublic = ['/', '/booking/', '/services/', '/prices/', '/team/', '/contacts/', '/privacy/', '/terms/'];
+const inBothLocales = (paths: string[]) => LOCALES.flatMap((locale) => paths.map((p) => `/${locale}${p}`));
+
+async function readSitemap(request: APIRequestContext, page: Page, url = '/sitemap.xml') {
+  const response = await request.get(url, { maxRedirects: 0 });
+  expect(response.status()).toBe(200);
+  expect(response.headers()['content-type']).toMatch(/^application\/xml\b/);
+  return page.evaluate((xml) => {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const ns = 'http://www.sitemaps.org/schemas/sitemap/0.9';
+    if (doc.documentElement.localName !== 'urlset' || doc.documentElement.namespaceURI !== ns || doc.querySelector('parsererror')) {
+      throw new Error('Invalid sitemap XML');
+    }
+    return Array.from(doc.getElementsByTagNameNS(ns, 'url'), (entry) => ({
+      loc: entry.getElementsByTagNameNS(ns, 'loc')[0]?.textContent ?? '',
+      alt: Array.from(entry.getElementsByTagNameNS('http://www.w3.org/1999/xhtml', 'link'), (link) => ({
+        rel: link.getAttribute('rel'), lang: link.getAttribute('hreflang'), href: link.getAttribute('href'),
+      })),
+    }));
+  }, await response.text());
+}
+
+function checkSitemap(urls: Awaited<ReturnType<typeof readSitemap>>, origin: string, expectedPaths: string[]) {
+  const expected = new Set(expectedPaths.map((p) => origin + p));
+  expect(urls.map(({ loc }) => loc).sort()).toEqual([...expected].sort());
+  for (const { loc, alt } of urls) {
+    const p = new URL(loc).pathname.replace(/^\/(ru|en)/, '');
+    const links = LOCALES.map((lang) => ({ rel: 'alternate', lang: String(lang), href: `${origin}/${lang}${p}` }))
+      .filter(({ href }) => expected.has(href));
+    if (expected.has(`${origin}/en${p}`)) links.push({ rel: 'alternate', lang: 'x-default', href: `${origin}/en${p}` });
+    const sortByLang = (a: { lang: string | null }, b: { lang: string | null }) => String(a.lang).localeCompare(String(b.lang));
+    expect(alt.sort(sortByLang), loc).toEqual(links.sort(sortByLang));
   }
+}
+
+test('sitemap.xml: public pages and working language alternates; robots.txt points to it', async ({ request, page }) => {
+  const urls = await readSitemap(request, page);
   const robots = await html(request, '/robots.txt');
   expect(robots).toMatch(/Disallow:\s*\/\s*$/im); // prototype: closed (DEL-13)
+  const origin = new URL(urls[0].loc).origin;
   expect(robots).toContain(`Sitemap: ${origin}/sitemap.xml`);
+  const paths = inBothLocales(sitemapPublic);
+  if (process.env.GATE_BASE_URL) {
+    // A remote gate can have Altegio configured. Allow only canonical catalog detail paths.
+    for (const { loc } of urls) {
+      const pathname = new URL(loc).pathname;
+      const service = pathname.match(/^\/(?:ru|en)\/services\/([^/]+)\/$/)?.[1];
+      if ((service && catalogServiceId(service) !== undefined) || /^\/(?:ru|en)\/team\/staff-[1-9]\d*\/$/.test(pathname)) {
+        paths.push(pathname);
+      }
+    }
+  }
+  checkSitemap(urls, origin, paths);
+});
+
+test('sitemap.xml: production catalog, cold failure, revalidation and recovery', async ({ request, page }) => {
+  test.skip(Boolean(process.env.GATE_BASE_URL), 'Requires a local production build with an Altegio fixture');
+  const { withProductionServer } = await import('../scripts/check-server.mjs');
+  const siteOrigin = new URL((await html(request, '/robots.txt')).match(/^Sitemap:\s*(\S+)/m)![1]).origin;
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-sitemap-'));
+  const services = path.join(dir, 'services');
+  const staff = path.join(dir, 'staff');
+  const preload = pathToFileURL(path.resolve('e2e/fixtures/altegio-catalog.mjs')).href;
+  const env = {
+    ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
+    ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
+    ALTEGIO_CURRENCY: 'AED',
+    CATALOG_TEST_SCENARIO: services,
+    STAFF_TEST_SCENARIO: staff,
+  };
+  const cacheFiles = new Set<string>();
+  const catalogFiles = new Set<string>();
+  const writtenFiles = (logs: string) => [...logs.matchAll(/\[catalog-cache-write\] (\w+)/g)]
+    .map(([, key]) => path.resolve('.next/cache/fetch-cache', key));
+  const start = (check: (origin: string, logs: () => string) => Promise<void>) =>
+    withProductionServer(async (origin: string, logs: () => string) => {
+      try {
+        await check(origin, logs);
+      } finally {
+        for (const file of writtenFiles(logs())) cacheFiles.add(file);
+      }
+    }, { env, preload });
+  const fixed = inBothLocales([...sitemapPublic, '/services/sports/']).concat('/ru/services/service-91204/');
+  const servicePaths = (id: number) => inBothLocales([`/services/service-${id}/`]);
+  const staffPaths = (id: number) => inBothLocales([`/team/staff-${id}/`]).concat('/en/team/staff-91216/');
+  const cold = [...fixed, ...servicePaths(91201)];
+  const full = [...cold, ...staffPaths(91214)];
+  const read = (origin: string) => readSitemap(request, page, `${origin}/sitemap.xml`);
+  async function waitForMap(origin: string, paths: string[]) {
+    await expect.poll(async () => (await read(origin)).map(({ loc }) => loc).sort())
+      .toEqual(paths.map((p) => siteOrigin + p).sort());
+    checkSitemap(await read(origin), siteOrigin, paths);
+  }
+
+  try {
+    await fs.writeFile(services, 'sitemap');
+    await fs.writeFile(staff, '500');
+    await start(async (origin, logs) => {
+      checkSitemap(await read(origin), siteOrigin, cold);
+      await fs.writeFile(staff, 'sitemap');
+      const urls = await read(origin);
+      checkSitemap(urls, siteOrigin, full);
+      for (const file of writtenFiles(logs())) catalogFiles.add(file);
+      // Open the catalog routes via the paths advertised in the XML.
+      const titles: Record<string, [string, string]> = {
+        sports: ['Спортивный массаж', 'Sports massage'],
+        'service-91201': ['Массаж из каталога', 'Catalog massage'],
+        'service-91204': ['Только в русском каталоге', ''],
+        'staff-91214': ['Taylor Example', 'Taylor Example'],
+        'staff-91216': ['', 'Robin Example'],
+      };
+      for (const { loc } of urls) {
+        const { pathname } = new URL(loc);
+        const [, locale, , slug] = pathname.split('/');
+        if (!Object.hasOwn(titles, slug)) continue;
+        const response = await request.get(origin + pathname, { maxRedirects: 0 });
+        expect(response.status(), loc).toBe(200);
+        const doc = await response.text();
+        const canonical = tags(doc, 'link').find((tag) => attr(tag, 'rel') === 'canonical');
+        expect(canonical && attr(canonical, 'href'), loc).toBe(loc);
+        const heading = doc.match(/<h1\b[^>]*>([^<]*)<\/h1>/i)?.[1] ?? '';
+        expect(plainSpaces(decode(heading)), loc).toBe(titles[slug][locale === 'ru' ? 0 : 1]);
+      }
+      expect(logs().match(/\[catalog-fixture\] sitemap /g)).toHaveLength(2);
+      expect(logs().match(/\[staff-fixture\] sitemap /g)).toHaveLength(2);
+    });
+    expect(catalogFiles.size).toBe(4);
+    // Age entries beyond the four-hour TTL. Restart to discard Next's in-memory copies.
+    const stale = new Date(Date.now() - 14_401_000);
+    await Promise.all([...catalogFiles].map((file) => fs.utimes(file, stale, stale)));
+    await fs.writeFile(services, '500');
+    await fs.writeFile(staff, 'sitemap-updated');
+    await start(async (origin) => {
+      checkSitemap(await read(origin), siteOrigin, full);
+      await waitForMap(origin, [...cold, ...staffPaths(91215)]);
+      await fs.writeFile(services, 'sitemap-updated');
+      await waitForMap(origin, [...fixed, ...servicePaths(91202), ...staffPaths(91215)]);
+    });
+  } finally {
+    await Promise.all([...cacheFiles, services, staff].map((file) => fs.rm(file, { force: true })));
+    await fs.rmdir(dir);
+  }
 });
 
 // ---------------------------------------------------------------- analytics (browser)

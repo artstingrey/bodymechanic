@@ -1,19 +1,42 @@
 import type { MetadataRoute } from 'next';
-import { locales } from '@/i18n/routing';
-import { pageUrl } from '@/lib/seo';
-import { articleSlugs, serviceSlugs, staffSlugs } from '@/lib/api';
+import { connection } from 'next/server';
+import { locales, type Locale } from '@/i18n/routing';
+import { catalogServiceSlug } from '@/lib/catalog-service-slugs';
+import { catalogStaffSlug } from '@/lib/catalog-staff-slug';
+import { pageUrl } from '@/lib/site';
+import { getCatalogServices } from '@/server/catalog/services';
+import { getCatalogStaff } from '@/server/catalog/staff';
 
-// ТЗ §14: sitemap.xml with language versions — every public page in every language, each entry with the full set of
-// alternates (ru, en, x-default → en), as search engines expect. Utility pages (booking steps 2–7, «Мои записи», record
-// links) are not listed. Static file in the export.
-export const dynamic = 'force-static';
+const publicPaths = ['/', '/booking/', '/services/', '/prices/', '/team/', '/contacts/', '/privacy/', '/terms/'];
 
-const SITEMAP_PATHS = () => ['/', '/booking/', '/services/', '/prices/', '/team/', '/journal/', '/contacts/', '/privacy/', '/terms/',
-  ...serviceSlugs().map((s) => `/services/${s}/`), ...staffSlugs().map((s) => `/team/${s}/`), ...articleSlugs().map((s) => `/journal/${s}/`)];
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Generate XML at request time so even a partial response uses the latest available catalog on the next request.
+  await connection();
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  return SITEMAP_PATHS().flatMap((p) => {
-    const languages = { ...Object.fromEntries(locales.map((l) => [l, pageUrl(l, p)])), 'x-default': pageUrl('en', p) };
-    return locales.map((l) => ({ url: pageUrl(l, p), alternates: { languages } }));
+  const paths = new Map(publicPaths.map((path) => [path, new Set<Locale>(locales)]));
+  function add(path: string, locale: Locale) {
+    const available = paths.get(path) ?? new Set<Locale>();
+    available.add(locale);
+    paths.set(path, available);
+  }
+
+  const catalogs = await Promise.all(locales.map(async (locale) => ({
+    locale,
+    results: await Promise.allSettled([getCatalogServices(locale), getCatalogStaff(locale)]),
+  })));
+  for (const { locale, results: [services, staff] } of catalogs) {
+    if (services.status === 'fulfilled') {
+      for (const { id } of services.value.data.services) add(`/services/${catalogServiceSlug(id)}/`, locale);
+    }
+    if (staff.status === 'fulfilled') {
+      for (const { id } of staff.value.data.staff) add(`/team/${catalogStaffSlug(id)}/`, locale);
+    }
+  }
+
+  return [...paths].flatMap(([path, available]) => {
+    const versions = locales.filter((locale) => available.has(locale));
+    const languages = Object.fromEntries(versions.map((locale) => [locale, pageUrl(locale, path)]));
+    if (languages.en) languages['x-default'] = languages.en;
+    return versions.map((locale) => ({ url: languages[locale], alternates: { languages } }));
   });
 }

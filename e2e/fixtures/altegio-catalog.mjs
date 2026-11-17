@@ -156,6 +156,23 @@ globalThis.fetch = async (input, init) => {
     return new Response(body, { status: Number(scenario), headers: { 'Retry-After': '5' } });
   }
   if (scenario === 'empty') return Response.json({ success: true, data: staff ? [] : { services: [], categories: [] } });
+  if (scenario === 'sitemap' || scenario === 'sitemap-updated') {
+    const ru = language === 'ru-RU';
+    const updated = scenario === 'sitemap-updated';
+    if (staff) return Response.json({ success: true, data: [
+      { id: updated ? 91215 : 91214, name: updated ? 'Jamie Example' : 'Taylor Example' },
+      ...(!ru ? [{ id: 91216, name: 'Robin Example' }] : []),
+      { id: 91220, name: 'Hidden Example', hidden: 1 },
+      { id: 91221, name: 'Dismissed Example', fired: 1 },
+    ] });
+    const numeric = { id: updated ? 91202 : 91201, title: ru ? 'Массаж из каталога' : 'Catalog massage' };
+    return Response.json({ success: true, data: { services: [
+      { id: 13982355, title: ru ? 'Спортивный массаж' : 'Sports massage' },
+      numeric,
+      ...(!updated ? [numeric] : []),
+      ...(ru ? [{ id: 91204, title: 'Только в русском каталоге' }] : []),
+    ] } });
+  }
   if (scenario === 'service-detail' || scenario === 'service-detail-renamed') {
     assert.equal(staff, false);
     const ru = language === 'ru-RU';
