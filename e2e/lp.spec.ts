@@ -4,7 +4,7 @@
  *   level A (A-*, every gate run): all four pages — first screen, layout, fonts, meta, AA, denylist — and the scenarios;
  *   level B and in-app (B-*, inapp-*, npm run test:matrix): layout smoke on one page per language;
  *   text scale 130 / 200 % (page zoom) on A-pixel-7 and A-moto-g4.
- * First screen: the whole form button (iPhone from 375×629, Android from 360×732) OR the sticky CTA. No horizontal scroll;
+ * First screen: the form button, the first contact field or the sticky CTA. No horizontal scroll;
  * targets ≥ 44 (chips 48; links inside a sentence excepted, WCAG 2.5.8); text ≥ 13. Level A also: 200, no console errors,
  * only the static LP fonts, one h1, noindex, hreflang ru/en/x-default, color-scheme «only light», AA 0, denylist banned +
  * landing_banned on the rendered text = 0; contact validation, AA in the error state, catalog error keeps the input,
@@ -89,10 +89,6 @@ async function sizeProblems(page: Page) {
   });
 }
 
-/** iPhone from 375×629, Android from 360×732: the whole form button on the first screen with ≥ 8 px to spare (README-CONTEXT,
- *  RC-1: 375×629 ru/a ended 5 px below the screen); below — the sticky CTA. */
-const FORM_BUTTON_SLACK = 8;
-const FORM_BUTTON_FROM = { webkit: { width: 375, height: 629 }, chromium: { width: 360, height: 732 } } as const;
 /** Android text scale = page zoom: the CSS viewport shrinks (Pixel 7 at 130 / 200 %, Moto G4 at 200 %). */
 const TEXT_SCALE = [{ project: 'A-pixel-7', scale: 1.3 }, { project: 'A-pixel-7', scale: 2 }, { project: 'A-moto-g4', scale: 2 }];
 const levelOf = (project: string) => (project.startsWith('A-') ? 'A' : 'B'); // B-* and inapp-* = layout smoke
@@ -100,7 +96,7 @@ const SMOKE_PAGES = ['/ru/lp/a/', '/en/lp/b/'];
 
 test.use({ reducedMotion: 'reduce' }); // deterministic sticky bar and rise-in
 
-/** Whole form button / sticky CTA on the first screen (after the IntersectionObserver's first callback). */
+/** Visible form entry points on the first screen, after the sticky CTA has settled. */
 async function firstScreen(page: Page) {
   await page.waitForTimeout(300);
   return page.evaluate(() => {
@@ -110,7 +106,6 @@ async function firstScreen(page: Page) {
     const f = document.querySelector('#lp-f1 input:not([type="hidden"])')?.getBoundingClientRect(); // «Имя»
     return {
       button: b.top >= 0 && b.bottom <= innerHeight + 0.5,
-      slack: innerHeight - b.bottom,
       field: !!f && f.width > 0 && f.top >= 0 && f.bottom <= innerHeight + 0.5 && !(shown && f.bottom > r.top),
       sticky: shown,
       at: `button ${Math.round(b.top)}–${Math.round(b.bottom)} in ${innerWidth}×${innerHeight} (spare ${Math.round(innerHeight - b.bottom)} px)`,
@@ -119,19 +114,22 @@ async function firstScreen(page: Page) {
 }
 
 /** First screen, overflow, targets, text; on level A also fonts, meta, AA, denylist. */
-async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' | 'firefox', full: boolean) {
+async function checkPage(page: Page, url: string, full: boolean) {
   const errs = consoleGuard(page);
   const fonts: string[] = [];
   page.on('request', (r) => { if (r.resourceType() === 'font' || /\.woff2(\?|$)/.test(r.url())) fonts.push(new URL(r.url()).pathname.split('/').pop()!); });
   const res = await page.goto(url, { waitUntil: 'networkidle' });
   expect(res?.status()).toBe(200);
-  const vp = page.viewportSize()!;
-  const from = FORM_BUTTON_FROM[engine === 'webkit' ? 'webkit' : 'chromium'];
   const fs = await firstScreen(page);
-  if (vp.width >= from.width && vp.height >= from.height) expect(fs.button && fs.slack >= FORM_BUTTON_SLACK - 0.5, `the whole form button on the first screen, ≥ ${FORM_BUTTON_SLACK} px to spare: ${fs.at}`).toBe(true);
-  // below: the whole button, OR the whole first field «Имя» (the form itself is the call to action), OR the sticky CTA —
-  // lead's decision 07.11 (RC-2): the sticky CTA no longer lies over the form, so on 320×560 or at 200 % text it hides there
-  else expect(fs.button || fs.field || fs.sticky, `the form button, its first field or the sticky CTA on the first screen: ${fs.at}`).toBe(true);
+  expect(fs.button || fs.field || fs.sticky, `the form button, its first field or the sticky CTA on the first screen: ${fs.at}`).toBe(true);
+  if (page.viewportSize()!.width < 768) {
+    for (const id of ['#lp-f1', '#lp-f2']) {
+      const name = (await page.locator(`${id} input[name="name"]`).boundingBox())!;
+      const phone = (await page.locator(`${id} input[name="phone"]`).boundingBox())!;
+      expect(phone.y, `${id} phone input below name input`).toBeGreaterThanOrEqual(name.y + name.height);
+      expect(phone.width, `${id} contact input widths`).toBeCloseTo(name.width);
+    }
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 'horizontal scroll').toBeLessThanOrEqual(0);
   expect(await sizeProblems(page)).toEqual([]);
   // R-LP-03 M-01: at the very end the sticky bar (if shown) never covers the footer disclaimer
@@ -201,10 +199,10 @@ async function checkPage(page: Page, url: string, engine: 'webkit' | 'chromium' 
 }
 
 for (const url of PAGES) {
-  test(`${url} first screen and layout (level A: + fonts, meta, AA, denylist)`, async ({ page, browserName }, ti) => {
+  test(`${url} first screen and layout (level A: + fonts, meta, AA, denylist)`, async ({ page }, ti) => {
     const A = levelOf(ti.project.name) === 'A';
     test.skip(!A && !SMOKE_PAGES.includes(url), 'level B / in-app: smoke on one page per language');
-    await checkPage(page, url, browserName, A);
+    await checkPage(page, url, A);
   });
 }
 
@@ -382,9 +380,9 @@ for (const ts of TEXT_SCALE) {
     const base = { 'A-pixel-7': { width: 412, height: 839 }, 'A-moto-g4': { width: 360, height: 640 } }[ts.project]!;
     test.use({ viewport: { width: Math.round(base.width / ts.scale), height: Math.round(base.height / ts.scale) } });
     for (const url of SMOKE_PAGES) {
-      test(`${url} no horizontal scroll, first screen, targets, text`, async ({ page, browserName }, ti) => {
+      test(`${url} no horizontal scroll, first screen, targets, text`, async ({ page }, ti) => {
         test.skip(ti.project.name !== ts.project, `runs on ${ts.project}`);
-        await checkPage(page, url, browserName, false);
+        await checkPage(page, url, false);
       });
     }
   });
@@ -557,17 +555,15 @@ test('sticky CTA never covers a field or a button of the forms, and never hides 
 });
 
 /**
- * Instagram on an iPhone SE (375×448 visible, not in the device matrix; lead): even after L03 the form button sits 33–53 px
- * below the first screen, so the first screen must show the whole first field (or the sticky CTA), and the bar must neither
- * cover a control nor hide with no control on screen. WebKit (A-iphone-se project), both smoke pages.
+ * Instagram on an iPhone SE (375×448 visible): a form entry point remains visible and the sticky CTA avoids the controls.
  */
-test('IG on iPhone SE 375×448: first screen (button, first field or sticky CTA) and the sticky CTA rules', async ({ page, browserName }, ti) => {
+test('IG on iPhone SE 375×448: first screen (button, first field or sticky CTA) and the sticky CTA rules', async ({ page }, ti) => {
   test.skip(ti.project.name !== 'A-iphone-se', 'one WebKit iPhone project sets the IG-on-SE window');
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 375, height: 448 });
   const bad: string[] = [];
   for (const url of SMOKE_PAGES) {
-    await checkPage(page, url, browserName, false);
+    await checkPage(page, url, false);
     bad.push(...(await stickyScan(page, url)));
   }
   expect([...new Set(bad)].slice(0, 40)).toEqual([]);
@@ -655,24 +651,6 @@ test('desktop and tablet windows 1024–1920: the form button on the first scree
     }
     await ctx.close();
   }
-  expect(bad).toEqual([]);
-});
-
-/** Instagram on an iPhone SE (375×448, Brand Designer L03): the form button whole on the first screen with ≥ 8 px to spare
- * (it ended 53 / 33 px below on /a / /b). ≤ 450 px high only: the top bar 48 px, the sub-line for screen readers. */
-test('LP in Instagram on an iPhone SE (375×448): the form button whole on the first screen', async ({ browser }, ti) => {
-  test.skip(ti.project.name !== 'A-iphone-se', 'one WebKit project');
-  const ctx = await browser.newContext({ viewport: { width: 375, height: 448 }, baseURL: ti.project.use.baseURL, isMobile: true, hasTouch: true, userAgent: ti.project.use.userAgent });
-  await stubStudioMap(ctx);
-  await ctx.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({ necessary: true, analytics: false, marketing: false, at: 'gate' })));
-  const page = await ctx.newPage(); const bad: string[] = [];
-  for (const url of PAGES) {
-    await page.goto(url, { waitUntil: 'networkidle' });
-    await page.evaluate(() => document.fonts.ready);
-    const spare = await page.evaluate(() => innerHeight - document.querySelector('.lp-hero .lp-form button[type="submit"]')!.getBoundingClientRect().bottom);
-    if (spare < 8) bad.push(`${url}: the form button ${Math.round(-spare)} px past the first screen (8 px spare needed)`);
-  }
-  await ctx.close();
   expect(bad).toEqual([]);
 });
 

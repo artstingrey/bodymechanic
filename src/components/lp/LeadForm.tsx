@@ -144,7 +144,6 @@ export function LeadForm({ id, variant, chips, waMessage, privacyHref, cta = tru
         </button>
         {whatsappLink()}
       </div>
-      <p className="hint" id={`${id}-phone-hint`}>{tf('field.phoneHint')}</p>
     </form>
   );
   return (

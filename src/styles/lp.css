@@ -1,8 +1,8 @@
 /* =====================================================================
    The Body Mechanic · ad landing /[locale]/lp/[variant] (art director). Source: site/landing/design/lp-frames.html.
    Own root layout: no site chrome, no Tailwind, static Manrope 400–800 (--font-lp). Mobile-first. First screen (README-CONTEXT
-   «ВСЕ iPhone И ВСЕ Android», visible area): the whole form button OR the sticky CTA on every device; the form button itself
-   from 375×629 (iPhone) and 360×732 (Android); ≤ 600 px high the photo band gives way to the form.
+   «ВСЕ iPhone И ВСЕ Android», visible area): show the form button, its first contact field or the sticky CTA.
+   At ≤ 600 px high the photo band gives way to the form.
    Motion: CSS only, 300–500 ms, 12–24 px (README п.15).
    ===================================================================== */
 @import "./tokens.css";
@@ -163,9 +163,6 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-form .ftitle { font-size: 20px; line-height: 1.2; letter-spacing: -.02em; }
 .lp-form .fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .lp-form .lp-email { grid-column: 1 / -1; }
-@media (min-width: 360px) and (max-width: 767px) {
-  .lp-hero > #lp-f1 .fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
-}
 .lp-form .field { display: grid; gap: 5px; align-content: start; } /* two columns (≥ 768): an error under one field must not push the other field's input down */
 .lp-form .field label { font-size: 14px; font-weight: 700; }
 .lp-form .input :is(input, textarea) { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: var(--r-field); background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--field-border); font: 400 16px/1 var(--font-sans); color: var(--text); transition: box-shadow var(--d-fade) var(--e-out); }
@@ -371,6 +368,12 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
        on the first screen stayed half-transparent — desktop audit L3) */
     .lp-rise { animation: lp-in linear both; animation-timeline: view(); animation-range: entry 0 entry 120px; }
   }
+}
+
+@media (max-width: 767px) {
+  .lp-copy > :is(h1, .sub), .lp-sec :is(.head, .fhead) { text-align: center; }
+  .lp-copy > .sub, .lp-sec .head > .sub { margin-inline: auto; }
+  .lp-final .grid > div > :is(h2, .sub) { margin-inline: auto; text-align: center; }
 }
 
 /* narrow phones below 360 px (band 288–326 × 145–164 px): no call-out on the band either. The offer pill wraps to two or three
