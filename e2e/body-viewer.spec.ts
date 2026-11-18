@@ -48,6 +48,22 @@ async function chestPoint(page: Page) {
   });
 }
 
+async function expectFullVerticalTurn(page: Page, quarterTurn: () => Promise<void>) {
+  const checkpoints = [
+    { axis: 1, direction: 1 }, // above
+    { axis: 2, direction: -1 }, // behind
+    { axis: 1, direction: -1 }, // below
+    { axis: 2, direction: 1 }, // in front again
+  ];
+  for (const { axis, direction } of checkpoints) {
+    await quarterTurn();
+    await expect.poll(async () => {
+      const pose = await view(page);
+      return direction * (pose.camera[axis] - pose.target[axis]) / distance(pose);
+    }).toBeGreaterThan(0.9);
+  }
+}
+
 test('RU viewer fills the desktop, supports mouse gestures and carries highlights across models', async ({ page }) => {
   const response = await page.goto('/ru/body-model');
   expect(response?.ok()).toBe(true);
@@ -76,10 +92,15 @@ test('RU viewer fills the desktop, supports mouse gestures and carries highlight
   await page.mouse.click(chest!.x, chest!.y);
   await expect.poll(() => outline(page)).toBe('off');
 
-  await page.mouse.move(cx, cy);
-  await page.mouse.down();
-  await page.mouse.move(cx + height / 2, cy, { steps: 8 });
-  await page.mouse.up();
+  const drag = async (dx: number, dy: number) => {
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + dx, cy + dy, { steps: 8 });
+    await page.mouse.up();
+  };
+  await expectFullVerticalTurn(page, () => drag(0, height / 4));
+  await expect(callout(page, 'chest')).toBeVisible();
+  await drag(height / 2, 0);
   await expect(callout(page, 'lumbar')).toBeVisible();
   await expect(callout(page, 'lumbar')).toHaveText('Поясничный отдел');
   await expect(callout(page, 'chest')).toBeHidden();
@@ -111,6 +132,17 @@ test.describe('EN viewer with a mobile touchscreen', () => {
     await expect.poll(() => outline(page)).toMatch(/^(screen|veil)$/);
     await page.touchscreen.tap(chest!.x, chest!.y);
     await expect.poll(() => outline(page)).toBe('off');
+
+    await expectFullVerticalTurn(page, async () => {
+      await touch('touchStart', { x, y, id: 0 });
+      for (let i = 1; i <= 6; i++) {
+        await touch('touchMove', { x, y: y + Math.round(box.height * i / 24), id: 0 });
+      }
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      await touch('touchEnd');
+    });
+    await expect(callout(page, 'chest')).toBeVisible();
+
     await touch('touchStart', { x, y, id: 0 });
     for (let i = 1; i <= 6; i++) await touch('touchMove', { x: x + i * 14, y, id: 0 });
     await touch('touchEnd');

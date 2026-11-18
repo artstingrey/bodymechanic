@@ -8,6 +8,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 import { useBody, useBodyStore, type Marker } from '@/lib/body3d/store';
 import { ZONE_KEYS, keyToIndex } from '@/lib/body3d/zones';
 import { computeZoneColours, FRAMING, loadModel, modelUrl, overlayMaterial, setReducedQuality, warmUp, type ModelEntry } from './loader';
@@ -46,6 +47,42 @@ const easeReset = (k: number) => 1 - Math.pow(1 - k, 3);
 const LOAD_TIMEOUT = 15000; // ТЗ §06: 15 s → offer the 2D mode
 
 type Slot = { el: HTMLElement; mode: SlotMode } | null;
+
+function ViewerTrackball() {
+  const camera = useThree((s) => s.camera);
+  const canvas = useThree((s) => s.gl.domElement);
+  const controls = useRef<TrackballControls | null>(null);
+
+  useEffect(() => {
+    const trackball = new TrackballControls(camera, canvas);
+    trackball.target.copy(CAM.target);
+    trackball.noPan = true;
+    trackball.keys = ['', '', ''];
+    trackball.staticMoving = true;
+    trackball.minDistance = CAM.minDist;
+    trackball.maxDistance = CAM.maxDist;
+    controls.current = trackball;
+
+    const resize = () => {
+      trackball.handleResize();
+      const { width, height } = trackball.screen;
+      // Trackball normalizes drag deltas by width. Keep half a canvas height equal to half a turn.
+      if (width && height) trackball.rotateSpeed = Math.PI * width / height;
+    };
+    resize();
+    trackball.update();
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    return () => {
+      observer.disconnect();
+      controls.current = null;
+      trackball.dispose();
+    };
+  }, [camera, canvas]);
+
+  useFrame(() => controls.current?.update(), -1);
+  return null;
+}
 
 export function Scene({ slot }: { slot: Slot }) {
   const { gl, camera, scene, setFrameloop, invalidate } = useThree();
@@ -259,7 +296,6 @@ export function Scene({ slot }: { slot: Slot }) {
     let pending = 0;
     const onDown = (e: PointerEvent) => {
       if (viewer && (down || !e.isPrimary || e.button !== 0)) { down = null; return; }
-      if (viewer) el.setPointerCapture(e.pointerId);
       down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, lastY: e.clientY, dragged: false };
     };
     const onMove = (e: PointerEvent) => {
@@ -362,7 +398,8 @@ export function Scene({ slot }: { slot: Slot }) {
       <ambientLight intensity={0.9} />
       <hemisphereLight args={['#ffffff', '#f1f3f5', 1.4]} position={[0, 2, 0]} />
       {lights.map((l, k) => <directionalLight key={k} position={l.p} intensity={l.i} color={l.c} />)}
-      {interactive && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'}
+      {viewer && <ViewerTrackball />}
+      {booking && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'}
         minDistance={CAM.minDist} maxDistance={CAM.maxDist} minPolarAngle={CAM.minPolar} maxPolarAngle={CAM.maxPolar} target={CAM.target}
         touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }} />}
       <group ref={pivot}>
