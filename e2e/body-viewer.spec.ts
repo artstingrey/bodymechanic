@@ -7,19 +7,22 @@ const callout = (page: Page, id: string) => page.locator(`.body-viewer__callouts
 const outline = (page: Page) => page.evaluate(() => window.__bm3d?.outline?.());
 const view = (page: Page) => page.evaluate(() => window.__bm3d!.view!());
 const distance = ({ camera, target }: Awaited<ReturnType<typeof view>>) => Math.hypot(...camera.map((n, i) => n - target[i]));
-const forbidden = 'header, footer, form, a, dialog, .cookie, .book-floating, .booking, .b3d-pin, .b2d-badge, .b2d-callout, .b2d-cross';
+const forbidden = 'header, footer, form, dialog, .cookie, .book-floating, .booking, .b3d-pin, .b2d-badge, .b2d-callout, .b2d-cross';
 
 async function expectFullscreen(page: Page, locale: string, controls: number) {
   await expect(page.locator('html')).toHaveAttribute('lang', locale);
   await expect(page.locator(forbidden)).toHaveCount(0);
   await expect(page.getByRole('button')).toHaveCount(controls);
+  await expect(page.locator('a')).toHaveCount(1);
+  await expect(page.locator('.body-viewer__languages [aria-current="page"]')).toHaveText(locale.toUpperCase());
+  await expect(page.getByRole('link')).toHaveAttribute('href', `/${locale === 'ru' ? 'en' : 'ru'}/body-model/`);
   expect(await page.evaluate(() => {
     const { top, bottom, width, height } = document.querySelector('.b3d-slot')!.getBoundingClientRect();
     return bottom >= innerHeight - 1 && bottom <= innerHeight + 1 && width === innerWidth &&
       height >= innerHeight * 0.65 &&
       document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth &&
-      Array.from(document.querySelectorAll('button')).every((button) => {
-        const r = button.getBoundingClientRect();
+      Array.from(document.querySelectorAll('.body-viewer__controls :is(button, a)')).every((control) => {
+        const r = control.getBoundingClientRect();
         return r.height >= 44 && r.width >= 44 && r.top >= 0 && r.bottom <= top && r.left >= 0 && r.right <= innerWidth;
       });
   })).toBe(true);
@@ -179,6 +182,16 @@ test.describe('EN viewer with a mobile touchscreen', () => {
     await expectFullscreen(page, 'en', 5);
     await expect(callout(page, 'chest')).toBeVisible();
     await expect.poll(() => outline(page)).toBe('off');
+
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.getByRole('link', { name: /Switch to Russian/ }).tap();
+    await expect(page).toHaveURL(/\/ru\/body-model\/$/);
+    await expect(page).toHaveTitle('Модель тела');
+    await expectFullscreen(page, 'ru', 5);
+    await page.getByRole('link', { name: /^EN\./ }).tap();
+    await expect(page).toHaveURL(/\/en\/body-model\/$/);
+    await expect(page).toHaveTitle('Body model');
+    await expectFullscreen(page, 'en', 5);
   });
 });
 

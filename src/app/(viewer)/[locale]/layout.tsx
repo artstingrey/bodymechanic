@@ -26,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ViewerLayout({ children }: LayoutProps<'/[locale]'>) {
   const locale = await rootLocale();
   if (!isLocale(locale)) notFound();
-  const messages = await pickMessages(['body3d', 'home.hero.posterAlt']);
+  const messages = await pickMessages(['body3d', 'home.hero.posterAlt', 'nav.langSwitch']);
   return (
     <html lang={locale} data-body-viewer>
       <body>

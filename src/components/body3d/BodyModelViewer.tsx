@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Segmented } from '@/components/ui/Choice';
+import { locales } from '@/i18n/routing';
 import { useBody, useBodyStore } from '@/lib/body3d/store';
 import { Body3DSlot } from './Body3DSlot';
 import { BodyViewerCallouts } from './BodyViewerCallouts';
@@ -11,6 +12,8 @@ import type { BodySide } from './Fallback2D';
 
 export function BodyModelViewer() {
   const t = useTranslations('body3d');
+  const language = useTranslations('nav.langSwitch');
+  const locale = useLocale();
   const store = useBodyStore();
   const mode2d = useBody((s) => s.mode2d);
   const [side, setSide] = useState<BodySide>('front');
@@ -39,6 +42,14 @@ export function BodyModelViewer() {
         ) : (
           <button className="body-viewer__reset" type="button" onClick={store.resetView}>{t('toolbar.reset')}</button>
         )}
+        <nav className="seg lang-switch body-viewer__languages" aria-label={language('label')}>
+          {locales.map((id) => id === locale ? (
+            <span key={id} lang={id} aria-current="page">{language(id)}</span>
+          ) : (
+            <a key={id} href={`/${id}/body-model/`} hrefLang={id} rel="nofollow"
+              aria-label={`${language(id)}. ${language(id === 'ru' ? 'toRu' : 'toEn')}`}>{language(id)}</a>
+          ))}
+        </nav>
       </div>
       <div className="body-viewer__stage">
         <Body3DSlot mode="viewer" viewerSide={side} />

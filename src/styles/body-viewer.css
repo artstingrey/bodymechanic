@@ -22,7 +22,17 @@ html[data-body-viewer] {
 
 .body-viewer__controls button {
   padding-inline: 12px;
+}
+
+.body-viewer__controls :is(button, a) {
   touch-action: manipulation;
+}
+
+.body-viewer__languages [aria-current="page"] {
+  min-width: 44px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--sh-1);
 }
 
 .body-viewer__controls button:disabled {
