@@ -213,7 +213,7 @@
       "name": "Name",
       "namePlaceholder": "What should we call you?",
       "phone": "Phone",
-      "phonePlaceholder": "+[country code][phone number]",
+      "phonePlaceholder": "+971 50 123 4567",
       "phoneHint": "Start with + and your country code.",
       "email": "Email",
       "emailPlaceholder": "name@example.com",
