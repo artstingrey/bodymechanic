@@ -7,6 +7,7 @@
  *  - booking: no WebGL / FPS < 20 / 15 s timeout / «Перейти в 2D» → the 2D silhouette (Fallback2D);
  *  - hero: NO 2D silhouette — the front-view poster stays (data-fallback), the anchors for the hero index are published from
  *    the poster (usePosterAnchors); no sway, no pause button, no loading / timeout UI over the hero.
+ *  - standalone viewer: use the selected model's poster when WebGL is unavailable or loading fails.
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import dynamic from 'next/dynamic';
@@ -15,7 +16,6 @@ import assets from '@/lib/body3d/assets.json';
 import { useBody, useBodyStore } from '@/lib/body3d/store';
 import { useBody3DHost, type SlotMode } from './Body3DProvider';
 import { LiveRegion } from './LiveRegion';
-import type { BodySide } from './Fallback2D';
 import { usePosterAnchors } from './usePosterAnchors';
 import { heroIntro, heroReveal, REVEAL_FAILSAFE_MS } from '@/lib/body3d/heroIntro';
 
@@ -25,7 +25,7 @@ const Fallback2D = dynamic(() => import('./Fallback2D').then((m) => m.Fallback2D
 /** hero shows the static poster instead of the 3D model */
 export const heroFallback = (s: { mode2d: unknown; status: string }) => !!s.mode2d || s.status === 'timeout' || s.status === 'error';
 
-export function Body3DSlot({ mode, className = '', viewerSide }: { mode: SlotMode; className?: string; viewerSide?: BodySide }) {
+export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const ctx = useBody3DHost();
   const t = useTranslations();
@@ -70,10 +70,13 @@ export function Body3DSlot({ mode, className = '', viewerSide }: { mode: SlotMod
   const p = assets.posters[model];
   const booking = mode === 'booking';
   const viewer = mode === 'viewer';
+  const viewerAlert = status === 'unavailable' ? 'body3d.mode2d.noWebgl'
+    : status === 'error' ? 'body3d.load.error'
+    : status === 'timeout' ? 'body3d.load.timeoutTitle' : null;
   return (
     <div ref={ref} className={`b3d-slot ${className}`} data-mode={mode} data-status={held ? 'loading' : status} data-mode2d={mode2d || undefined}
       data-fallback={posterMode || undefined} role="group"
-      aria-label={t(viewer ? (mode2d ? 'body3d.mode2d.badge' : 'body3d.viewer.canvasLabel') : 'body3d.canvasLabel')}>
+      aria-label={t(viewer ? (status === 'ready' ? 'body3d.viewer.canvasLabel' : 'body3d.viewer.title') : 'body3d.canvasLabel')}>
       <picture className="b3d-poster" style={held ? { zIndex: 2 } : undefined}>
         <source srcSet={p.avif} type="image/avif" />
         <source srcSet={p.webp} type="image/webp" />
@@ -82,9 +85,7 @@ export function Body3DSlot({ mode, className = '', viewerSide }: { mode: SlotMod
       </picture>
       {/* RC-6 (lead + AD): no loading badge over the hero figure — the hero's caption under the model shows the progress */}
       {status === 'loading' && !mode2d && !hero ? <div className={viewer ? 'sr-only' : 'b3d-loader'} role="status">{t('body3d.load.progress', { percent: Math.round(progress * 100) })}</div> : null}
-      {viewer && !mode2d && (status === 'error' || status === 'timeout') ? (
-        <p className="sr-only" role="alert">{t(status === 'error' ? 'body3d.load.error' : 'body3d.load.timeoutTitle')} {t('body3d.load.switchTo2d')}</p>
-      ) : null}
+      {viewer && viewerAlert ? <p className="sr-only" role="alert">{t(viewerAlert)}</p> : null}
       {booking && status === 'error' && !mode2d ? (
         <div className="b3d-loader" role="alert">
           {t('body3d.load.error')}{' '}
@@ -101,7 +102,7 @@ export function Body3DSlot({ mode, className = '', viewerSide }: { mode: SlotMod
         </div>
       ) : null}
       {hint && !mode2d ? <p className="b3d-hint" key={hint.seq}>{t(`body3d.hint.${hint.key}`)}</p> : null}
-      {!hero && mode2d ? <Fallback2D viewerSide={viewer ? viewerSide ?? 'front' : undefined} /> : null}
+      {booking && mode2d ? <Fallback2D /> : null}
       {!viewer ? <LiveRegion mode={mode} /> : null}
     </div>
   );

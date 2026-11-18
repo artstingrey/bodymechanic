@@ -35,20 +35,6 @@ html[data-body-viewer] {
   box-shadow: var(--sh-1);
 }
 
-.body-viewer__controls button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.body-viewer__reset {
-  min-height: 44px;
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  box-shadow: inset 0 0 0 1px var(--field-border);
-  font: 600 14px/1 var(--font-sans);
-  cursor: pointer;
-}
-
 .body-viewer__stage {
   position: relative;
   min-height: 0;
@@ -93,17 +79,6 @@ html[data-body-viewer] {
   pointer-events: none;
 }
 
-.body-viewer .b3d-slot[data-mode2d] .b3d-poster {
-  display: none;
-}
-
 .body-viewer canvas {
   touch-action: none;
-}
-
-.body-viewer__diagram,
-.body-viewer__diagram :is(.b2d-figure, .b2d-stage, .b2d-stage svg.b2d) {
-  width: 100%;
-  height: 100%;
-  margin: 0;
 }

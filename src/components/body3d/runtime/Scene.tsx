@@ -214,25 +214,15 @@ export function Scene({ slot }: { slot: Slot }) {
   const startAnim = useCallback(() => {
     const orbit = controls.current;
     if (!orbit || !pivot.current) return;
-    const from = camera.position.clone();
-    const fromT = orbit.target.clone();
-    if (viewer && orbit.enableDamping) {
-      // Consume the previous drag's momentum so it cannot move the camera after the reset.
-      orbit.enableDamping = false;
-      orbit.update();
-      orbit.enableDamping = true;
-      camera.position.copy(from);
-      camera.lookAt(fromT);
-    }
     const r = pivot.current.rotation.y;
     resetAnim.current = {
       t0: performance.now(),
-      from,
-      fromT,
+      from: camera.position.clone(),
+      fromT: orbit.target.clone(),
       rotFrom: r - Math.round(r / TURN) * TURN,
     };
-  }, [camera, viewer]);
-  useEffect(() => { if (interactive && resetSeq) startAnim(); }, [interactive, resetSeq, startAnim]);
+  }, [camera]);
+  useEffect(() => { if (booking && resetSeq) startAnim(); }, [booking, resetSeq, startAnim]);
   // Booking starts at the front, taking the shortest path from the hero's angle.
   useEffect(() => {
     if (booking) startAnim();
@@ -267,13 +257,9 @@ export function Scene({ slot }: { slot: Slot }) {
     let down: { x: number; y: number; t: number; id: number; lastY: number; dragged: boolean } | null = null;
     let lastTap: { t: number; x: number; y: number } | null = null;
     let pending = 0;
-    const interruptReset = () => { resetAnim.current = null; };
     const onDown = (e: PointerEvent) => {
       if (viewer && (down || !e.isPrimary || e.button !== 0)) { down = null; return; }
-      if (viewer) {
-        interruptReset();
-        el.setPointerCapture(e.pointerId);
-      }
+      if (viewer) el.setPointerCapture(e.pointerId);
       down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, lastY: e.clientY, dragged: false };
     };
     const onMove = (e: PointerEvent) => {
@@ -318,16 +304,12 @@ export function Scene({ slot }: { slot: Slot }) {
     const onCancel = () => { down = null; };
     const noDbl = (e: MouseEvent) => e.preventDefault();
     el.addEventListener('pointerdown', onDown); el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('dblclick', noDbl);
-    if (viewer) {
-      el.addEventListener('lostpointercapture', onCancel);
-      el.addEventListener('wheel', interruptReset, { passive: true });
-    }
+    if (viewer) el.addEventListener('lostpointercapture', onCancel);
     return () => {
       clearTimeout(pending);
       el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp); el.removeEventListener('dblclick', noDbl);
       el.removeEventListener('lostpointercapture', onCancel);
-      el.removeEventListener('wheel', interruptReset);
     };
   }, [gl, camera, interactive, viewer, store]);
 

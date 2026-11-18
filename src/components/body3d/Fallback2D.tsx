@@ -30,11 +30,10 @@ function selectionOf(markers: Marker[]): string[] {
 const svgText = new Map<string, Promise<string>>();
 const loadSvg = (src: string) => { let p = svgText.get(src); if (!p) { p = fetch(src).then((r) => r.text()); svgText.set(src, p); } return p; };
 
-export type BodySide = 'front' | 'back';
+type BodySide = 'front' | 'back';
 
-function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggleZone, annotations = true }: {
+function Silhouette({ src, label, selected, names, fontsEpoch }: {
   src: string; label: string; selected: string[]; names: Record<string, string>; fontsEpoch: number;
-  onToggle?: (id: string) => void; annotations?: boolean;
 }) {
   const locale = useLocale() as 'ru' | 'en';
   const host = useRef<HTMLDivElement>(null);
@@ -61,11 +60,11 @@ function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggle
 
   // the svg box decides full / compact / none
   useEffect(() => {
-    if (!annotations || !host.current) return;
+    if (!host.current) return;
     const ro = new ResizeObserver(([e]) => setBox(Math.round(e.contentRect.width)));
     ro.observe(host.current);
     return () => ro.disconnect();
-  }, [annotations]);
+  }, []);
 
   // accessible names in the page language (the files carry English defaults)
   useEffect(() => {
@@ -86,14 +85,13 @@ function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggle
       z.setAttribute('aria-checked', String(checked));
       svg.querySelector(`[data-fx-for="${id}"]`)?.classList.toggle('is-selected', checked);
     });
-    if (!annotations) return;
     const ev = live.event;
     const justAdded = live.seq !== handledSeq.current && ev?.type === 'markerAdded' ? ev.zoneId : null;
     handledSeq.current = live.seq;
     layout(svg, selected, { names, locale, allowCompact: window.innerWidth >= 530 });
     drawMarkers(svg, selected, { justAdded });
     crosshair(svg, hovId.current || focId.current, selected);
-  }, [svg, selected, names, locale, box, fontsEpoch, live, annotations]);
+  }, [svg, selected, names, locale, box, fontsEpoch, live]);
 
   // input: click / Enter / Space toggle; hover + keyboard focus → crosshair (never on a selected zone), focus ring
   useEffect(() => {
@@ -112,7 +110,7 @@ function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggle
     const ring = (zone: SVGPathElement | null) => {
       svg.querySelectorAll('.b2d-focus-ring,.b2d-focus-halo').forEach((x) => x.remove());
       focId.current = zone?.dataset.zoneId ?? null;
-      if (annotations) crosshair(svg, hovId.current || focId.current, sel.current);
+      crosshair(svg, hovId.current || focId.current, sel.current);
       if (!zone) return;
       for (const c of ['b2d-focus-halo', 'b2d-focus-ring']) {
         const r = svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -120,12 +118,12 @@ function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggle
         svg.appendChild(r);
       }
     };
-    const onClick = (e: MouseEvent) => { const id = zoneOf(e.target); if (id) onToggle(id); };
+    const onClick = (e: MouseEvent) => { const id = zoneOf(e.target); if (id) toggleZone(id); };
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as Element;
       if ((e.key === 'Enter' || e.key === ' ') && el.classList?.contains('b2d-zone')) {
         e.preventDefault();
-        if (annotations || !e.repeat) onToggle((el as SVGPathElement).dataset.zoneId!);
+        toggleZone((el as SVGPathElement).dataset.zoneId!);
       }
     };
     const onOver = (e: PointerEvent) => { if (e.pointerType !== 'touch') hover(zoneOf(e.target)); };
@@ -137,14 +135,13 @@ function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggle
       if (visible) ring(el);
     };
     const onFocusOut = () => ring(null);
-    h.addEventListener('click', onClick); h.addEventListener('keydown', onKey);
-    if (annotations) { h.addEventListener('pointerover', onOver); h.addEventListener('pointerleave', onLeave); }
-    h.addEventListener('focusin', onFocusIn); h.addEventListener('focusout', onFocusOut);
+    h.addEventListener('click', onClick); h.addEventListener('keydown', onKey); h.addEventListener('pointerover', onOver);
+    h.addEventListener('pointerleave', onLeave); h.addEventListener('focusin', onFocusIn); h.addEventListener('focusout', onFocusOut);
     return () => {
       h.removeEventListener('click', onClick); h.removeEventListener('keydown', onKey); h.removeEventListener('pointerover', onOver);
       h.removeEventListener('pointerleave', onLeave); h.removeEventListener('focusin', onFocusIn); h.removeEventListener('focusout', onFocusOut);
     };
-  }, [svg, annotations, onToggle]);
+  }, [svg]);
 
   return (
     <figure className="b2d-figure" data-callouts={svg?.dataset.callouts}>
@@ -154,30 +151,24 @@ function Silhouette({ src, label, selected, names, fontsEpoch, onToggle = toggle
   );
 }
 
-export function Fallback2D({ viewerSide }: { viewerSide?: BodySide }) {
+export function Fallback2D() {
   const t = useTranslations();
   const store = useBodyStore();
   const model = useBody((s) => s.model);
   const reason = useBody((s) => s.mode2d);
   const markers = useBody((s) => s.markers);
-  const selectedZones = useBody((s) => s.selectedZones);
   const selected = useMemo(() => selectionOf(markers), [markers]);
   const names = useMemo(() => Object.fromEntries(ALL_KEYS.map((k) => [k, zoneLabel(t, k)])), [t]);
   // label widths are measured with the web font: re-measure once it is ready
   const [fontsEpoch, setFontsEpoch] = useState(0);
-  useEffect(() => {
-    if (!viewerSide) document.fonts?.ready.then(() => { clearCache(); setFontsEpoch((n) => n + 1); });
-  }, [viewerSide]);
+  useEffect(() => { document.fonts?.ready.then(() => { clearCache(); setFontsEpoch((n) => n + 1); }); }, []);
   // < 600 px: one figure + «Спереди / Сзади» (lead's decision; layout CSS: Web Art Director, hidden ≥ 600 px)
   const [side, setSide] = useState<BodySide>('front');
   const silhouette = (v: BodySide) => (
-    <Silhouette key={`${model}-${v}`} src={`/body2d/body-${model}-${v}.svg`} selected={viewerSide ? selectedZones : selected}
-      names={names} fontsEpoch={fontsEpoch} annotations={!viewerSide} onToggle={viewerSide ? store.toggleZone : undefined}
+    <Silhouette key={`${model}-${v}`} src={`/body2d/body-${model}-${v}.svg`} selected={selected}
+      names={names} fontsEpoch={fontsEpoch}
       label={t('body3d.mode2d.diagramLabel', { side: t(v === 'front' ? 'body3d.zones.sideFront' : 'body3d.zones.sideBack') })} />
   );
-  if (viewerSide) {
-    return <div className="body-viewer__diagram" data-testid="b2d">{silhouette(viewerSide)}</div>;
-  }
   return (
     <section className="b2d-mode" aria-label={t('body3d.mode2d.badge')} data-testid="b2d">
       <p><span className="badge badge--dark">{t('body3d.mode2d.badge')}</span> {reason === 'noWebgl' ? t('body3d.mode2d.noWebgl') : reason === 'lowFps' ? t('body3d.mode2d.lowFps') : null}</p>

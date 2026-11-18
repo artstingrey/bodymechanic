@@ -14,7 +14,7 @@ export { MAX_MARKERS } from './booking-details';
 
 export type Gender = 'male' | 'female';
 export type Tool = 'rotate' | 'zoom' | 'marker';
-export type Status = 'idle' | 'loading' | 'ready' | 'error' | 'timeout';
+export type Status = 'idle' | 'loading' | 'ready' | 'error' | 'timeout' | 'unavailable';
 export type Marker = BodyMarker & { n: number; normal?: [number, number, number] };
 
 /** Events for the aria-live region (formatted with messages by the UI, never hard-coded text). */
@@ -131,7 +131,7 @@ export function createBodyStore(viewer = false) {
     setAutorotate(on: boolean) { set({ autorotate: on && !reducedMotion() }); },
     setStatus(status: Status, progress?: number) { set(progress === undefined ? { status } : { status, progress }); },
     setProgress(progress: number) { set({ progress }); },
-    setMode2d(reason: BodyState['mode2d']) { set({ mode2d: reason }); if (reason && !viewer) announce({ type: 'mode2d' }); },
+    setMode2d(reason: BodyState['mode2d']) { set({ mode2d: reason }); if (reason) announce({ type: 'mode2d' }); },
     resetView() { set({ resetSeq: state.resetSeq + 1 }); announce({ type: 'viewReset' }); },
     toggleZone(zoneId: string) {
       const selected = state.selectedZones;
