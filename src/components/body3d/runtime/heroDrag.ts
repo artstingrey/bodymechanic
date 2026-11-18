@@ -1,15 +1,14 @@
 const DRAG_THRESHOLD = 6;
 
 /** Keep the browser in charge of vertical scrolling and pinch zoom. */
-export function bindHeroDrag(canvas: HTMLCanvasElement, rotate: (dx: number, isTouch: boolean) => void, end: () => void) {
+export function bindHeroDrag(canvas: HTMLCanvasElement, rotate: (dx: number, isTouch: boolean) => void) {
   let pointer: { id: number; x: number; y: number; dragging: boolean } | null = null;
 
   const finish = () => {
     if (!pointer) return;
-    const { id, dragging } = pointer;
+    const { id } = pointer;
     pointer = null;
     if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
-    if (dragging) end();
   };
   const onDown = (e: PointerEvent) => {
     if (!e.isPrimary || (e.pointerType !== 'touch' && e.pointerType !== 'mouse') || e.button !== 0 || pointer) return;

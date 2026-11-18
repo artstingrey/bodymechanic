@@ -47,24 +47,25 @@ test('stage 11: desktop hero mouse gestures and the shared booking camera', asyn
     await drag(0, -90);
     expect(await readView(page)).toEqual(front);
     await page.mouse.up();
+    await pause.click();
+    await expect(pause).toHaveAttribute('aria-pressed', 'false');
     await drag(92, -65);
     const turned = await readView(page);
     expect(turned.yaw - front.yaw, 'right drag turns the front of the model right').toBeGreaterThan(0.4);
     expect({ ...turned, yaw: front.yaw }).toEqual(front);
     await page.mouse.up();
-    const returning = (await readView(page)).yaw;
-    expect(yawGap(returning, front.yaw)).toBeGreaterThan(0.2);
-    // Reverse the drag while the return is running: it must continue from the in-flight pose.
-    await page.mouse.down();
-    await page.mouse.move(x + 74, y - 65);
-    const interrupted = (await readView(page)).yaw;
-    expect(yawGap(interrupted, front.yaw)).toBeGreaterThan(0.15);
-    expect(yawGap(interrupted, returning)).toBeLessThan(0.5);
+    await expect(pause).toHaveAttribute('aria-pressed', 'true');
+    const released = await readView(page);
+    await page.waitForTimeout(650); // longer than the old 500 ms automatic return
+    expect(await readView(page)).toEqual(released);
+    await drag(-60, 0);
+    await expect.poll(async () => (await readView(page)).yaw - released.yaw).toBeLessThan(-0.4);
     await page.mouse.up();
-    await expect.poll(async () => yawGap((await readView(page)).yaw, front.yaw)).toBeLessThan(0.001);
+    const held = await readView(page);
     await pause.click();
     await expect(pause).toHaveAttribute('aria-pressed', 'false');
-    await expect.poll(async () => yawGap((await readView(page)).yaw, front.yaw)).toBeGreaterThan(0.035);
+    await expect.poll(async () => yawGap((await readView(page)).yaw, held.yaw)).toBeGreaterThan(0.035);
+    expect(yawGap((await readView(page)).yaw, held.yaw)).toBeLessThan(0.7);
     await pause.click();
     const paused = await readView(page);
     const restAnchors = () => page.evaluate(() => window.__bm3d!.anchors!.get().zones.map(({ zoneId, restX, restY }) => [zoneId, restX, restY]));
@@ -139,7 +140,7 @@ test('stage 11: touch swipes, pinch and cancellation in the hero', async ({ page
   await page.goto('/ru/');
   const { x, y } = await liveCanvas(page, 'hero');
   const canvasWidth = await page.locator('.atlas canvas').evaluate((canvas) => canvas.clientWidth);
-  const swipeDistance = Math.round(canvasWidth * 0.4);
+  const swipeDistance = Math.round(canvasWidth * 0.3);
   const cdp = await context.newCDPSession(page);
   const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd' | 'touchCancel', ...touchPoints: { x: number; y: number; id?: number }[]) =>
     cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
@@ -150,29 +151,37 @@ test('stage 11: touch swipes, pinch and cancellation in the hero', async ({ page
   await expect.poll(async () => (await readView(page)).yaw - front.yaw, { message: 'one right swipe reaches the back' }).toBeCloseTo(Math.PI, 1);
   const turned = await readView(page);
   expect({ ...turned, yaw: front.yaw }).toEqual(front);
-  await touch('touchCancel');
-  await expect.poll(() => readView(page)).toEqual(front);
+  await touch('touchEnd');
+  expect(await readView(page)).toEqual(turned);
 
   const scroll = await page.evaluate(() => scrollY);
   await touch('touchStart', { x, y });
   for (let i = 1; i <= 8; i++) await touch('touchMove', { x, y: y - i * 12 });
   await touch('touchEnd');
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(scroll + 45);
-  expect(await readView(page)).toEqual(front);
+  expect(await readView(page)).toEqual(turned);
 
-  // Scroll back before the next gesture, which must work after both native scroll and explicit touch cancellation.
+  // A new swipe after native scrolling continues from the saved back view.
   await page.evaluate((top) => scrollTo({ top, behavior: 'instant' }), scroll);
   await touch('touchStart', { x, y });
+  for (let i = 1; i <= 8; i++) await touch('touchMove', { x: x + Math.round(swipeDistance * 1.25 * i / 8), y });
+  await expect.poll(async () => (await readView(page)).yaw - turned.yaw).toBeCloseTo(1.25 * Math.PI, 1);
+  const fullTurn = await readView(page);
+  await touch('touchCancel');
+  expect(await readView(page)).toEqual(fullTurn);
+
+  await touch('touchStart', { x, y });
   for (let i = 1; i <= 8; i++) await touch('touchMove', { x: x - Math.round(swipeDistance * i / 8), y });
-  await expect.poll(async () => (await readView(page)).yaw - front.yaw, { message: 'one left swipe reaches the back' }).toBeCloseTo(-Math.PI, 1);
+  await expect.poll(async () => (await readView(page)).yaw - fullTurn.yaw).toBeCloseTo(-Math.PI, 1);
+  const afterLeftSwipe = await readView(page);
   await touch('touchEnd');
-  await expect.poll(() => readView(page)).toEqual(front);
+  expect(await readView(page)).toEqual(afterLeftSwipe);
 
   await touch('touchStart', { x: x - 20, y, id: 0 }, { x: x + 20, y, id: 1 });
   for (let i = 1; i <= 8; i++) await touch('touchMove', { x: x - 20 - i * 6, y, id: 0 }, { x: x + 20 + i * 6, y, id: 1 });
-  expect(await readView(page)).toEqual(front);
+  expect(await readView(page)).toEqual(afterLeftSwipe);
   await touch('touchEnd');
-  expect(await readView(page)).toEqual(front);
+  expect(await readView(page)).toEqual(afterLeftSwipe);
 });
 
 const FIG_CENTRE = 0.5013; // the drawn (red) centre of the figure in the slot — sections.css; the pixel test checks the drawing itself

@@ -24,8 +24,6 @@ const CAM = { pos: new THREE.Vector3(0, 0.9, 2.9), target: new THREE.Vector3(0, 
 // DECISION (lead + art director, hi-fi hero): instead of a full turn the hero model sways ±20° around the front view
 // (sine, 9 s) — the index call-outs keep their anchors; the pause button stops the sway (WCAG 2.2.2); reduced motion → still.
 const SWAY = { amp: THREE.MathUtils.degToRad(20), period: 9, easeIn: 0.6 };
-// After a drag the hero model returns to its resting yaw: reduced motion → instant.
-const RETURN_MS = 500;
 const TURN = 2 * Math.PI;
 // A swipe from the centre can reach the back before the finger reaches the edge.
 const TOUCH_HALF_TURN_WIDTH = 0.3;
@@ -37,18 +35,11 @@ const TOUCH_HALF_TURN_WIDTH = 0.3;
 // Projection only (zoom + view offset as fractions — resize-safe): orbit distances, the zoom tool and the reset stay.
 const LAND_ZOOM = 1.2;
 const LAND_SHIFT = 0.035;
-function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
-  const bx = (t: number) => 3 * x1 * t * (1 - t) ** 2 + 3 * x2 * t * t * (1 - t) + t ** 3;
-  const by = (t: number) => 3 * y1 * t * (1 - t) ** 2 + 3 * y2 * t * t * (1 - t) + t ** 3;
-  return (x: number) => { let lo = 0, hi = 1; for (let i = 0; i < 24; i++) { const m = (lo + hi) / 2; if (bx(m) < x) lo = m; else hi = m; } return by((lo + hi) / 2); };
-}
-const easeReturn = cubicBezier(0.65, 0, 0.35, 1);
 // rest pose for the anchors API (front view, steady under the sway): a camera at the start position + pivot without rotation
 const restCam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 restCam.position.copy(CAM.pos); restCam.lookAt(CAM.target); restCam.updateMatrixWorld();
 const restPivot = new THREE.Matrix4();
 const easeReset = (k: number) => 1 - Math.pow(1 - k, 3);
-const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LOAD_TIMEOUT = 15000; // ТЗ §06: 15 s → offer the 2D mode
 
 type Slot = { el: HTMLElement; mode: SlotMode } | null;
@@ -61,7 +52,6 @@ export function Scene({ slot }: { slot: Slot }) {
   const entryRef = useRef<ModelEntry | null>(null);
   const model = useBody((s) => s.model);
   const tool = useBody((s) => s.tool);
-  const autorotate = useBody((s) => s.autorotate);
   const markers = useBody((s) => s.markers);
   const resetSeq = useBody((s) => s.resetSeq);
   const mode2d = useBody((s) => s.mode2d);
@@ -198,17 +188,22 @@ export function Scene({ slot }: { slot: Slot }) {
   }, [slot, mode2d, setFrameloop]);
 
   // ---- booking reset (double tap / button / entry from the hero)
-  type Anim = { t0: number; dur: number; ease: (k: number) => number; from: THREE.Vector3; fromT: THREE.Vector3; rotFrom: number; rotTo: number };
+  type Anim = { t0: number; from: THREE.Vector3; fromT: THREE.Vector3; rotFrom: number };
   const resetAnim = useRef<Anim | null>(null);
-  const startAnim = useCallback((rotTo?: number) => {
+  const startAnim = useCallback(() => {
     if (!controls.current || !pivot.current) return;
     const r = pivot.current.rotation.y;
-    resetAnim.current = { t0: performance.now(), dur: 450, ease: easeReset, from: camera.position.clone(), fromT: controls.current.target.clone(), rotFrom: r, rotTo: rotTo ?? Math.round(r / TURN) * TURN };
+    resetAnim.current = {
+      t0: performance.now(),
+      from: camera.position.clone(),
+      fromT: controls.current.target.clone(),
+      rotFrom: r - Math.round(r / TURN) * TURN,
+    };
   }, [camera]);
   useEffect(() => { if (editable && resetSeq) startAnim(); }, [editable, resetSeq, startAnim]);
-  // the booking starts from the front view (the hero may have left the model mid-sway)
+  // Booking starts at the front, taking the shortest path from the hero's angle.
   useEffect(() => {
-    if (editable) startAnim(0);
+    if (editable) startAnim();
     return () => { resetAnim.current = null; };
   }, [editable, startAnim]);
 
@@ -216,8 +211,6 @@ export function Scene({ slot }: { slot: Slot }) {
   const hero = mode === 'hero' && !mode2d;
   const swayT = useRef(0);
   const dragYaw = useRef(0);
-  const returning = useRef<{ t0: number; from: number } | null>(null);
-  const dragging = useRef(false);
   useLayoutEffect(() => {
     if (!hero) return;
     camera.position.copy(CAM.pos);
@@ -225,18 +218,11 @@ export function Scene({ slot }: { slot: Slot }) {
     if (pivot.current) pivot.current.rotation.y = 0;
     swayT.current = 0;
     dragYaw.current = 0;
-    returning.current = null;
-    dragging.current = false;
     const canvas = gl.domElement;
     return bindHeroDrag(canvas, (dx, isTouch) => {
-      dragging.current = true;
-      returning.current = null; // continue from the yaw drawn in the most recent frame
+      if (body.get().autorotate) body.setAutorotate(false);
       const halfTurnDistance = isTouch ? canvas.clientWidth * TOUCH_HALF_TURN_WIDTH : canvas.clientHeight / 2;
       dragYaw.current += Math.PI * dx / Math.max(1, halfTurnDistance);
-    }, () => {
-      dragging.current = false;
-      if (reducedMotion()) dragYaw.current = 0;
-      else returning.current = { t0: performance.now(), from: dragYaw.current - Math.round(dragYaw.current / TURN) * TURN };
     });
   }, [hero, camera, gl]);
 
@@ -299,24 +285,18 @@ export function Scene({ slot }: { slot: Slot }) {
       // RC-5 (lead): the sway clock runs from the reveal (lib/body3d/heroIntro — the model waits in the front pose under the
       // poster until the index intro is done), its amplitude eased in over SWAY.easeIn s (a sine starts at full speed,
       // 14°/s: the dots slid 2.4–3.4 px in the first frames after the swap)
-      if (autorotate && !dragging.current && !returning.current) {
+      if (body.get().autorotate) {
         if (heroReveal.isShown()) swayT.current += Math.min(dt, 0.1); else swayT.current = 0;
-      }
-      const motion = returning.current;
-      if (motion) {
-        const progress = Math.min(1, (performance.now() - motion.t0) / RETURN_MS);
-        dragYaw.current = motion.from * (1 - easeReturn(progress));
-        if (progress === 1) { dragYaw.current = 0; returning.current = null; }
       }
       const k = Math.min(1, swayT.current / SWAY.easeIn);
       p.rotation.y = dragYaw.current + SWAY.amp * k * k * (3 - 2 * k) * Math.sin(TURN * swayT.current / SWAY.period);
     }
     const ra = resetAnim.current;
     if (ra && controls.current && p) {
-      const k = ra.dur > 0 ? Math.min(1, (performance.now() - ra.t0) / ra.dur) : 1, e = ra.ease(k);
+      const k = Math.min(1, (performance.now() - ra.t0) / 450), e = easeReset(k);
       camera.position.lerpVectors(ra.from, CAM.pos, e);
       controls.current.target.lerpVectors(ra.fromT, CAM.target, e);
-      p.rotation.y = ra.rotFrom + (ra.rotTo - ra.rotFrom) * e;
+      p.rotation.y = ra.rotFrom * (1 - e);
       if (k >= 1) resetAnim.current = null;
     }
     const probe = fpsProbe.current;
