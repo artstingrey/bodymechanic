@@ -515,6 +515,13 @@
     },
     "back": "← Back",
     "canvasLabel": "Interactive 3D body model. Click to mark an area.",
+    "viewer": {
+      "title": "Body model",
+      "mode": "View mode",
+      "side": "Body side",
+      "labels": "Anatomical areas",
+      "canvasLabel": "Interactive 3D body model. Select an area to turn its highlight on or off."
+    },
     "help": {
       "title": "Help",
       "step1": "Tap or click the model where something bothers you and a marker will appear.",

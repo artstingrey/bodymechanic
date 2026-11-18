@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
-import { body, useBody } from '@/lib/body3d/store';
+import { useBody, useBodyStore } from '@/lib/body3d/store';
 import { Scene, modelUrl } from './Scene';
 import type { SlotMode } from '../Body3DProvider';
 
@@ -12,11 +12,12 @@ function hasWebGL2() {
 }
 
 export default function Body3DRuntime({ host, slot }: { host: HTMLDivElement; slot: { el: HTMLElement; mode: SlotMode } | null }) {
+  const store = useBodyStore();
   // debug only: ?debug=nowebgl behaves like a device without WebGL 2 (checks of the hero / booking fallbacks)
   const [webgl] = useState(() => hasWebGL2() && new URLSearchParams(window.location.search).get('debug') !== 'nowebgl');
   // declarative DPR: the Canvas re-applies its dpr prop on re-render, so the quality fallback lives here, not in setDpr()
   const reduced = useBody((s) => s.quality === 'reduced');
-  useEffect(() => { if (!webgl) body.setMode2d('noWebgl'); }, [webgl]); // ТЗ 6.11: no WebGL → 2D
+  useEffect(() => { if (!webgl) store.setMode2d('noWebgl'); }, [webgl, store]); // ТЗ 6.11: no WebGL → 2D
   if (!webgl) return null;
   return createPortal(
     <Canvas
@@ -27,12 +28,12 @@ export default function Body3DRuntime({ host, slot }: { host: HTMLDivElement; sl
       onCreated={({ gl, camera }) => {
         gl.toneMappingExposure = 1.5; // prototype: ACES Filmic (R3F default) + exposure 1.5
         camera.lookAt(0, 0.5, 0);
-        window.__bm3d = { contextId: Math.random().toString(36).slice(2), frames: 0, model: () => body.get().model, url: modelUrl, quality: () => body.get().quality, dpr: () => gl.getPixelRatio() };
+        window.__bm3d = { contextId: Math.random().toString(36).slice(2), frames: 0, model: () => store.get().model, url: modelUrl, quality: () => store.get().quality, dpr: () => gl.getPixelRatio() };
         // debug only (lead: no debug UI in the product): ?debug=reduced forces the low-quality path for checks
         const debug = new URLSearchParams(window.location.search).get('debug');
-        if (debug === 'reduced') body.setQuality('reduced');
+        if (debug === 'reduced') store.setQuality('reduced');
         // ?debug=lowfps: a weak GPU (FPS < 20 in the first 3 s) → hero poster / booking 2D (device matrix: Moto G4, iPhone SE)
-        if (debug === 'lowfps') body.setMode2d('lowFps');
+        if (debug === 'lowfps') store.setMode2d('lowFps');
       }}
     >
       <Scene slot={slot} />

@@ -8,13 +8,14 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
-import { body, useBody, type Marker } from '@/lib/body3d/store';
+import { useBody, useBodyStore, type Marker } from '@/lib/body3d/store';
 import { ZONE_KEYS, keyToIndex } from '@/lib/body3d/zones';
 import { computeZoneColours, FRAMING, loadModel, modelUrl, overlayMaterial, setReducedQuality, warmUp, type ModelEntry } from './loader';
 import { anchorForZone, transferMarkers, zoneAtHit } from './transfer';
 import { createZoneOutline, type OutlineMode } from './zoneOutline';
 import { clearAnchors, projectAnchors } from './anchorsProjector';
 import { bodyAnchors } from '@/lib/body3d/anchors';
+import { VIEWER_CALLOUT_IDS } from '@/lib/body3d/viewer-callouts';
 import type { SlotMode } from '../Body3DProvider';
 import { LAND_PHONE_MQ } from '@/lib/ui/media';
 import { heroReveal } from '@/lib/body3d/heroIntro';
@@ -35,6 +36,8 @@ const TOUCH_HALF_TURN_WIDTH = 0.3;
 // Projection only (zoom + view offset as fractions — resize-safe): orbit distances, the zoom tool and the reset stay.
 const LAND_ZOOM = 1.2;
 const LAND_SHIFT = 0.035;
+const VIEWER_ZOOM = 1.12;
+const VIEWER_SHIFT = 0.027;
 // rest pose for the anchors API (front view, steady under the sway): a camera at the start position + pivot without rotation
 const restCam = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
 restCam.position.copy(CAM.pos); restCam.lookAt(CAM.target); restCam.updateMatrixWorld();
@@ -46,6 +49,7 @@ type Slot = { el: HTMLElement; mode: SlotMode } | null;
 
 export function Scene({ slot }: { slot: Slot }) {
   const { gl, camera, scene, setFrameloop, invalidate } = useThree();
+  const store = useBodyStore();
   const controls = useRef<OrbitControlsImpl>(null);
   const pivot = useRef<THREE.Group>(null);
   const [entry, setEntry] = useState<ModelEntry | null>(null);
@@ -53,65 +57,81 @@ export function Scene({ slot }: { slot: Slot }) {
   const model = useBody((s) => s.model);
   const tool = useBody((s) => s.tool);
   const markers = useBody((s) => s.markers);
+  const selectedZones = useBody((s) => s.selectedZones);
   const resetSeq = useBody((s) => s.resetSeq);
   const mode2d = useBody((s) => s.mode2d);
   const loadSeq = useBody((s) => s.loadSeq); // «Повторить» after a load error (F-07)
   const quality = useBody((s) => s.quality);
   const dpr = useThree((s) => s.viewport.dpr); // follows setDpr (quality fallback) → outline stays 1.5 CSS px
   const mode = slot?.mode ?? null;
-  const editable = mode === 'booking';
+  const booking = mode === 'booking';
+  const viewer = mode === 'viewer';
+  const interactive = booking || viewer;
+  const viewerZoom = useThree(({ size }) =>
+    viewer && size.width && size.height ? Math.min(VIEWER_ZOOM, size.width / size.height / 0.38) : VIEWER_ZOOM);
 
 
   // ---- load / switch model (marker transfer, warm-up of the other model in idle)
   useEffect(() => {
     let alive = true;
     const first = !entryRef.current;
-    if (first) body.setStatus('loading', 0);
-    const timer = window.setTimeout(() => { if (alive && body.get().status === 'loading') body.setStatus('timeout'); }, LOAD_TIMEOUT);
-    loadModel(gl, model, (f) => body.setProgress(f)).then(async (next) => {
+    if (first || viewer) store.setStatus('loading', 0);
+    const timer = window.setTimeout(() => { if (alive && store.get().status === 'loading') store.setStatus('timeout'); }, LOAD_TIMEOUT);
+    loadModel(gl, model, (f) => store.setProgress(f)).then(async (next) => {
       if (!alive) return;
       const prev = entryRef.current;
-      if (prev === next) return;
+      if (prev === next) {
+        if (viewer) store.setStatus('ready', 1);
+        return;
+      }
       await warmUp(gl, next, camera, scene);
       if (!alive || !pivot.current) return;
       if (prev) pivot.current.remove(prev.root);
       pivot.current.position.y = FRAMING[next.gender].y;
       pivot.current.add(next.root);
       pivot.current.updateMatrixWorld(true);
-      if (prev && body.get().markers.length) {
-        const { kept, dropped } = transferMarkers(pivot.current, prev, next, body.get().markers);
-        body.replaceMarkers(kept, { model: next.gender, dropped });
+      if (!viewer && prev && store.get().markers.length) {
+        const { kept, dropped } = transferMarkers(pivot.current, prev, next, store.get().markers);
+        store.replaceMarkers(kept, { model: next.gender, dropped });
       }
       entryRef.current = next;
       setEntry(next);
-      if (first) { body.setStatus('ready', 1); body.announceLoaded(); }
+      if (first || viewer) store.setStatus('ready', 1);
+      if (first && !viewer) store.announceLoaded();
       // prefetch + warm the other model when idle (switch without network or GPU-upload hitch)
       const other = next.gender === 'male' ? 'female' : 'male';
       const idle = (cb: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 4000 }) : setTimeout(cb, 1500));
       window.setTimeout(() => idle(() => { loadModel(gl, other).then((e) => warmUp(gl, e, camera, scene)).catch(() => {}); }), 2500);
-    }).catch(() => { if (alive && first) body.setStatus('error'); });
+    }).catch(() => { if (alive && (first || viewer)) store.setStatus('error'); });
     return () => { alive = false; clearTimeout(timer); };
-  }, [model, gl, camera, scene, loadSeq]);
+  }, [model, gl, camera, scene, loadSeq, store, viewer]);
 
-  // ---- zone highlight (booking only). Normal quality: screen-space veil + outline (zoneOutline.ts, F-07 variant «а»);
+  // ---- zone highlight. Normal quality: screen-space veil + outline (zoneOutline.ts, F-07 variant «а»);
   // reduced quality: per-vertex veil only, no outline (lead). Both read the same uMask.
-  const outlineMode: OutlineMode = !editable || mode2d || !markers.length ? 'off' : quality === 'high' ? 'screen' : 'veil';
-  // short landscape phones, booking: a tighter framing (LAND_ZOOM); everywhere else zoom 1
+  const highlighted = useMemo(() => {
+    if (booking) return markers.map((m) => keyToIndex(m.zoneId));
+    if (viewer) return selectedZones.map(keyToIndex).filter((index) => entry?.present.has(index));
+    return [];
+  }, [booking, markers, viewer, selectedZones, entry]);
+  const outlineMode: OutlineMode = mode2d || !highlighted.length ? 'off' : quality === 'high' ? 'screen' : 'veil';
+  // A tighter frame for short booking screens and a full-length view in the standalone viewer.
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;
     const mq = window.matchMedia(LAND_PHONE_MQ);
     /* eslint-disable react-hooks/immutability -- the three.js camera is mutable by design (as in the frame loop) */
     const apply = () => {
       const on = mode === 'booking' && mq.matches;
-      if (on) cam.setViewOffset(1, 1, 0, LAND_SHIFT, 1, 1); else cam.clearViewOffset();
-      cam.zoom = on ? LAND_ZOOM : 1;
+      if (viewer) cam.setViewOffset(cam.aspect, 1, 0, VIEWER_SHIFT, cam.aspect, 1);
+      else if (on) cam.setViewOffset(1, 1, 0, LAND_SHIFT, 1, 1);
+      else cam.clearViewOffset();
+      cam.zoom = viewer ? viewerZoom : on ? LAND_ZOOM : 1;
       cam.updateProjectionMatrix(); invalidate();
     };
     /* eslint-enable react-hooks/immutability */
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
-  }, [camera, mode, invalidate]);
+  }, [camera, mode, invalidate, viewer, viewerZoom]);
   const modeRef = useRef<OutlineMode>('off');
   const outline = useMemo(() => createZoneOutline(overlayMaterial.uniforms.uMask), []);
   useEffect(() => () => outline.dispose(), [outline]);
@@ -122,22 +142,22 @@ export function Scene({ slot }: { slot: Slot }) {
     modeRef.current = outlineMode;
     const mask = overlayMaterial.uniforms.uMask.value as Float32Array;
     mask.fill(0);
-    if (editable) for (const m of markers) mask[keyToIndex(m.zoneId)] = 1;
-    if (entry) for (const ov of entry.overlays) ov.visible = outlineMode === 'veil' && markers.some((m) => (ov.userData.keys as Set<number>).has(keyToIndex(m.zoneId)));
-  }, [markers, entry, editable, outlineMode]);
+    for (const index of highlighted) mask[index] = 1;
+    if (entry) for (const ov of entry.overlays) ov.visible = outlineMode === 'veil' && highlighted.some((index) => (ov.userData.keys as Set<number>).has(index));
+  }, [highlighted, entry, outlineMode]);
   /* eslint-enable react-hooks/immutability */
 
   // ---- markers chosen from the zone list / 2D have no surface point → anchor them on the zone (disc on the body, not inside)
   const [bvhSeq, setBvhSeq] = useState(0);
   useEffect(() => { let alive = true; entry?.bvh.then(() => { if (alive) setBvhSeq((n) => n + 1); }); return () => { alive = false; }; }, [entry]);
   useEffect(() => {
-    if (!entry?.bvhReady || !pivot.current) return; // dozens of rays per zone: wait for the BVH (built right after load)
+    if (viewer || !entry?.bvhReady || !pivot.current) return; // dozens of rays per zone: wait for the BVH (built right after load)
     for (const m of markers) {
       if (m.normal) continue;
       const a = anchorForZone(pivot.current, entry, keyToIndex(m.zoneId));
-      if (a) body.updateMarker(m.id, a);
+      if (a) store.updateMarker(m.id, a);
     }
-  }, [markers, entry, bvhSeq]);
+  }, [markers, entry, bvhSeq, store, viewer]);
 
   // ---- the frame: [mask pass] → scene → [veil + outline]. Priority 1 → R3F leaves rendering to us.
   useFrame(({ gl: r, scene: sc, camera: cam, size, invalidate: redraw }) => {
@@ -146,7 +166,8 @@ export function Scene({ slot }: { slot: Slot }) {
       const rc = restCam, pc = cam as THREE.PerspectiveCamera;
       if (rc.aspect !== pc.aspect || rc.fov !== pc.fov || rc.zoom !== pc.zoom) { rc.fov = pc.fov; rc.aspect = pc.aspect; rc.zoom = pc.zoom; rc.near = pc.near; rc.far = pc.far; rc.updateProjectionMatrix(); }
       restPivot.makeTranslation(pivot.current.position.x, pivot.current.position.y, pivot.current.position.z);
-      projectAnchors({ camera: cam, pivot: pivot.current, entry: entryRef.current, markers: body.get().markers, mode, width: size.width, height: size.height, rest: { camera: rc, pivot: restPivot } });
+      projectAnchors({ camera: cam, pivot: pivot.current, entry: entryRef.current, markers: store.get().markers, mode,
+        zoneIds: viewer ? VIEWER_CALLOUT_IDS : undefined, width: size.width, height: size.height, rest: { camera: rc, pivot: restPivot } });
     }
     outline.render(r, sc, cam, modeRef.current === 'screen', dpr);
     if (window.__bm3d && !window.__bm3d.outline) { // gate probes
@@ -191,21 +212,32 @@ export function Scene({ slot }: { slot: Slot }) {
   type Anim = { t0: number; from: THREE.Vector3; fromT: THREE.Vector3; rotFrom: number };
   const resetAnim = useRef<Anim | null>(null);
   const startAnim = useCallback(() => {
-    if (!controls.current || !pivot.current) return;
+    const orbit = controls.current;
+    if (!orbit || !pivot.current) return;
+    const from = camera.position.clone();
+    const fromT = orbit.target.clone();
+    if (viewer && orbit.enableDamping) {
+      // Consume the previous drag's momentum so it cannot move the camera after the reset.
+      orbit.enableDamping = false;
+      orbit.update();
+      orbit.enableDamping = true;
+      camera.position.copy(from);
+      camera.lookAt(fromT);
+    }
     const r = pivot.current.rotation.y;
     resetAnim.current = {
       t0: performance.now(),
-      from: camera.position.clone(),
-      fromT: controls.current.target.clone(),
+      from,
+      fromT,
       rotFrom: r - Math.round(r / TURN) * TURN,
     };
-  }, [camera]);
-  useEffect(() => { if (editable && resetSeq) startAnim(); }, [editable, resetSeq, startAnim]);
+  }, [camera, viewer]);
+  useEffect(() => { if (interactive && resetSeq) startAnim(); }, [interactive, resetSeq, startAnim]);
   // Booking starts at the front, taking the shortest path from the hero's angle.
   useEffect(() => {
-    if (editable) startAnim();
+    if (booking) startAnim();
     return () => { resetAnim.current = null; };
-  }, [editable, startAnim]);
+  }, [booking, startAnim]);
 
   // ---- hero: the camera stays at the front; drag and sway share the model's vertical pivot.
   const hero = mode === 'hero' && !mode2d;
@@ -220,57 +252,84 @@ export function Scene({ slot }: { slot: Slot }) {
     dragYaw.current = 0;
     const canvas = gl.domElement;
     return bindHeroDrag(canvas, (dx, isTouch) => {
-      if (body.get().autorotate) body.setAutorotate(false);
+      if (store.get().autorotate) store.setAutorotate(false);
       const halfTurnDistance = isTouch ? canvas.clientWidth * TOUCH_HALF_TURN_WIDTH : canvas.clientHeight / 2;
       dragYaw.current += Math.PI * dx / Math.max(1, halfTurnDistance);
     });
-  }, [hero, camera, gl]);
+  }, [hero, camera, gl, store]);
 
   // ---- input on the canvas: taps, double tap, marker placement, one-finger zoom tool
   useEffect(() => {
-    if (!editable) return;
+    if (!interactive) return;
     const el = gl.domElement;
     const raycaster = new THREE.Raycaster() as THREE.Raycaster & { firstHitOnly?: boolean };
     raycaster.firstHitOnly = true;
-    let down: { x: number; y: number; t: number; id: number; lastY: number } | null = null;
+    let down: { x: number; y: number; t: number; id: number; lastY: number; dragged: boolean } | null = null;
     let lastTap: { t: number; x: number; y: number } | null = null;
     let pending = 0;
-    const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, lastY: e.clientY }; };
+    const interruptReset = () => { resetAnim.current = null; };
+    const onDown = (e: PointerEvent) => {
+      if (viewer && (down || !e.isPrimary || e.button !== 0)) { down = null; return; }
+      if (viewer) {
+        interruptReset();
+        el.setPointerCapture(e.pointerId);
+      }
+      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, lastY: e.clientY, dragged: false };
+    };
     const onMove = (e: PointerEvent) => {
-      if (!down || e.pointerId !== down.id || body.get().tool !== 'zoom' || !controls.current) return;
+      if (!down || e.pointerId !== down.id) return;
+      if (viewer && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.dragged = true;
+      if (store.get().tool !== 'zoom' || !controls.current) return;
       const dy = e.clientY - down.lastY; down.lastY = e.clientY;
       const off = camera.position.clone().sub(controls.current.target);
       camera.position.copy(controls.current.target).add(off.setLength(THREE.MathUtils.clamp(off.length() * Math.exp(dy * 0.006), CAM.minDist, CAM.maxDist)));
     };
     const place = (x: number, y: number) => {
       const cur = entryRef.current; if (!cur || !pivot.current) return;
+      if (viewer && (store.get().status !== 'ready' || cur.gender !== store.get().model)) return;
       const r = el.getBoundingClientRect();
       raycaster.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
       const hit = raycaster.intersectObjects(cur.meshes, false)[0];
       if (!hit || !hit.face) return;
       const key = ZONE_KEYS[zoneAtHit(hit)] ?? null;
+      if (viewer) {
+        if (key) store.toggleZone(key);
+        return;
+      }
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
       if (n.dot(raycaster.ray.direction) > 0) n.negate();
       n.transformDirection(new THREE.Matrix4().copy(pivot.current.matrixWorld).invert());
       const p = pivot.current.worldToLocal(hit.point.clone());
-      body.addMarker({ zoneId: key, position: [p.x, p.y, p.z], normal: [n.x, n.y, n.z] });
+      store.addMarker({ zoneId: key, position: [p.x, p.y, p.z], normal: [n.x, n.y, n.z] });
     };
     const onUp = (e: PointerEvent) => {
       if (!down || e.pointerId !== down.id) return;
-      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t;
+      const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t, dragged = down.dragged;
       down = null;
-      if (moved > 6 || dt > 450) return; // a drag, not a tap
+      if (dragged || moved > 6 || dt > 450) return;
+      if (viewer) { place(e.clientX, e.clientY); return; }
       const now = performance.now();
-      if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) { clearTimeout(pending); lastTap = null; body.resetView(); return; }
+      if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) { clearTimeout(pending); lastTap = null; store.resetView(); return; }
       lastTap = { t: now, x: e.clientX, y: e.clientY };
       // DECISION: a tap places the marker after 230 ms, so a double tap resets the view instead of adding a marker.
       // R-FINAL F-04 (lead): in ANY tool — the hints say «tap the model»; drags rotate (or zoom), a tap without a move marks
       const { clientX: x, clientY: y } = e; pending = window.setTimeout(() => place(x, y), 230);
     };
+    const onCancel = () => { down = null; };
     const noDbl = (e: MouseEvent) => e.preventDefault();
     el.addEventListener('pointerdown', onDown); el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('dblclick', noDbl);
-    return () => { clearTimeout(pending); el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerup', onUp); el.removeEventListener('dblclick', noDbl); };
-  }, [gl, camera, editable]);
+    if (viewer) {
+      el.addEventListener('lostpointercapture', onCancel);
+      el.addEventListener('wheel', interruptReset, { passive: true });
+    }
+    return () => {
+      clearTimeout(pending);
+      el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp); el.removeEventListener('dblclick', noDbl);
+      el.removeEventListener('lostpointercapture', onCancel);
+      el.removeEventListener('wheel', interruptReset);
+    };
+  }, [gl, camera, interactive, viewer, store]);
 
   // ---- quality fallback (lead, R-3D-01): MeshStandard here; DPR ≤ 1.5 via the Canvas dpr prop (Body3DRuntime).
   useEffect(() => { if (quality === 'reduced') setReducedQuality(); }, [quality]);
@@ -285,7 +344,7 @@ export function Scene({ slot }: { slot: Slot }) {
       // RC-5 (lead): the sway clock runs from the reveal (lib/body3d/heroIntro — the model waits in the front pose under the
       // poster until the index intro is done), its amplitude eased in over SWAY.easeIn s (a sine starts at full speed,
       // 14°/s: the dots slid 2.4–3.4 px in the first frames after the swap)
-      if (body.get().autorotate) {
+      if (store.get().autorotate) {
         if (heroReveal.isShown()) swayT.current += Math.min(dt, 0.1); else swayT.current = 0;
       }
       const k = Math.min(1, swayT.current / SWAY.easeIn);
@@ -305,7 +364,7 @@ export function Scene({ slot }: { slot: Slot }) {
       const el = performance.now() - probe.t0;
       if (el > 3000) {
         const fps = (probe.frames * 1000) / el;
-        if (fps < 20) body.setMode2d('lowFps'); else if (fps < 30) body.setQuality('reduced');
+        if (fps < 20 && !viewer) store.setMode2d('lowFps'); else if (fps < 30) store.setQuality('reduced');
         probe.frames = -1;
       }
     }
@@ -321,11 +380,11 @@ export function Scene({ slot }: { slot: Slot }) {
       <ambientLight intensity={0.9} />
       <hemisphereLight args={['#ffffff', '#f1f3f5', 1.4]} position={[0, 2, 0]} />
       {lights.map((l, k) => <directionalLight key={k} position={l.p} intensity={l.i} color={l.c} />)}
-      {editable && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'}
+      {interactive && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'}
         minDistance={CAM.minDist} maxDistance={CAM.maxDist} minPolarAngle={CAM.minPolar} maxPolarAngle={CAM.maxPolar} target={CAM.target}
         touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }} />}
       <group ref={pivot}>
-        {editable && markers.filter((m) => m.normal).map((m) => <Pin key={m.id} m={m} meshes={entry?.meshes} />)}
+        {booking && markers.filter((m) => m.normal).map((m) => <Pin key={m.id} m={m} meshes={entry?.meshes} />)}
       </group>
     </>
   );

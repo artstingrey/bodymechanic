@@ -1,16 +1,17 @@
 'use client';
 /** Hero: model switch (ТЗ §05.1) and the visible pause/play of the auto-rotation (WCAG 2.2.2, A11Y-15). */
 import { useTranslations } from 'next-intl';
-import { body, useBody } from '@/lib/body3d/store';
+import { body, useBody, useBodyStore } from '@/lib/body3d/store';
 import { Icon } from '@/components/ui/Icon';
 
 export function ModelSwitch() {
   const t = useTranslations();
+  const store = useBodyStore();
   const model = useBody((s) => s.model);
   return (
     <div role="group" aria-label={t('body3d.model.label')} className="b3d-switch">
       {(['male', 'female'] as const).map((g) => (
-        <button key={g} type="button" aria-pressed={model === g} onClick={() => body.setModel(g)}>{t(`body3d.model.${g}`)}</button>
+        <button key={g} type="button" aria-pressed={model === g} onClick={() => store.setModel(g)}>{t(`body3d.model.${g}`)}</button>
       ))}
     </div>
   );

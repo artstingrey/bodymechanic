@@ -47,6 +47,7 @@ export default defineConfig({
   },
   projects: [
     ...WIDTHS.map((w) => ({ name: w.name, testMatch: /pages\.spec\.ts/, use: { ...CHROME, viewport: { width: w.width, height: w.height } } })),
+    { name: 'body-viewer', testMatch: /body-viewer\.spec\.ts/, use: { ...CHROME, viewport: { width: 1280, height: 800 } } },
     { name: 'flows', testMatch: /(flows|states|seo|lp-tracking)\.spec\.ts/, use: { ...CHROME, viewport: { width: 1280, height: 800 } } },
     // Level A (README-CONTEXT «ВСЕ iPhone И ВСЕ Android»): every functional phone scenario on 4 iPhones (WebKit) and
     // 4 Android phones (Chrome, mobile UA, touch) — visible areas, not screens (e2e/devices.ts). On every gate run.

@@ -12,9 +12,10 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import assets from '@/lib/body3d/assets.json';
-import { body, useBody } from '@/lib/body3d/store';
+import { useBody, useBodyStore } from '@/lib/body3d/store';
 import { useBody3DHost, type SlotMode } from './Body3DProvider';
 import { LiveRegion } from './LiveRegion';
+import type { BodySide } from './Fallback2D';
 import { usePosterAnchors } from './usePosterAnchors';
 import { heroIntro, heroReveal, REVEAL_FAILSAFE_MS } from '@/lib/body3d/heroIntro';
 
@@ -24,10 +25,11 @@ const Fallback2D = dynamic(() => import('./Fallback2D').then((m) => m.Fallback2D
 /** hero shows the static poster instead of the 3D model */
 export const heroFallback = (s: { mode2d: unknown; status: string }) => !!s.mode2d || s.status === 'timeout' || s.status === 'error';
 
-export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className?: string }) {
+export function Body3DSlot({ mode, className = '', viewerSide }: { mode: SlotMode; className?: string; viewerSide?: BodySide }) {
   const ref = useRef<HTMLDivElement>(null);
   const ctx = useBody3DHost();
   const t = useTranslations();
+  const store = useBodyStore();
   const model = useBody((s) => s.model);
   const status = useBody((s) => s.status);
   const progress = useBody((s) => s.progress);
@@ -35,7 +37,7 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
   const hint = useBody((s) => s.hint);
   const posterMode = mode === 'hero' && heroFallback({ mode2d, status });
   // the visible hint (e.g. tap on the head / front of the shin) fades after 5 s; aria-live announces it separately
-  useEffect(() => { if (!hint) return; const id = window.setTimeout(() => body.clearHint(), 5000); return () => window.clearTimeout(id); }, [hint]);
+  useEffect(() => { if (!hint) return; const id = window.setTimeout(() => store.clearHint(), 5000); return () => window.clearTimeout(id); }, [hint, store]);
 
   useEffect(() => { if (ref.current && ctx) return ctx.register(ref.current, mode); }, [ctx, mode]);
   // RC-5 (lead; FB + AD): the hero index stands on the POSTER's anchors also while the model loads (not only in the fallback)
@@ -54,7 +56,7 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
   // the hero mounts with the model already live (a client navigation from /booking): no intro to wait for — the signal at
   // once (before HeroAtlas's first draw: child layout effects run first), so neither the poster covers the live model nor
   // the lines draw over it
-  useLayoutEffect(() => { if (hero && body.get().status === 'ready') heroIntro.done(true); }, [hero]);
+  useLayoutEffect(() => { if (hero && store.get().status === 'ready') heroIntro.done(true); }, [hero, store]);
   useEffect(() => {
     if (!hero || status !== 'ready' || mode2d) return;
     heroReveal.ready();
@@ -67,9 +69,11 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
 
   const p = assets.posters[model];
   const booking = mode === 'booking';
+  const viewer = mode === 'viewer';
   return (
     <div ref={ref} className={`b3d-slot ${className}`} data-mode={mode} data-status={held ? 'loading' : status} data-mode2d={mode2d || undefined}
-      data-fallback={posterMode || undefined} role="group" aria-label={t('body3d.canvasLabel')}>
+      data-fallback={posterMode || undefined} role="group"
+      aria-label={t(viewer ? (mode2d ? 'body3d.mode2d.badge' : 'body3d.viewer.canvasLabel') : 'body3d.canvasLabel')}>
       <picture className="b3d-poster" style={held ? { zIndex: 2 } : undefined}>
         <source srcSet={p.avif} type="image/avif" />
         <source srcSet={p.webp} type="image/webp" />
@@ -77,25 +81,28 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
         <img src={p.png} width={p.width} height={p.height} alt={t('home.hero.posterAlt')} fetchPriority="high" />
       </picture>
       {/* RC-6 (lead + AD): no loading badge over the hero figure — the hero's caption under the model shows the progress */}
-      {status === 'loading' && !mode2d && mode !== 'hero' ? <div className="b3d-loader" role="status">{t('body3d.load.progress', { percent: Math.round(progress * 100) })}</div> : null}
+      {status === 'loading' && !mode2d && !hero ? <div className={viewer ? 'sr-only' : 'b3d-loader'} role="status">{t('body3d.load.progress', { percent: Math.round(progress * 100) })}</div> : null}
+      {viewer && !mode2d && (status === 'error' || status === 'timeout') ? (
+        <p className="sr-only" role="alert">{t(status === 'error' ? 'body3d.load.error' : 'body3d.load.timeoutTitle')} {t('body3d.load.switchTo2d')}</p>
+      ) : null}
       {booking && status === 'error' && !mode2d ? (
         <div className="b3d-loader" role="alert">
           {t('body3d.load.error')}{' '}
-          <button type="button" onClick={() => body.retryLoad()}>{t('common.actions.retry')}</button>{' '}
-          <button type="button" onClick={() => body.setMode2d('user')}>{t('body3d.load.switchTo2d')}</button>
+          <button type="button" onClick={() => store.retryLoad()}>{t('common.actions.retry')}</button>{' '}
+          <button type="button" onClick={() => store.setMode2d('user')}>{t('body3d.load.switchTo2d')}</button>
         </div>
       ) : null}
       {booking && status === 'timeout' && !mode2d ? (
         <div className="b3d-dialog" role="alertdialog" aria-labelledby="b3d-timeout-title">
           <p id="b3d-timeout-title"><b>{t('body3d.load.timeoutTitle')}</b></p>
           <p>{t('body3d.load.timeoutText')}</p>
-          <button type="button" onClick={() => body.setMode2d('timeout')}>{t('body3d.load.switchTo2d')}</button>
-          <button type="button" onClick={() => body.setStatus('loading')}>{t('body3d.load.keepWaiting')}</button>
+          <button type="button" onClick={() => store.setMode2d('timeout')}>{t('body3d.load.switchTo2d')}</button>
+          <button type="button" onClick={() => store.setStatus('loading')}>{t('body3d.load.keepWaiting')}</button>
         </div>
       ) : null}
       {hint && !mode2d ? <p className="b3d-hint" key={hint.seq}>{t(`body3d.hint.${hint.key}`)}</p> : null}
-      {booking && mode2d ? <Fallback2D /> : null}
-      <LiveRegion mode={mode} />
+      {!hero && mode2d ? <Fallback2D viewerSide={viewer ? viewerSide ?? 'front' : undefined} /> : null}
+      {!viewer ? <LiveRegion mode={mode} /> : null}
     </div>
   );
 }

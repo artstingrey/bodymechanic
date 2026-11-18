@@ -7,9 +7,9 @@
  * The three.js runtime is loaded with a dynamic import after the first paint (ТЗ §13: 3D не входит в JS первого экрана).
  */
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
-import { hydrateBody } from '@/lib/body3d/store';
+import { body, BodyStoreContext, createBodyStore } from '@/lib/body3d/store';
 
-export type SlotMode = 'hero' | 'booking';
+export type SlotMode = 'hero' | 'booking' | 'viewer';
 type Slot = { el: HTMLElement; mode: SlotMode; id: number };
 type RuntimeProps = { host: HTMLDivElement; slot: Slot | null };
 
@@ -18,7 +18,8 @@ export const useBody3DHost = () => useContext(Ctx);
 
 let seq = 0;
 
-export function Body3DProvider({ children }: { children: React.ReactNode }) {
+export function Body3DProvider({ children, viewer = false }: { children: React.ReactNode; viewer?: boolean }) {
+  const [store] = useState(() => viewer ? createBodyStore(true) : body);
   const parking = useRef<HTMLDivElement>(null);
   // Created on the client only (null during prerender — the static HTML contains just the poster).
   const [host] = useState<HTMLDivElement | null>(() => {
@@ -32,17 +33,19 @@ export function Body3DProvider({ children }: { children: React.ReactNode }) {
   const [Runtime, setRuntime] = useState<ComponentType<RuntimeProps> | null>(null);
   const wantRuntime = useRef(false);
 
-  useEffect(() => { hydrateBody(); }, []); // restore the booking draft (sessionStorage) once on the client
+  useEffect(() => { if (!viewer) store.hydrate(); }, [store, viewer]);
 
   const loadRuntime = useCallback(() => {
     if (wantRuntime.current) return;
     wantRuntime.current = true;
-    const go = () => import('./runtime/Body3DRuntime').then((m) => setRuntime(() => m.default));
+    const go = () => import('./runtime/Body3DRuntime')
+      .then((m) => setRuntime(() => m.default))
+      .catch(() => store.setStatus('error'));
     // after the first paint and when the browser is idle (ТЗ §06: модель грузится после отрисовки первого экрана)
     const idle = (cb: () => void) => ('requestIdleCallback' in window ? window.requestIdleCallback(cb, { timeout: 1200 }) : setTimeout(cb, 200));
     if (document.readyState === 'complete') requestAnimationFrame(() => idle(go));
     else window.addEventListener('load', () => requestAnimationFrame(() => idle(go)), { once: true });
-  }, []);
+  }, [store]);
 
   const register = useCallback((el: HTMLElement, mode: SlotMode) => {
     const slot = { el, mode, id: ++seq };
@@ -62,10 +65,12 @@ export function Body3DProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(() => ({ register }), [register]);
   return (
-    <Ctx.Provider value={value}>
-      {children}
-      <div ref={parking} hidden aria-hidden="true" />
-      {Runtime && host ? <Runtime host={host} slot={active} /> : null}
-    </Ctx.Provider>
+    <BodyStoreContext.Provider value={store}>
+      <Ctx.Provider value={value}>
+        {children}
+        <div ref={parking} hidden aria-hidden="true" />
+        {Runtime && host ? <Runtime host={host} slot={active} /> : null}
+      </Ctx.Provider>
+    </BodyStoreContext.Provider>
   );
 }

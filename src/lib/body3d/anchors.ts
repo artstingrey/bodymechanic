@@ -38,7 +38,7 @@ export interface BodyAnchor {
 export interface BodyAnchors {
   /** increments on every publish */
   seq: number;
-  mode: 'hero' | 'booking' | null;
+  mode: 'hero' | 'booking' | 'viewer' | null;
   /** 'poster' = published by the hero poster (usePosterAnchors: while the model loads, or the fallback); absent = the 3D runtime */
   source?: 'poster';
   /** canvas size in CSS px */

@@ -4,7 +4,7 @@
  * Visibility = surface faces the camera + inside the canvas + not hidden behind another body part (BVH ray to the point).
  */
 import * as THREE from 'three';
-import { bodyAnchors, type BodyAnchor } from '@/lib/body3d/anchors';
+import { bodyAnchors, type BodyAnchor, type BodyAnchors } from '@/lib/body3d/anchors';
 import type { Marker } from '@/lib/body3d/store';
 import { ZONE_KEYS, keyToIndex } from '@/lib/body3d/zones';
 import type { ModelEntry } from './loader';
@@ -21,14 +21,15 @@ interface Args {
   pivot: THREE.Object3D;
   entry: ModelEntry;
   markers: Marker[];
-  mode: 'hero' | 'booking';
+  mode: NonNullable<BodyAnchors['mode']>;
+  zoneIds?: ReadonlySet<string>;
   width: number;
   height: number;
   /** front-view rest pose: camera at its start position, pivot without rotation */
   rest: { camera: THREE.Camera; pivot: THREE.Matrix4 };
 }
 
-export function projectAnchors({ camera, pivot, entry, markers, mode, width, height, rest }: Args) {
+export function projectAnchors({ camera, pivot, entry, markers, mode, zoneIds, width, height, rest }: Args) {
   if (!bodyAnchors.wanted()) { lastSig = ''; return; }
   pivot.updateMatrixWorld();
   camera.updateMatrixWorld();
@@ -62,8 +63,9 @@ export function projectAnchors({ camera, pivot, entry, markers, mode, width, hei
   const zones: BodyAnchor[] = [];
   for (const z of entry.present) {
     const key = ZONE_KEYS[z];
-    const a = key ? anchorForZone(pivot, entry, z) : null;
-    if (key && a) zones.push(project(key, key, a.position, a.normal));
+    if (!key || (zoneIds && !zoneIds.has(key))) continue;
+    const a = anchorForZone(pivot, entry, z);
+    if (a) zones.push(project(key, key, a.position, a.normal));
   }
   const marks = markers.filter((m) => m.normal).map((m) => project(m.id, m.zoneId, m.position, m.normal!, m.n));
 
