@@ -18,7 +18,7 @@ const forbidden = 'header, footer, form, dialog, .cookie, .book-floating, .booki
 async function expectFullscreen(page: Page, locale: string, path = 'body-model') {
   await expect(page.locator('html')).toHaveAttribute('lang', locale);
   await expect(page.locator(forbidden)).toHaveCount(0);
-  await expect(page.getByRole('button')).toHaveCount(2);
+  await expect(page.getByRole('button')).toHaveCount(path === 'body-model-auto' ? 3 : 2);
   await expect(slot(page)).not.toHaveAttribute('data-mode2d');
   await expect(page.locator('a')).toHaveCount(1);
   await expect(page.locator('.body-viewer__languages [aria-current="page"]')).toHaveText(locale.toUpperCase());
@@ -178,6 +178,42 @@ test('changing models keeps both active rotation and the existing pause deadline
   expect(await yaw(page)).toBeGreaterThan(paused + 0.025);
 });
 
+test('the background picker applies a chosen colour and accepts HEX', async ({ page }) => {
+  await page.goto('/ru/body-model-auto/');
+  await liveModel(page);
+  const main = page.getByRole('main');
+  const toggle = page.getByRole('button', { name: 'Цвет фона' });
+  const panel = page.getByRole('group', { name: 'Цвет фона' });
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toBeVisible();
+
+  const picker = panel.getByLabel('Выбрать цвет');
+  const hex = panel.getByRole('textbox', { name: 'HEX' });
+  await picker.fill('#1a2b3c');
+  await expect(main).toHaveCSS('background-color', 'rgb(26, 43, 60)');
+  await expect(hex).toHaveValue('#1A2B3C');
+  await expect(page.locator('.body-viewer__callouts')).toHaveCSS('color', 'rgb(255, 255, 255)');
+
+  await hex.fill('AABBCC');
+  await expect(main).toHaveCSS('background-color', 'rgb(170, 187, 204)');
+  await expect(picker).toHaveValue('#aabbcc');
+  await hex.fill('#123');
+  await hex.press('Enter');
+  await expect(main).toHaveCSS('background-color', 'rgb(17, 34, 51)');
+  await expect(hex).toHaveValue('#112233');
+
+  await hex.fill('invalid');
+  await hex.press('Enter');
+  await expect(hex).toHaveAttribute('aria-invalid', 'true');
+  await expect(main).toHaveCSS('background-color', 'rgb(17, 34, 51)');
+  await hex.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(toggle).toBeFocused();
+});
+
 test.describe('EN viewer with a mobile touchscreen', () => {
   test.use({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
 
@@ -197,6 +233,16 @@ test.describe('EN viewer with a mobile touchscreen', () => {
     await page.clock.fastForward(VIEWER_IDLE_MS / 2 + 100);
     await expect.poll(() => yaw(page)).toBeGreaterThan(stopped + 0.025);
     await expect.poll(() => outline(page)).toMatch(/^(screen|veil)$/);
+
+    const toggle = page.getByRole('button', { name: 'Background colour' });
+    await toggle.tap();
+    const panel = page.getByRole('group', { name: 'Background colour' });
+    await expect(panel).toBeVisible();
+    const bounds = (await panel.boundingBox())!;
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+    await toggle.tap();
+    await expect(panel).toBeHidden();
   });
 
   test('rotates and zooms by touch, picks on a tap, and fits short landscape', async ({ page, context }) => {

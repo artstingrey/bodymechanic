@@ -519,6 +519,12 @@
       "title": "Body model",
       "labels": "Anatomical areas",
       "pauseHint": "Press Enter or Space to pause automatic rotation.",
+      "background": {
+        "label": "Background colour",
+        "pick": "Pick a colour",
+        "hex": "HEX",
+        "invalid": "Enter a HEX colour such as #EEE9E2."
+      },
       "canvasLabel": "Interactive 3D body model. Select an area to turn its highlight on or off."
     },
     "help": {

@@ -11,8 +11,13 @@ html[data-body-viewer] {
   padding: max(6px, env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-.body-viewer--auto {
-  background-color: #eee9e2;
+.body-viewer--auto .body-viewer__callouts {
+  color: var(--viewer-ink, var(--text));
+  --reticle: var(--viewer-ink, var(--text));
+}
+
+.body-viewer--auto :is(.b3d-switch button[aria-pressed="false"], .body-viewer__languages a) {
+  color: var(--viewer-ink, var(--muted-card));
 }
 
 .body-viewer--auto .b3d-slot:focus-visible {
@@ -47,6 +52,74 @@ html[data-body-viewer] {
   position: relative;
   min-height: 0;
   isolation: isolate;
+}
+
+.body-viewer__background-picker {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  z-index: 3;
+  color: var(--text);
+}
+
+.body-viewer__background-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  background: var(--surface);
+  border: 1px solid var(--field-border);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.body-viewer__background-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  width: min(230px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--field-border);
+  border-radius: var(--r-card-sm);
+  background: var(--surface);
+  box-shadow: var(--sh-2);
+}
+
+.body-viewer__background-panel:not([hidden]) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.body-viewer__background-panel label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.body-viewer__background-panel input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 8px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 16px;
+}
+
+.body-viewer__background-panel input[type="color"] {
+  cursor: pointer;
+}
+
+.body-viewer__background-panel p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--error);
+  font-size: 14px;
 }
 
 .body-viewer__callouts {
