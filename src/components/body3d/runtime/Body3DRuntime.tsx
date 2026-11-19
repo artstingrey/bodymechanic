@@ -5,13 +5,13 @@ import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
 import { useBody, useBodyStore } from '@/lib/body3d/store';
 import { Scene, modelUrl } from './Scene';
-import type { SlotMode } from '../Body3DProvider';
+import type { Body3DActiveSlot } from '../Body3DProvider';
 
 function hasWebGL2() {
   try { return !!document.createElement('canvas').getContext('webgl2'); } catch { return false; }
 }
 
-export default function Body3DRuntime({ host, slot }: { host: HTMLDivElement; slot: { el: HTMLElement; mode: SlotMode } | null }) {
+export default function Body3DRuntime({ host, slot }: { host: HTMLDivElement; slot: Body3DActiveSlot | null }) {
   const store = useBodyStore();
   const viewer = slot?.mode === 'viewer';
   const hasSlot = !!slot;

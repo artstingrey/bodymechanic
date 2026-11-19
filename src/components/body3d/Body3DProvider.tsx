@@ -10,10 +10,11 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 import { body, BodyStoreContext, createBodyStore } from '@/lib/body3d/store';
 
 export type SlotMode = 'hero' | 'booking' | 'viewer';
-type Slot = { el: HTMLElement; mode: SlotMode; id: number };
-type RuntimeProps = { host: HTMLDivElement; slot: Slot | null };
+export type Body3DActiveSlot = { el: HTMLElement; mode: SlotMode; autoRotate: boolean };
+type Slot = Body3DActiveSlot & { id: number };
+type RuntimeProps = { host: HTMLDivElement; slot: Body3DActiveSlot | null };
 
-const Ctx = createContext<{ register: (el: HTMLElement, mode: SlotMode) => () => void } | null>(null);
+const Ctx = createContext<{ register: (el: HTMLElement, mode: SlotMode, autoRotate: boolean) => () => void } | null>(null);
 export const useBody3DHost = () => useContext(Ctx);
 
 let seq = 0;
@@ -47,8 +48,8 @@ export function Body3DProvider({ children, viewer = false }: { children: React.R
     else window.addEventListener('load', () => requestAnimationFrame(() => idle(go)), { once: true });
   }, [store]);
 
-  const register = useCallback((el: HTMLElement, mode: SlotMode) => {
-    const slot = { el, mode, id: ++seq };
+  const register = useCallback((el: HTMLElement, mode: SlotMode, autoRotate: boolean) => {
+    const slot = { el, mode, autoRotate, id: ++seq };
     setSlots((s) => [...s, slot]);
     loadRuntime();
     return () => setSlots((s) => s.filter((q) => q.id !== slot.id));

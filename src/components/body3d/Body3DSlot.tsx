@@ -25,7 +25,7 @@ const Fallback2D = dynamic(() => import('./Fallback2D').then((m) => m.Fallback2D
 /** hero shows the static poster instead of the 3D model */
 export const heroFallback = (s: { mode2d: unknown; status: string }) => !!s.mode2d || s.status === 'timeout' || s.status === 'error';
 
-export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className?: string }) {
+export function Body3DSlot({ mode, className = '', autoRotate = false }: { mode: SlotMode; className?: string; autoRotate?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const ctx = useBody3DHost();
   const t = useTranslations();
@@ -39,7 +39,7 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
   // the visible hint (e.g. tap on the head / front of the shin) fades after 5 s; aria-live announces it separately
   useEffect(() => { if (!hint) return; const id = window.setTimeout(() => store.clearHint(), 5000); return () => window.clearTimeout(id); }, [hint, store]);
 
-  useEffect(() => { if (ref.current && ctx) return ctx.register(ref.current, mode); }, [ctx, mode]);
+  useEffect(() => { if (ref.current && ctx) return ctx.register(ref.current, mode, autoRotate); }, [ctx, mode, autoRotate]);
   // RC-5 (lead; FB + AD): the hero index stands on the POSTER's anchors also while the model loads (not only in the fallback)
   // — the rows, dots and lines are where the live 3D anchors will put them, so the handover does not move them (it used
   // to jump 27–37 px and the lines appeared only with the model). The runtime's first publish replaces them seamlessly
@@ -76,6 +76,8 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
   return (
     <div ref={ref} className={`b3d-slot ${className}`} data-mode={mode} data-status={held ? 'loading' : status} data-mode2d={mode2d || undefined}
       data-fallback={posterMode || undefined} role="group"
+      tabIndex={autoRotate && status === 'ready' ? 0 : undefined}
+      aria-describedby={autoRotate && status === 'ready' ? 'body-viewer-pause-hint' : undefined}
       aria-label={t(viewer ? (status === 'ready' ? 'body3d.viewer.canvasLabel' : 'body3d.viewer.title') : 'body3d.canvasLabel')}>
       <picture className="b3d-poster" style={held ? { zIndex: 2 } : undefined}>
         <source srcSet={p.avif} type="image/avif" />
@@ -86,6 +88,7 @@ export function Body3DSlot({ mode, className = '' }: { mode: SlotMode; className
       {/* RC-6 (lead + AD): no loading badge over the hero figure — the hero's caption under the model shows the progress */}
       {status === 'loading' && !mode2d && !hero ? <div className={viewer ? 'sr-only' : 'b3d-loader'} role="status">{t('body3d.load.progress', { percent: Math.round(progress * 100) })}</div> : null}
       {viewer && viewerAlert ? <p className="sr-only" role="alert">{t(viewerAlert)}</p> : null}
+      {autoRotate && status === 'ready' ? <p id="body-viewer-pause-hint" className="sr-only">{t('body3d.viewer.pauseHint')}</p> : null}
       {booking && status === 'error' && !mode2d ? (
         <div className="b3d-loader" role="alert">
           {t('body3d.load.error')}{' '}

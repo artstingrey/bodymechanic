@@ -518,6 +518,7 @@
     "viewer": {
       "title": "Body model",
       "labels": "Anatomical areas",
+      "pauseHint": "Press Enter or Space to pause automatic rotation.",
       "canvasLabel": "Interactive 3D body model. Select an area to turn its highlight on or off."
     },
     "help": {

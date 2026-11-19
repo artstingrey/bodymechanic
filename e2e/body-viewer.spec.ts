@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { VIEWER_IDLE_MS, VIEWER_LEVEL_MS } from '../src/lib/body3d/viewer-timing';
 
 const slot = (page: Page) => page.locator('.b3d-slot[data-mode="viewer"]');
 const canvas = (page: Page) => slot(page).locator('canvas');
@@ -6,17 +7,22 @@ const zone = (page: Page, id: string) => page.locator(`.b2d-zone[data-zone-id="$
 const callout = (page: Page, id: string) => page.locator(`.body-viewer__callouts [data-zone="${id}"] .body-viewer__label`);
 const outline = (page: Page) => page.evaluate(() => window.__bm3d?.outline?.());
 const view = (page: Page) => page.evaluate(() => window.__bm3d!.view!());
+const yaw = async (page: Page) => (await view(page)).yaw;
 const distance = ({ camera, target }: Awaited<ReturnType<typeof view>>) => Math.hypot(...camera.map((n, i) => n - target[i]));
+const elevation = ({ camera, target }: Awaited<ReturnType<typeof view>>) =>
+  Math.asin((camera[1] - target[1]) / Math.hypot(...camera.map((n, i) => n - target[i])));
+const azimuth = ({ camera, target }: Awaited<ReturnType<typeof view>>) =>
+  Math.atan2(camera[0] - target[0], camera[2] - target[2]);
 const forbidden = 'header, footer, form, dialog, .cookie, .book-floating, .booking, .b3d-pin, [data-testid="b2d"]';
 
-async function expectFullscreen(page: Page, locale: string) {
+async function expectFullscreen(page: Page, locale: string, path = 'body-model') {
   await expect(page.locator('html')).toHaveAttribute('lang', locale);
   await expect(page.locator(forbidden)).toHaveCount(0);
   await expect(page.getByRole('button')).toHaveCount(2);
   await expect(slot(page)).not.toHaveAttribute('data-mode2d');
   await expect(page.locator('a')).toHaveCount(1);
   await expect(page.locator('.body-viewer__languages [aria-current="page"]')).toHaveText(locale.toUpperCase());
-  await expect(page.getByRole('link')).toHaveAttribute('href', `/${locale === 'ru' ? 'en' : 'ru'}/body-model/`);
+  await expect(page.getByRole('link')).toHaveAttribute('href', `/${locale === 'ru' ? 'en' : 'ru'}/${path}/`);
   expect(await page.evaluate(() => {
     const { top, bottom, width, height } = document.querySelector('.b3d-slot')!.getBoundingClientRect();
     return bottom >= innerHeight - 1 && bottom <= innerHeight + 1 && width === innerWidth &&
@@ -86,10 +92,112 @@ test('RU viewer fills the desktop, supports mouse gestures and carries highlight
   await expect.poll(() => outline(page)).toBe('off');
   await page.mouse.wheel(0, -240);
   await expect.poll(async () => distance(await view(page))).toBeLessThan(2.8);
+  expect(await yaw(page)).toBe(0);
+});
+
+test('auto viewer levels the tilted back view before rotating again', async ({ page }) => {
+  await page.clock.install();
+  const response = await page.goto('/ru/body-model-auto');
+  expect(response?.ok()).toBe(true);
+  await expect(page).toHaveURL(/\/ru\/body-model-auto\/$/);
+  const { x, y, width, height } = await liveModel(page);
+  await expectFullscreen(page, 'ru', 'body-model-auto');
+  await expect(page.locator('main')).toHaveCSS('background-color', 'rgb(238, 233, 226)');
+  await expect.poll(() => yaw(page)).toBeGreaterThan(0.025);
+  const initialElevation = elevation(await view(page));
+  await page.mouse.move(x + width / 2, y + height / 2);
+  await page.mouse.down();
+  const stopped = await yaw(page);
+  await page.clock.fastForward(VIEWER_IDLE_MS + 100);
+  expect(await yaw(page)).toBe(stopped);
+  await page.mouse.move(x + width / 2 + height / 2, y + height * 0.62, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => (await view(page)).camera[2]).toBeLessThan(-0.5);
+  await page.clock.fastForward(VIEWER_IDLE_MS / 2);
+  expect(await yaw(page)).toBe(stopped);
+
+  const beforeWheel = distance(await view(page));
+  await page.mouse.wheel(0, -180);
+  await expect.poll(async () => distance(await view(page))).toBeLessThan(beforeWheel - 0.05);
+  await page.clock.runFor(1500);
+  const tilted = await view(page);
+  expect(Math.abs(elevation(tilted) - initialElevation)).toBeGreaterThan(0.3);
+  await page.clock.fastForward(VIEWER_IDLE_MS / 2);
+  expect(await yaw(page)).toBe(stopped);
+  expect(elevation(await view(page))).toBeCloseTo(elevation(tilted), 3);
+
+  await page.clock.fastForward(VIEWER_IDLE_MS / 2);
+  await page.clock.runFor(VIEWER_LEVEL_MS / 3);
+  expect(await yaw(page)).toBe(stopped);
+  expect(Math.abs(elevation(await view(page)) - initialElevation)).toBeLessThan(Math.abs(elevation(tilted) - initialElevation));
+  await expect.poll(() => yaw(page)).toBeGreaterThan(stopped + 0.025);
+  const resumed = await view(page);
+  expect(elevation(resumed)).toBeCloseTo(initialElevation, 5);
+  expect(Math.cos(azimuth(resumed) - azimuth(tilted))).toBeCloseTo(1, 5);
+  expect(distance(resumed)).toBeCloseTo(distance(tilted), 5);
+
+  await slot(page).press('Space');
+  const keyboardPause = await yaw(page);
+  await page.clock.fastForward(VIEWER_IDLE_MS / 2);
+  expect(await yaw(page)).toBe(keyboardPause);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('link', { name: /^EN\./ }).click();
+  await expect(page).toHaveURL(/\/en\/body-model-auto\/$/);
+  await liveModel(page);
+  await expectFullscreen(page, 'en', 'body-model-auto');
+  await page.clock.fastForward(VIEWER_IDLE_MS + VIEWER_LEVEL_MS);
+  expect(await yaw(page)).toBe(0);
+});
+
+test('changing models keeps both active rotation and the existing pause deadline', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/en/body-model-auto/');
+  await liveModel(page);
+  await expect.poll(() => yaw(page)).toBeGreaterThan(0.025);
+
+  const female = page.getByRole('button', { name: 'Female', exact: true });
+  await female.click();
+  await expect(female).toHaveAttribute('aria-pressed', 'true');
+  await liveModel(page);
+  const switched = await yaw(page);
+  await page.clock.runFor(400);
+  expect(await yaw(page)).toBeGreaterThan(switched + 0.025);
+
+  await slot(page).press('Space');
+  const paused = await yaw(page);
+  await page.clock.fastForward(VIEWER_IDLE_MS / 2);
+  const male = page.getByRole('button', { name: 'Male', exact: true });
+  await male.click();
+  await expect(male).toHaveAttribute('aria-pressed', 'true');
+  await liveModel(page);
+  await page.clock.runFor(400);
+  expect(await yaw(page)).toBe(paused);
+  await page.clock.fastForward(VIEWER_IDLE_MS / 2 + 100);
+  await page.clock.runFor(400);
+  expect(await yaw(page)).toBeGreaterThan(paused + 0.025);
 });
 
 test.describe('EN viewer with a mobile touchscreen', () => {
   test.use({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+
+  test('a short touch pauses auto rotation and highlights the touched zone', async ({ page }) => {
+    await page.clock.install();
+    await page.goto('/en/body-model-auto/');
+    await liveModel(page);
+    await expectFullscreen(page, 'en', 'body-model-auto');
+    await expect.poll(() => yaw(page)).toBeGreaterThan(0.025);
+    const chest = await chestPoint(page);
+    expect(chest).not.toBeNull();
+    await page.touchscreen.tap(chest!.x, chest!.y);
+    await expect.poll(() => outline(page)).toMatch(/^(screen|veil)$/);
+    const stopped = await yaw(page);
+    await page.clock.fastForward(VIEWER_IDLE_MS / 2);
+    expect(await yaw(page)).toBe(stopped);
+    await page.clock.fastForward(VIEWER_IDLE_MS / 2 + 100);
+    await expect.poll(() => yaw(page)).toBeGreaterThan(stopped + 0.025);
+    await expect.poll(() => outline(page)).toMatch(/^(screen|veil)$/);
+  });
 
   test('rotates and zooms by touch, picks on a tap, and fits short landscape', async ({ page, context }) => {
     await page.goto('/en/body-model/?debug=lowfps');

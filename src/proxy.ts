@@ -5,7 +5,7 @@ import { catalogServiceId } from '@/lib/catalog-service-slugs';
 import { catalogStaffId } from '@/lib/catalog-staff-slug';
 
 const pages = new Set([
-  '', 'body-model', 'booking', 'contacts', 'journal', 'prices', 'privacy', 'services', 'team', 'terms',
+  '', 'body-model', 'body-model-auto', 'booking', 'contacts', 'journal', 'prices', 'privacy', 'services', 'team', 'terms',
   'account', 'account/record', 'lp/a', 'lp/b',
   ...articleSlugs().map((slug) => `journal/${slug}`),
   ...serviceSlugs().map((slug) => `services/${slug}`),

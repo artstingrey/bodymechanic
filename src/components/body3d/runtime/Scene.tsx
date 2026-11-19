@@ -16,12 +16,14 @@ import { createZoneOutline, type OutlineMode } from './zoneOutline';
 import { clearAnchors, projectAnchors } from './anchorsProjector';
 import { bodyAnchors } from '@/lib/body3d/anchors';
 import { VIEWER_CALLOUT_IDS } from '@/lib/body3d/viewer-callouts';
-import type { SlotMode } from '../Body3DProvider';
+import type { Body3DActiveSlot } from '../Body3DProvider';
 import { LAND_PHONE_MQ } from '@/lib/ui/media';
 import { heroReveal } from '@/lib/body3d/heroIntro';
 import { bindHeroDrag } from './heroDrag';
+import { useViewerAutoRotate } from './useViewerAutoRotate';
 
 const CAM = { pos: new THREE.Vector3(0, 0.9, 2.9), target: new THREE.Vector3(0, 0.5, 0), minDist: 1.6, maxDist: 5.5, minPolar: 0.08 * Math.PI, maxPolar: 0.78 * Math.PI };
+const INITIAL_POLAR_ANGLE = new THREE.Spherical().setFromVector3(CAM.pos.clone().sub(CAM.target)).phi;
 // DECISION (lead + art director, hi-fi hero): instead of a full turn the hero model sways ±20° around the front view
 // (sine, 9 s) — the index call-outs keep their anchors; the pause button stops the sway (WCAG 2.2.2); reduced motion → still.
 const SWAY = { amp: THREE.MathUtils.degToRad(20), period: 9, easeIn: 0.6 };
@@ -45,9 +47,7 @@ const restPivot = new THREE.Matrix4();
 const easeReset = (k: number) => 1 - Math.pow(1 - k, 3);
 const LOAD_TIMEOUT = 15000; // ТЗ §06: 15 s → offer the 2D mode
 
-type Slot = { el: HTMLElement; mode: SlotMode } | null;
-
-export function Scene({ slot }: { slot: Slot }) {
+export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
   const { gl, camera, scene, setFrameloop, invalidate } = useThree();
   const store = useBodyStore();
   const controls = useRef<OrbitControlsImpl>(null);
@@ -70,6 +70,13 @@ export function Scene({ slot }: { slot: Slot }) {
   const viewerZoom = useThree(({ size }) =>
     viewer && size.width && size.height ? Math.min(VIEWER_ZOOM, size.width / size.height / 0.38) : VIEWER_ZOOM);
 
+  const autoRotateElement = slot?.autoRotate ? slot.el : undefined;
+  const advanceRotation = useViewerAutoRotate(autoRotateElement, INITIAL_POLAR_ANGLE);
+  useEffect(() => {
+    const group = pivot.current;
+    if (!autoRotateElement || !group) return;
+    return () => { group.rotation.y = 0; };
+  }, [autoRotateElement]);
 
   // ---- load / switch model (marker transfer, warm-up of the other model in idle)
   useEffect(() => {
@@ -322,6 +329,10 @@ export function Scene({ slot }: { slot: Slot }) {
 
   useFrame((_, dt) => {
     const p = pivot.current;
+    if (p && autoRotateElement) {
+      const step = advanceRotation(controls.current, dt);
+      if (step) p.rotation.y = (p.rotation.y + step) % TURN;
+    }
     if (p && hero) {
       // RC-5 (lead): the sway clock runs from the reveal (lib/body3d/heroIntro — the model waits in the front pose under the
       // poster until the index intro is done), its amplitude eased in over SWAY.easeIn s (a sine starts at full speed,
