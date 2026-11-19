@@ -183,8 +183,10 @@ test('the background picker applies a chosen colour and accepts HEX', async ({ p
   await liveModel(page);
   const main = page.getByRole('main');
   const toggle = page.getByRole('button', { name: 'Цвет фона' });
+  const swatch = toggle.locator('.body-viewer__background-swatch');
   const panel = page.getByRole('group', { name: 'Цвет фона' });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(swatch).toHaveCSS('background-color', 'rgb(238, 233, 226)');
   await expect(panel).toBeHidden();
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
@@ -199,6 +201,7 @@ test('the background picker applies a chosen colour and accepts HEX', async ({ p
 
   await hex.fill('AABBCC');
   await expect(main).toHaveCSS('background-color', 'rgb(170, 187, 204)');
+  await expect(swatch).toHaveCSS('background-color', 'rgb(170, 187, 204)');
   await expect(picker).toHaveValue('#aabbcc');
   await hex.fill('#123');
   await hex.press('Enter');
@@ -243,6 +246,9 @@ test.describe('EN viewer with a mobile touchscreen', () => {
     expect(bounds.y).toBeGreaterThan(trigger.y + trigger.height);
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
+    const hex = panel.getByRole('textbox', { name: 'HEX' });
+    await hex.tap();
+    await expect(hex).toBeFocused();
     await toggle.tap();
     await expect(panel).toBeHidden();
   });

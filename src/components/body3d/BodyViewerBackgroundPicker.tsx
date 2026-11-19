@@ -34,9 +34,11 @@ export function BodyViewerBackgroundPicker({ color, onChange }: { color: string;
     }}>
       <button ref={trigger} type="button" className="body-viewer__background-toggle" aria-label={t('label')}
         title={t('label')} aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}>
+        <span className="body-viewer__background-swatch" style={{ backgroundColor: color }} aria-hidden="true" />
         <Icon name={open ? 'chevron-up' : 'chevron-down'} />
       </button>
-      <div id={id} className="body-viewer__background-panel" role="group" aria-label={t('label')} hidden={!open}>
+      <div id={id} className="body-viewer__background-panel" role="group" aria-labelledby={`${id}-title`} hidden={!open}>
+        <span id={`${id}-title`} className="body-viewer__background-title">{t('label')}</span>
         <label>
           <span>{t('pick')}</span>
           <input type="color" value={color} onChange={(event) => {

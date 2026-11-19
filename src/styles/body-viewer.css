@@ -81,6 +81,33 @@ html[data-body-viewer] {
   cursor: pointer;
 }
 
+.body-viewer__background-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding-inline: 10px;
+  box-shadow: var(--sh-1);
+}
+
+.body-viewer__background-toggle[aria-expanded="true"] {
+  background: var(--bg);
+}
+
+.body-viewer__background-toggle .i {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  stroke-width: 2;
+}
+
+.body-viewer__background-swatch {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+}
+
 .body-viewer__fullscreen-error,
 .body-viewer__background-panel {
   position: absolute;
@@ -100,33 +127,78 @@ html[data-body-viewer] {
   font-size: 14px;
 }
 
+.body-viewer__background-panel {
+  width: min(248px, calc(100vw - 48px));
+  padding: 14px;
+  border-color: var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--sh-3);
+}
+
 .body-viewer__background-panel:not([hidden]) {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.body-viewer__background-title {
+  grid-column: 1 / -1;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .body-viewer__background-panel label {
   display: grid;
-  gap: 4px;
+  align-content: start;
+  gap: 6px;
   min-width: 0;
-  font-size: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.2;
 }
 
 .body-viewer__background-panel input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding-inline: 8px;
+  height: 44px;
   border: 1px solid var(--field-border);
-  border-radius: 8px;
-  background: var(--surface);
+  border-radius: var(--r-field);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.body-viewer__background-panel input[type="text"] {
+  padding-inline: 10px;
+  font-family: ui-monospace, Consolas, monospace;
   font-size: 16px;
+  font-weight: 500;
+}
+
+.body-viewer__background-panel input[aria-invalid="true"] {
+  border-color: var(--error);
 }
 
 .body-viewer__background-panel input[type="color"] {
+  padding: 5px;
   cursor: pointer;
+}
+
+.body-viewer__background-panel input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.body-viewer__background-panel input[type="color"]::-webkit-color-swatch {
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+}
+
+.body-viewer__background-panel input[type="color"]::-moz-color-swatch {
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
 }
 
 .body-viewer__background-panel p {
