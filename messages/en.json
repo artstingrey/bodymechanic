@@ -519,6 +519,11 @@
       "title": "Body model",
       "labels": "Anatomical areas",
       "pauseHint": "Press Enter or Space to pause automatic rotation.",
+      "fullscreen": {
+        "enter": "Enter full screen",
+        "exit": "Exit full screen",
+        "unavailable": "Full screen is unavailable in this browser."
+      },
       "background": {
         "label": "Background colour",
         "pick": "Pick a colour",

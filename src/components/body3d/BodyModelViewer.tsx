@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { locales } from '@/i18n/routing';
 import { Body3DSlot } from './Body3DSlot';
 import { BodyViewerBackgroundPicker } from './BodyViewerBackgroundPicker';
 import { BodyViewerCallouts } from './BodyViewerCallouts';
+import { BodyViewerFullscreen } from './BodyViewerFullscreen';
 import { ModelSwitch } from './HeroControls';
 
 const DEFAULT_BACKGROUND = '#eee9e2';
@@ -24,6 +25,7 @@ export function BodyModelViewer({ autoRotate = false }: { autoRotate?: boolean }
   const language = useTranslations('nav.langSwitch');
   const locale = useLocale();
   const page = autoRotate ? 'body-model-auto' : 'body-model';
+  const viewer = useRef<HTMLElement>(null);
   const [background, setBackground] = useState(DEFAULT_BACKGROUND);
   const style = autoRotate ? {
     backgroundColor: background,
@@ -31,23 +33,30 @@ export function BodyModelViewer({ autoRotate = false }: { autoRotate?: boolean }
   } as CSSProperties : undefined;
 
   return (
-    <main className={autoRotate ? 'body-viewer body-viewer--auto' : 'body-viewer'} style={style}>
+    <main ref={viewer} className={autoRotate ? 'body-viewer body-viewer--auto' : 'body-viewer'} style={style}>
       <h1 className="sr-only">{t('viewer.title')}</h1>
       <div className="body-viewer__controls" role="group" aria-label={t('toolbar.label')}>
         <ModelSwitch />
-        <nav className="seg lang-switch body-viewer__languages" aria-label={language('label')}>
-          {locales.map((id) => id === locale ? (
-            <span key={id} lang={id} aria-current="page">{language(id)}</span>
-          ) : (
-            <a key={id} href={`/${id}/${page}/`} hrefLang={id} rel="nofollow"
-              aria-label={`${language(id)}. ${language(id === 'ru' ? 'toRu' : 'toEn')}`}>{language(id)}</a>
-          ))}
-        </nav>
+        <div className="body-viewer__actions">
+          <nav className="seg lang-switch body-viewer__languages" aria-label={language('label')}>
+            {locales.map((id) => id === locale ? (
+              <span key={id} lang={id} aria-current="page">{language(id)}</span>
+            ) : (
+              <a key={id} href={`/${id}/${page}/`} hrefLang={id} rel="nofollow"
+                aria-label={`${language(id)}. ${language(id === 'ru' ? 'toRu' : 'toEn')}`}>{language(id)}</a>
+            ))}
+          </nav>
+          {autoRotate && (
+            <>
+              <BodyViewerFullscreen viewer={viewer} />
+              <BodyViewerBackgroundPicker color={background} onChange={setBackground} />
+            </>
+          )}
+        </div>
       </div>
       <div className="body-viewer__stage">
         <Body3DSlot mode="viewer" autoRotate={autoRotate} />
         <BodyViewerCallouts />
-        {autoRotate && <BodyViewerBackgroundPicker color={background} onChange={setBackground} />}
       </div>
     </main>
   );

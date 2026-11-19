@@ -11,6 +11,11 @@ html[data-body-viewer] {
   padding: max(6px, env(safe-area-inset-top)) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
+.body-viewer:fullscreen {
+  width: 100%;
+  height: 100%;
+}
+
 .body-viewer--auto .body-viewer__callouts {
   color: var(--viewer-ink, var(--text));
   --reticle: var(--viewer-ink, var(--text));
@@ -25,6 +30,8 @@ html[data-body-viewer] {
 }
 
 .body-viewer__controls {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -33,12 +40,19 @@ html[data-body-viewer] {
   padding-inline: 6px;
 }
 
-.body-viewer__controls button {
+.body-viewer__controls .b3d-switch button {
   padding-inline: 12px;
 }
 
 .body-viewer__controls :is(button, a) {
   touch-action: manipulation;
+}
+
+.body-viewer__actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .body-viewer__languages [aria-current="page"] {
@@ -54,15 +68,8 @@ html[data-body-viewer] {
   isolation: isolate;
 }
 
-.body-viewer__background-picker {
-  position: absolute;
-  inset-block-start: 8px;
-  inset-inline-end: 8px;
-  z-index: 3;
-  color: var(--text);
-}
-
-.body-viewer__background-toggle {
+.body-viewer__background-toggle,
+.body-viewer__fullscreen-toggle {
   display: grid;
   place-items: center;
   width: 44px;
@@ -70,10 +77,11 @@ html[data-body-viewer] {
   background: var(--surface);
   border: 1px solid var(--field-border);
   border-radius: var(--r-pill);
+  color: var(--text);
   cursor: pointer;
-  touch-action: manipulation;
 }
 
+.body-viewer__fullscreen-error,
 .body-viewer__background-panel {
   position: absolute;
   inset-block-start: calc(100% + 8px);
@@ -83,7 +91,13 @@ html[data-body-viewer] {
   border: 1px solid var(--field-border);
   border-radius: var(--r-card-sm);
   background: var(--surface);
+  color: var(--text);
   box-shadow: var(--sh-2);
+}
+
+.body-viewer__fullscreen-error {
+  margin: 0;
+  font-size: 14px;
 }
 
 .body-viewer__background-panel:not([hidden]) {

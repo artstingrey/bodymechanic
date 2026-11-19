@@ -34,7 +34,7 @@ export function BodyViewerBackgroundPicker({ color, onChange }: { color: string;
     }}>
       <button ref={trigger} type="button" className="body-viewer__background-toggle" aria-label={t('label')}
         title={t('label')} aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)}>
-        <Icon name={open ? 'chevron-right' : 'chevron-left'} />
+        <Icon name={open ? 'chevron-up' : 'chevron-down'} />
       </button>
       <div id={id} className="body-viewer__background-panel" role="group" aria-label={t('label')} hidden={!open}>
         <label>

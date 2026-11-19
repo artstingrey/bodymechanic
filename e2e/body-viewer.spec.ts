@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 import { VIEWER_IDLE_MS, VIEWER_LEVEL_MS } from '../src/lib/body3d/viewer-timing';
 
 const slot = (page: Page) => page.locator('.b3d-slot[data-mode="viewer"]');
@@ -18,7 +18,7 @@ const forbidden = 'header, footer, form, dialog, .cookie, .book-floating, .booki
 async function expectFullscreen(page: Page, locale: string, path = 'body-model') {
   await expect(page.locator('html')).toHaveAttribute('lang', locale);
   await expect(page.locator(forbidden)).toHaveCount(0);
-  await expect(page.getByRole('button')).toHaveCount(path === 'body-model-auto' ? 3 : 2);
+  await expect(page.getByRole('button')).toHaveCount(path === 'body-model-auto' ? 4 : 2);
   await expect(slot(page)).not.toHaveAttribute('data-mode2d');
   await expect(page.locator('a')).toHaveCount(1);
   await expect(page.locator('.body-viewer__languages [aria-current="page"]')).toHaveText(locale.toUpperCase());
@@ -239,6 +239,8 @@ test.describe('EN viewer with a mobile touchscreen', () => {
     const panel = page.getByRole('group', { name: 'Background colour' });
     await expect(panel).toBeVisible();
     const bounds = (await panel.boundingBox())!;
+    const trigger = (await toggle.boundingBox())!;
+    expect(bounds.y).toBeGreaterThan(trigger.y + trigger.height);
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(320);
     await toggle.tap();
@@ -289,6 +291,42 @@ test.describe('EN viewer with a mobile touchscreen', () => {
     await expect(page).toHaveURL(/\/en\/body-model\/$/);
     await expect(page).toHaveTitle('Body model');
     await expectFullscreen(page, 'en');
+  });
+});
+
+test.describe('Android fullscreen viewer', () => {
+  test.use({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true, userAgent: devices['Pixel 7'].userAgent });
+
+  test('enters and exits native full screen by touch in both languages', async ({ page }) => {
+    for (const [locale, enterLabel, exitLabel] of [
+      ['en', 'Enter full screen', 'Exit full screen'],
+      ['ru', 'На весь экран', 'Выйти из полноэкранного режима'],
+    ]) {
+      await page.goto(`/${locale}/body-model-auto/`);
+      await liveModel(page);
+      await expectFullscreen(page, locale, 'body-model-auto');
+      const enter = page.getByRole('button', { name: enterLabel, exact: true });
+      const exit = page.getByRole('button', { name: exitLabel, exact: true });
+      const languageBounds = (await page.locator('.body-viewer__languages').boundingBox())!;
+      const fullscreenBounds = (await enter.boundingBox())!;
+      const pickerBounds = (await page.locator('.body-viewer__background-toggle').boundingBox())!;
+      expect(fullscreenBounds.x).toBeGreaterThanOrEqual(languageBounds.x + languageBounds.width);
+      expect(pickerBounds.x).toBeGreaterThanOrEqual(fullscreenBounds.x + fullscreenBounds.width);
+      expect(fullscreenBounds.y).toBeCloseTo(languageBounds.y + (languageBounds.height - fullscreenBounds.height) / 2);
+      expect(pickerBounds.y).toBeCloseTo(fullscreenBounds.y);
+      const fullscreenViewer = page.locator('main.body-viewer:fullscreen');
+      await enter.tap();
+      await expect(fullscreenViewer).toBeVisible();
+      await expect(fullscreenViewer.locator('canvas')).toBeVisible();
+      await exit.tap();
+      await expect(fullscreenViewer).toHaveCount(0);
+      await expect(enter).toBeVisible();
+
+      await enter.tap();
+      await expect(exit).toBeVisible();
+      await page.evaluate(() => document.exitFullscreen());
+      await expect(enter).toBeVisible();
+    }
   });
 });
 
