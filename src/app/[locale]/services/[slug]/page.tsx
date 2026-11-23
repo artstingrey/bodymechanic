@@ -98,6 +98,7 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
   const facts = serviceFacts(t as unknown as Parameters<typeof serviceFacts>[0]);
   const articles = getArticles(locale).slice(0, 2);
   const staff = detail.source === 'demo' ? await getStaff(locale, s.id) : null;
+  
   const staffList = staff?.length ? (
     <ul className="card-grid card-grid--4">{staff.map((p) => (
       <li key={p.id}><StaffCard name={p.name} href={`/team/${p.slug}`} photoCaption={t('placeholder.specialistPhoto')} /></li>

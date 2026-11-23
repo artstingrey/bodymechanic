@@ -62,7 +62,6 @@ export function Carousel({ label, children, t, hideCount }: {
       {items.length > 1 ? (
         <div className="ctl">
           <div className="prog" aria-hidden="true"><i ref={thumb} /></div>
-          <span className="cap tn" data-pos aria-live="polite">{position(cur + 1, items.length)}</span>
           <div className="arr">
             <IconButton ghost icon="chevron-left" label={t.prev} aria-disabled={edges.start || undefined} onClick={() => !edges.start && step(-1)} />
             <IconButton ghost icon="chevron-right" label={t.next} aria-disabled={edges.end || undefined} onClick={() => !edges.end && step(1)} />

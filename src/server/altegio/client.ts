@@ -55,7 +55,6 @@ async function requestAltegio<T>(operation: string, path: string, language: stri
       if (status === 429) throw new AltegioError('rateLimited', retryAfter(header), upstreamRetryAfter);
       throw new AltegioError('unavailable', undefined, upstreamRetryAfter, status);
     }
-
     return await decode(response);
   } catch (cause) {
     const error = cause instanceof AltegioError ? cause : new AltegioError(
