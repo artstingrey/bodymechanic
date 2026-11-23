@@ -55,7 +55,7 @@ async function checkBookingFromProfile(page, origin, locale, name, copy) {
   await expect(staff(0)).toBeEnabled();
   await expect(staff(0)).toBeChecked();
 
-  const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true, health: true };
+  const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true };
   await page.evaluate(({ classic, contact }) => {
     sessionStorage.setItem('bm.bookingSteps', JSON.stringify({
       version: 2, savedAt: Date.now(), serviceId: classic, staffId: 91602, contact,

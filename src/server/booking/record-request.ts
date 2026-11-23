@@ -100,10 +100,9 @@ function readNote(value: unknown, limit: number) {
 
 function parseBody3D(value: unknown, fields: BookingRecordField[]): BookingRecord3DDetails | null {
   if (!isRecord(value)) { fields.push('body3d'); return null; }
-  const { healthConsent, model, markers } = value;
+  const { model, markers } = value;
   const generalNote = readNote(value.generalNote, GENERAL_NOTE_LIMIT);
   const validModel = model === 'male' || model === 'female';
-  if (healthConsent !== true) fields.push('healthConsent');
   if (!validModel) fields.push('model');
   if (generalNote === null) fields.push('generalNote');
   const parsed: BookingRecord3DDetails['markers'] = [];
@@ -118,7 +117,7 @@ function parseBody3D(value: unknown, fields: BookingRecordField[]): BookingRecor
     if (parsed.length !== markers.length) fields.push('markers');
   } else fields.push('markers');
   if (fields.length || !validModel) return null;
-  return { healthConsent: true, model, markers: parsed, ...(generalNote ? { generalNote } : {}) };
+  return { model, markers: parsed, ...(generalNote ? { generalNote } : {}) };
 }
 
 export async function parseRecordRequest(request: Request): Promise<ParsedRequest> {

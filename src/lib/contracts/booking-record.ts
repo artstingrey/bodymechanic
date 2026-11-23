@@ -12,7 +12,6 @@ interface BookingRecordBase {
 }
 
 export interface BookingRecord3DDetails {
-  healthConsent: true;
   model: 'male' | 'female';
   markers: { zoneId: string; intensity?: number; note?: string }[];
   generalNote?: string;
@@ -50,7 +49,7 @@ export type BookingRecordData =
 
 export type BookingRecordField = 'serviceId' | 'staffId' | 'datetime' | 'locale' | 'contact'
   | 'fullname' | 'phone' | 'email' | 'age' | 'condition' | 'consent' | 'idempotencyKey'
-  | 'source' | 'body3d' | 'healthConsent' | 'model' | 'markers' | 'generalNote' | 'details';
+  | 'source' | 'body3d' | 'model' | 'markers' | 'generalNote' | 'details';
 
 export type BookingRecordErrorCode =
   | 'INVALID_BODY' | 'PAYLOAD_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ORIGIN'

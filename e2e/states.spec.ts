@@ -135,7 +135,7 @@ test.describe('3D panel states (R-APP-01)', () => {
       const at = Date.now() - h * 3600_000;
       const d = JSON.parse(sessionStorage.getItem('bm.bookingDraft')!);
       sessionStorage.setItem('bm.bookingDraft', JSON.stringify({ ...d, savedAt: at }));
-      sessionStorage.setItem('bm.bookingSteps', JSON.stringify({ serviceId: 101, staffId: 0, date: null, datetime: null, contact: { fullname: 'Demo', phone: '+971500000000', email: '', consent: true, health: true }, savedAt: at }));
+      sessionStorage.setItem('bm.bookingSteps', JSON.stringify({ serviceId: 101, staffId: 0, date: null, datetime: null, contact: { fullname: 'Demo', phone: '+971500000000', email: '', consent: true }, savedAt: at }));
       sessionStorage.setItem('bm.bookingResult', JSON.stringify({ status: 'created', recordId: 9001, hash: 'demo-hash', datetime: '2026-11-20T11:00:00+04:00', serviceTitle: 'Demo', durationMin: 100, staffName: null, zones: ['lumbar'], at: new Date(at).toISOString() }));
     }, hours);
     const left = () => page.evaluate(() => ['bm.bookingDraft', 'bm.bookingSteps', 'bm.bookingResult'].filter((k) => sessionStorage.getItem(k) !== null));
@@ -575,22 +575,36 @@ test.describe('form validation (R-CODE-02 F-05)', () => {
     expectClean(await g.problems(), 'home form validation');
   });
 
-  test('booking step 5: empty submit → name, phone, both consents, focus on the name; bad phone / age; valid → step 6', async ({ page, baseURL }) => {
+  test('booking step 5: validates contacts and privacy consent, then advances to review', async ({ page, baseURL }) => {
     const g = guard(page, baseURL!);
-    await page.goto('/en/booking/?step=5', { waitUntil: 'networkidle' });
+    const date = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const time = '13:30';
+    const id = 13982355;
+    await page.route('**/api/catalog/services?*', (route) => route.fulfill({ json: { data: {
+      services: [{ id, title: 'Sports massage', categoryId: null, priceMin: 750, priceMax: 750, currency: 'AED', durationMin: 60 }],
+      categories: [],
+    } } }));
+    await page.route('**/api/booking/staff?*', (route) => route.fulfill({ json: { data: { serviceId: id, staff: [] } } }));
+    await page.route('**/api/booking/dates?*', (route) => route.fulfill({ json: { data: { serviceId: id, staffId: 0, dates: [date] } } }));
+    await page.route('**/api/booking/times?*', (route) => route.fulfill({ json: { data: {
+      serviceId: id, staffId: 0, date, times: [{ datetime: `${date}T${time}:00+04:00`, time }],
+    } } }));
+    await page.goto(`/en/booking/?step=5&service=${id}&date=${date}&time=${time}`, { waitUntil: 'networkidle' });
+    await expect(page.locator('form.bk-form input[type="checkbox"]')).toHaveCount(1);
     const next = page.getByRole('button', { name: en.booking.contacts.next, exact: true });
     await next.click();
     await expect(page.locator('#c-name')).toBeFocused();
     await expectFieldError(page, 'c-name', E.required);
     await expectFieldError(page, 'c-phone', E.required);
+    await expectFieldError(page, 'c-email', E.required);
     await expectFieldError(page, 'c-consent', E.consentRequired);
-    await expectFieldError(page, 'c-health', E.healthRequired);
     await expect(page.locator('.form-errors[role="alert"] li')).toHaveCount(4);
     await expect(page).toHaveURL(/step=5/);
     await page.locator('#c-name').fill('Demo');
     await page.locator('#c-phone').fill('+97150');
     await page.locator('#c-age').fill('200');
-    for (const id of ['c-consent', 'c-health']) await page.locator(`#${id}`).check();
+    await page.locator('#c-email').fill('visitor@example.test');
+    await page.locator('#c-consent').check();
     await next.click();
     await expect(page.locator('#c-phone')).toBeFocused();
     await expectFieldError(page, 'c-phone', E.phoneInvalid);

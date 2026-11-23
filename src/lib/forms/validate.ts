@@ -5,7 +5,7 @@
  */
 export type ErrorCode =
   | 'required' | 'nameShort' | 'phoneInvalid' | 'emailInvalid' | 'ageInvalid' | 'ageRange'
-  | 'consentRequired' | 'healthRequired' | 'serviceRequired' | 'datetimeRequired';
+  | 'consentRequired' | 'serviceRequired' | 'datetimeRequired';
 
 /** Technical bounds of the age field. TODO(content): forms.todo.ageBounds — the client's age policy (minors). */
 export const AGE_BOUNDS = { min: 1, max: 120 };

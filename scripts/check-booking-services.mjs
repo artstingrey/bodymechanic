@@ -61,11 +61,11 @@ async function checkServiceEntry(page, origin, locale, messages) {
   await expect(checked).toHaveValue(String(sports));
   await expect(next).toBeEnabled();
 
-  const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true, health: true };
+  const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true };
   await page.evaluate(({ other, contact }) => {
     const savedAt = Date.now() - 60_000;
     sessionStorage.setItem('bm.bookingSteps', JSON.stringify({
-      version: 2, savedAt, serviceId: other, staffId: 91605, contact,
+      version: 2, savedAt, serviceId: other, staffId: 91605, contact: { ...contact, health: false },
       date: '2026-11-30', datetime: '2026-11-30T12:00:00+04:00', wantDate: '2026-11-30', wantTime: '12:00',
     }));
     sessionStorage.setItem('bm.bookingDraft', JSON.stringify({
@@ -319,13 +319,14 @@ async function checkContacts(page, booking, messages) {
   await expect(page).toHaveURL(`${booking}?step=4`);
   await page.goto(`${booking}?step=7&service=${sports}&staff=91602&date=2026-12-01&time=00:20`);
   await expect(page).toHaveURL(`${booking}?step=5`);
+  await expect(page.locator('form.bk-form input[type="checkbox"]')).toHaveCount(1);
   await expect(page.locator('#c-email')).toHaveAttribute('required', '');
   const phone = page.locator('#c-phone');
   await checkPhoneField(phone, { copy: messages.forms, submit: () => save.click() });
   await phone.fill('');
   await save.click();
   await expect(page.locator('#c-name')).toBeFocused();
-  for (const id of ['name', 'phone', 'email', 'consent', 'health']) {
+  for (const id of ['name', 'phone', 'email', 'consent']) {
     await expect(page.locator(`#c-${id}`)).toHaveAttribute('aria-invalid', 'true');
   }
   await page.locator('#c-name').fill('  Fixture visitor  ');
@@ -333,7 +334,6 @@ async function checkContacts(page, booking, messages) {
   await phone.fill(number);
   await page.locator('#c-email').fill('invalid');
   await page.locator('#c-consent').check();
-  await page.locator('#c-health').check();
   await save.click();
   await expect(page.locator('#c-email')).toBeFocused();
   await page.locator('#c-email').fill('fixture@example.test');
@@ -349,7 +349,7 @@ async function checkContacts(page, booking, messages) {
   await expect(page.locator('#c-name')).toHaveValue('Fixture visitor');
   await expect(phone).toHaveValue(number.replace(/[ -]/g, ''));
   await expect(page.locator('#c-age')).toHaveValue('');
-  await expect(page.locator('#c-health')).toBeChecked();
+  await expect(page.locator('#c-consent')).toBeChecked();
 }
 
 try {

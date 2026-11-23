@@ -63,7 +63,7 @@ async function openReview(origin, locale, staffId, contactIndex, serviceId = 139
     const savedAt = Date.now();
     sessionStorage.setItem('bm.bookingSteps', JSON.stringify({ version: 2, serviceId, staffId, date, datetime, savedAt,
       contact: { fullname: 'fixture-private-fullname', phone: `+97150${String(contactIndex).padStart(7, '0')}`,
-        email: `visitor${contactIndex}@example.test`, age: 36, consent: true, health: true },
+        email: `visitor${contactIndex}@example.test`, age: 36, consent: true },
     }));
     sessionStorage.setItem('bm.bookingDraft', JSON.stringify({ v: 1, model: 'male', savedAt, generalNote: 'fixture-private-general',
       markers: [{ id: 'marker-1', zoneId: 'knee_l', note: 'fixture-private-marker', intensity: 5, position: [0, 0, 0] }],
@@ -174,7 +174,7 @@ try {
       assert.equal(submitted.datetime, datetime);
       assert.equal(submitted.staffId, 0);
       assert.equal(submitted.consent, true);
-      assert.equal(submitted.body3d.healthConsent, true);
+      assert.equal('healthConsent' in submitted.body3d, false);
       assert.deepEqual(submitted.body3d.markers, [{ zoneId: 'knee_l', intensity: 5, note: 'fixture-private-marker' }]);
       assert.equal('captchaToken' in submitted, false);
       const replay = await page.evaluate(async (input) => {

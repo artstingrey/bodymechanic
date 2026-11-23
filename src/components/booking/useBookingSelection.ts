@@ -18,11 +18,11 @@ export interface Selection {
    *  chosen service has it, else the step says so (booking.time.slotUnfit) */
   wantTime?: string | null;
   datetime: string | null;
-  contact: Contact & { consent: boolean; health: boolean };
+  contact: Contact & { consent: boolean };
 }
 const KEY = 'bm.bookingSteps';
 const VERSION = 2;
-const EMPTY: Selection = { serviceId: null, staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false, health: false } };
+const EMPTY: Selection = { serviceId: null, staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false } };
 /** every write stamps the time of the change: the name and the phone are dropped a day after it (lib/booking/draft-ttl, Ж-5) */
 const persist = (next: Selection) => { try { sessionStorage.setItem(KEY, JSON.stringify({ ...next, version: VERSION, savedAt: Date.now() })); } catch { /* ignore */ } };
 
@@ -41,7 +41,8 @@ export function useBookingSelection() {
       const { savedAt, version, ...kept } = (raw ? JSON.parse(raw) : {}) as Partial<Selection> & { savedAt?: number; version?: number };
       if (draftExpired(savedAt)) sessionStorage.removeItem(KEY); // Ж-5: older than a day → gone
       else if (raw) {
-        stored = { ...EMPTY, ...kept, contact: { ...EMPTY.contact, ...kept.contact } };
+        const { fullname = '', phone = '', email = '', age, consent = false } = kept.contact ?? {};
+        stored = { ...EMPTY, ...kept, contact: { fullname, phone, email, age, consent } };
         if (version !== VERSION) stored = {
           ...stored,
           serviceId: restoreServiceId(stored.serviceId),

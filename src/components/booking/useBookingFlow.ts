@@ -222,7 +222,6 @@ export function useBookingFlow() {
     ['c-email', requiredEmail(c.email)],
     ['c-age', rules.age(c.age, ageBad)],
     ['c-consent', rules.filled(c.consent === true, 'consentRequired')],
-    ['c-health', rules.filled(c.health === true, 'healthRequired')],
   ]);
   const contactOk = Object.keys(contactCheck(sel.contact)).length === 0;
   const needsContacts = step >= 6 && !contactOk;
@@ -278,7 +277,7 @@ export function useBookingFlow() {
       contact: { fullname: fullname.trim(), phone: normalizePhone(phone), email: email!.trim() }, age,
       consent: true, idempotencyKey,
       body3d: {
-        healthConsent: true, model, generalNote: generalNote || undefined,
+        model, generalNote: generalNote || undefined,
         markers: markers.map(({ zoneId, intensity, note }) => ({ zoneId, intensity, note })),
       },
     };

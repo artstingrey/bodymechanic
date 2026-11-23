@@ -1,5 +1,5 @@
 'use client';
-/** Step 5 «Контакты» (ТЗ §07): name, phone (E.164), email, age, gender from the model, two consents. */
+/** Step 5 «Контакты» (ТЗ §07): name, phone (E.164), email, age, gender from the model, privacy consent. */
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Choice';
@@ -50,8 +50,6 @@ export function StepContacts({ flow }: { flow: Flow }) {
         <div>
           <Checkbox required id="c-consent" error={contactMsg('c-consent')} checked={c.consent}
             onChange={(e) => { updateContact({ consent: e.target.checked }); live('c-consent', rules.filled(e.target.checked, 'consentRequired')); }}>{t.rich('forms.consent.privacy', { privacy: (x) => <Link href="/privacy">{x}</Link> })}</Checkbox>
-          <Checkbox required id="c-health" error={contactMsg('c-health')} checked={c.health}
-            onChange={(e) => { updateContact({ health: e.target.checked }); live('c-health', rules.filled(e.target.checked, 'healthRequired')); }}>{t('forms.consent.health')}</Checkbox>
         </div>
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(4)}>{t('common.actions.back')}</Button>

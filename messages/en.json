@@ -231,7 +231,6 @@
     },
     "consent": {
       "privacy": "I consent to the processing of my personal data and accept the <privacy>privacy policy</privacy>",
-      "health": "I have read the contraindications",
       "healthData": "I understand that my notes and the markers I place on the body model are shared with the studio’s specialist so that they can prepare for my session"
     },
     "error": {
@@ -243,7 +242,6 @@
       "ageRange": "Age must be between {min} and {max}",
       "noteTooLong": "No more than {max} characters",
       "consentRequired": "We need your consent to continue",
-      "healthRequired": "Please confirm that you have read the contraindications",
       "serviceRequired": "Choose a service",
       "datetimeRequired": "Choose a date and time",
       "summary": "Please check the highlighted fields"
@@ -460,7 +458,7 @@
       },
       "contraindications": {
         "q": "Are there any contraindications?",
-        "a": "Yes, any kind of bodywork has limits. The list of contraindications is in the left-hand panel on the booking page and on each service page, and you confirm you’ve read it before you book. If in doubt, check with your doctor."
+        "a": "Yes, any kind of bodywork has limits. The list of contraindications is in the left-hand panel on the booking page and on each service page. If in doubt, check with your doctor."
       }
     },
     "form": {
@@ -552,7 +550,7 @@
     },
     "contra": {
       "title": "Contraindications",
-      "intro": "Please read this before you book. You’ll confirm it at the “Contact details” step."
+      "intro": "Please read this before you book."
     },
     "prices": {
       "title": "Prices",
