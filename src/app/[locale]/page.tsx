@@ -104,7 +104,6 @@ export default async function HomePage() {
       </section> */}
 
       <HomeSpace locale={locale} />
-
       {/* 8 FAQ — first item open (ТЗ §05.8) */}
       <section id="faq" className="section home-sec" aria-labelledby="faq-title">
         <div className="container faq">
