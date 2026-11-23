@@ -3,7 +3,8 @@
 .car .track { display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding: 0 0 6px; margin: 0; list-style: none; overscroll-behavior-x: contain; }
 .car .track::-webkit-scrollbar { display: none; }
 .car .track[data-mouse-drag] { cursor: grab; user-select: none; }
-.car .track[data-dragging] { cursor: grabbing; scroll-snap-type: none; }
+.car .track[data-dragging] { cursor: grabbing; }
+.car .track:is([data-dragging], [data-settling]) { scroll-snap-type: none; }
 /* Let the next card peek past the content column. The page supplies the available side margin. */
 @media (max-width: 1439px) {
   .car .track {

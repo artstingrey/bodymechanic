@@ -41,12 +41,15 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
   const track = useRef<HTMLUListElement>(null);
   const thumb = useRef<HTMLElement>(null);
   const drag = useRef<{ pointerId: number; startX: number; scrollLeft: number; active: boolean } | null>(null);
+  const settleFrame = useRef<number | null>(null);
   const items = Children.toArray(children);
   const [edges, setEdges] = useState({ start: true, end: items.length <= 1 });
 
   const measure = useCallback(() => {
     const el = track.current; if (!el) return;
-    setEdges({ start: el.scrollLeft < 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
+    const start = el.scrollLeft < 4;
+    const end = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    setEdges((current) => current.start === start && current.end === end ? current : { start, end });
     const bar = thumb.current;
     if (bar) { // set here, not through state: the thumb follows the finger without re-rendering the strip
       const max = el.scrollWidth - el.clientWidth;
@@ -56,6 +59,12 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
     }
   }, []);
 
+  const stopSettling = useCallback((el: HTMLUListElement) => {
+    if (settleFrame.current !== null) cancelAnimationFrame(settleFrame.current);
+    settleFrame.current = null;
+    delete el.dataset.settling;
+  }, []);
+
   useEffect(() => {
     const el = track.current; if (!el) return;
     let raf = 0;
@@ -63,19 +72,56 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
     el.addEventListener('scroll', on, { passive: true });
     window.addEventListener('resize', on);
     on();
-    return () => { el.removeEventListener('scroll', on); window.removeEventListener('resize', on); if (raf) cancelAnimationFrame(raf); };
-  }, [measure, items.length]);
+    return () => {
+      el.removeEventListener('scroll', on);
+      window.removeEventListener('resize', on);
+      if (raf) cancelAnimationFrame(raf);
+      stopSettling(el);
+    };
+  }, [measure, items.length, stopSettling]);
+
+  const settleAt = (el: HTMLUListElement, left: number) => {
+    const start = el.scrollLeft;
+    const distance = left - start;
+    if (settleFrame.current !== null) cancelAnimationFrame(settleFrame.current);
+
+    // Keep native snapping off until the track reaches the chosen slide.
+    el.dataset.settling = '';
+    delete el.dataset.dragging;
+    if (Math.abs(distance) <= 1 || scrollBehavior() === 'auto') {
+      el.scrollLeft = left;
+      stopSettling(el);
+      return;
+    }
+
+    const duration = Math.max(160, Math.min(420, Math.abs(distance) * 0.8));
+    const startedAt = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const eased = 1 - (1 - progress) ** 3;
+      el.scrollLeft = start + distance * eased;
+      if (progress < 1) settleFrame.current = requestAnimationFrame(animate);
+      else stopSettling(el);
+    };
+    settleFrame.current = requestAnimationFrame(animate);
+  };
 
   const step = (dir: 1 | -1) => {
     const el = track.current;
     if (!el) return;
     const left = adjacentOffset(slideOffsets(el), el.scrollLeft, dir);
-    if (left !== undefined) el.scrollTo({ left, behavior: scrollBehavior() });
+    if (left === undefined) return;
+    if (settleFrame.current !== null) settleAt(el, left);
+    else el.scrollTo({ left, behavior: scrollBehavior() });
   };
 
   const startDrag = (event: PointerEvent<HTMLUListElement>) => {
     const el = event.currentTarget;
-    if (event.pointerType !== 'mouse' || event.button !== 0 || el.scrollWidth <= el.clientWidth) return;
+    if (event.pointerType !== 'mouse') {
+      stopSettling(el);
+      return;
+    }
+    if (event.button !== 0 || el.scrollWidth <= el.clientWidth) return;
     drag.current = { pointerId: event.pointerId, startX: event.clientX, scrollLeft: el.scrollLeft, active: false };
   };
 
@@ -88,6 +134,10 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
       if (Math.abs(distance) < 6) return;
       state.active = true;
       el.dataset.dragging = '';
+      if (settleFrame.current !== null) {
+        state.scrollLeft = el.scrollLeft;
+        stopSettling(el);
+      }
       el.setPointerCapture(event.pointerId);
     }
     el.scrollLeft = state.scrollLeft + distance;
@@ -108,8 +158,7 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
     if (event.type === 'pointerup' && left === start && Math.abs(distance) >= 36) {
       left = adjacentOffset(offsets, start, distance > 0 ? 1 : -1) ?? start;
     }
-    delete el.dataset.dragging;
-    el.scrollTo({ left, behavior: scrollBehavior() });
+    settleAt(el, left);
   };
 
   return (
@@ -120,7 +169,10 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
         onPointerUp={mouseDrag ? endDrag : undefined}
         onPointerCancel={mouseDrag ? endDrag : undefined}
         onPointerLeave={mouseDrag ? endDrag : undefined}
-        onLostPointerCapture={mouseDrag ? endDrag : undefined}>
+        onLostPointerCapture={mouseDrag ? endDrag : undefined}
+        onWheel={mouseDrag ? (event) => {
+          if (event.deltaX || event.shiftKey) stopSettling(event.currentTarget);
+        } : undefined}>
         {items.map((c, i) => <li key={i} aria-label={position(i + 1, items.length)}>{c}</li>)}
       </ul>
       {items.length > 1 ? (
