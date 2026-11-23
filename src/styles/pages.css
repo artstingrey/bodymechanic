@@ -59,11 +59,17 @@
 @media (min-width: 1024px) {
   .svc-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
   .svc-hero__photo { position: sticky; top: calc(var(--header-h) + 16px); }
+  .svc-hero__photo picture, .svc-hero__photo img, .svc-hero__photo .ph {
+    aspect-ratio: 3 / 2;
+    max-height: 400px;
+  }
+  .svc-hero__text { display: flex; flex-direction: column; align-self: stretch; }
+  .svc-hero__text > .facts { margin-top: auto; }
+  .svc-hero__text > .btn-book { align-self: start; }
+  .svc-hero + .doc-sections { margin-top: 32px; }
 }
-/* Service and specialist first screen (R-FINAL-2 D-03, lead's option A; one template for both pages). The DOM follows the phone
-   order: head (crumbs, eyebrow, H1) → price → «Записаться» → description → photo. Below 1024 the photo goes after the text and
-   the head drops its bottom rule (the price block's dark rule separates them); ≥ 1024 the description returns under the H1,
-   above the head's rule, exactly as before. */
+/* On phones and tablets, price and booking come before the description and photo.
+   On desktop, the description sits directly under the title. */
 .hero-lead { max-width: 760px; margin: 0; }
 /* long service names on phones (lead, design audit F11): 26 px, so «Классический массаж с инфракрасной капсулой» sets in two even lines
    instead of three with «капсулой» hanging; short names keep the scale */
@@ -81,9 +87,9 @@
 }
 @media (min-width: 1024px) {
   .svc-hero__text > .page-head, .profile__text > .page-head { order: -2; padding-bottom: 0; border-bottom: 0; }
-  .svc-hero__text > .hero-lead, .profile__text > .hero-lead { order: -1; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
+  .svc-hero__text > .hero-lead, .profile__text > .hero-lead { order: -1; }
   .svc-hero__text > .hero-lead { margin-top: -8px; }   /* gap 20 → 12, the head's own gap */
-  .profile__text > .hero-lead { margin-top: -4px; }    /* gap 16 → 12 */
+  .profile__text > .hero-lead { margin-top: -4px; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
   .profile__text > .profile__slots { order: 0; }
   .profile__text > .btn-book { order: 1; }
   .profile__text > .btn--text { order: 2; }
