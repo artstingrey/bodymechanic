@@ -6,7 +6,6 @@ import { formatCatalogServiceDiscount } from '@/lib/catalog-service-price';
 import type { CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/catalog';
 
 const SERVICE_IDS = [13982355, 13982356, 13982353, 13982363, 13983057];
-const PHOTO_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
 
 export async function LandingCatalogCards({ catalog, locale, percent, t }: {
   catalog: Promise<CatalogServicesResponse | null>;
@@ -39,7 +38,7 @@ export async function LandingCatalogCards({ catalog, locale, percent, t }: {
         return (
           <article key={service.id} className="lp-card" data-service-id={service.id}>
             <div className="ph">
-              <CatalogServicePhoto serviceId={service.id} title={title} sizes={PHOTO_SIZES} t={t} />
+              <CatalogServicePhoto serviceId={service.id} title={title} t={t} />
             </div>
             <div className="bd">
               <span className="n">{String(i + 1).padStart(2, '0')}</span>

@@ -229,7 +229,7 @@ try {
       const photo = sports.locator('img');
       await photo.scrollIntoViewIfNeeded();
       await expect(photo).toHaveAttribute('alt', labels.sports);
-      await expect(photo).toHaveAttribute('src', '/photos/website-services/sports-massage-640.webp');
+      await expect(photo).toHaveAttribute('src', '/website-services/sports-massage.webp');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 
       const grid = page.locator('main .card-grid');

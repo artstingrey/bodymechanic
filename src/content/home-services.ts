@@ -11,22 +11,24 @@ export function homeServiceDescription(locale: CatalogLocale, service: CatalogSe
   return locale === 'en' ? editorial ?? service.description : service.description ?? editorial;
 }
 
-// Map Altegio service IDs to the local WebP versions of the supplied website photos.
+const websiteServicePhoto = (filename: string) => `/website-services/${encodeURIComponent(filename)}.webp`;
+
+// Map Altegio service IDs to the supplied WebP files.
 export const servicePhotos: ReadonlyMap<number, string> = new Map([
-  [13688504, 'mobile-massage'],
-  [13706788, 'classic-massage'],
-  [13982351, 'ice-bath'],
-  [13982353, 'ice-bath'],
-  [13982355, 'sports-massage'],
-  [13982356, 'classic-massage'],
-  [13982358, 'thai-massage'],
-  [13982363, 'infrared-capsule'],
-  [13982369, 'infrared-capsule-45'],
-  [13982379, 'sports-massage-capsule'],
-  [13982380, 'classic-massage-capsule'],
-  [13982382, 'thai-massage-capsule'],
-  [13983057, 'functional-training'],
-  [13983060, 'deep-bodywork'],
-  [13983065, 'sports-conditioning'],
-  [13983067, 'muscle-fascia-stretching'],
+  [13688504, websiteServicePhoto('Home-service')],
+  [13706788, websiteServicePhoto('classic-massage')],
+  [13982351, websiteServicePhoto('ice-bath')],
+  [13982353, websiteServicePhoto('ice-bath')],
+  [13982355, websiteServicePhoto('sports-massage')],
+  [13982356, websiteServicePhoto('classic-massage')],
+  [13982358, websiteServicePhoto('thai-massage')],
+  [13982363, websiteServicePhoto('infrared')],
+  [13982369, websiteServicePhoto('infrared-2')],
+  [13982379, websiteServicePhoto('sports-massage+capsule')],
+  [13982380, websiteServicePhoto('classic-massage+capsule')],
+  [13982382, websiteServicePhoto('thai-massage+capsule')],
+  [13983057, websiteServicePhoto('Functional-Training-&-Mobility')],
+  [13983060, websiteServicePhoto('Deep-Bodywork+infrared-capsule')],
+  [13983065, websiteServicePhoto('Sports-Conditioning-&-Mobility')],
+  [13983067, websiteServicePhoto('Muscle-&-Fascia-Work+Stretching')],
 ]);

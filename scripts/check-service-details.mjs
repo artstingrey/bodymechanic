@@ -114,7 +114,7 @@ async function browserChecks(origin) {
       await expect(facts).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/, '']);
       await expect(hero.locator('.badge')).toHaveCount(0);
       const photo = hero.locator('.svc-hero__photo img');
-      await expect(photo).toHaveAttribute('src', '/photos/website-services/sports-massage-640.webp');
+      await expect(photo).toHaveAttribute('src', '/website-services/sports-massage.webp');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
       await checkSectionVisibility(locale);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
@@ -176,7 +176,7 @@ async function browserChecks(origin) {
     await demoCta.click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
     await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
-    await page.route('**/photos/website-services/sports-massage-*.webp', (route) => route.fulfill({ status: 404 }));
+    await page.route('**/website-services/sports-massage.webp', (route) => route.fulfill({ status: 404 }));
     await page.goto(origin + paths.page('en', 'sports'));
     await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
     assert.deepEqual(unexpectedRequests, []);

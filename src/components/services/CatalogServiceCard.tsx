@@ -8,12 +8,11 @@ import { CatalogServicePhoto } from './CatalogServicePhoto';
 
 const TONES = ['lav', 'sand', 'sky'] as const;
 
-export function CatalogServiceCard({ service, locale, t, index, sizes, titleAs, linkLabel }: {
+export function CatalogServiceCard({ service, locale, t, index, titleAs, linkLabel }: {
   service: CatalogService;
   locale: CatalogLocale;
   t: Awaited<ReturnType<typeof getTranslations>>;
   index: number;
-  sizes: string;
   titleAs?: 'h2' | 'h3';
   linkLabel: string;
 }) {
@@ -24,7 +23,7 @@ export function CatalogServiceCard({ service, locale, t, index, sizes, titleAs, 
   return (
     <ServiceCard href={`/services/${catalogServiceSlug(service.id)}`} linkLabel={linkLabel} index={index} title={title} titleAs={titleAs}
       description={description ?? undefined} tone={TONES[(index - 1) % TONES.length]}
-      photo={<CatalogServicePhoto serviceId={service.id} title={title} sizes={sizes} t={t} />}
+      photo={<CatalogServicePhoto serviceId={service.id} title={title} t={t} />}
       priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
       price={formatCatalogServicePrice(service, locale, {
         unknown: () => t('home.services.priceUnknown'), from: (price) => t('home.services.priceFrom', { price }),

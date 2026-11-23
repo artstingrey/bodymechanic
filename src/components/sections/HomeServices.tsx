@@ -8,8 +8,6 @@ import { Carousel } from '@/components/ui/Carousel';
 import { CatalogServiceCard } from '@/components/services/CatalogServiceCard';
 import { HomeCatalogResult } from './HomeCatalogResult';
 
-const CARD_SIZES = '(min-width: 1920px) 420px, (min-width: 1440px) 400px, (min-width: 1024px) 30vw, (min-width: 768px) 45vw, 76vw';
-
 async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awaited<ReturnType<typeof getTranslations>> }) {
   // Runtime configuration and CRM availability must not decide the build output.
   await connection();
@@ -30,7 +28,7 @@ async function HomeServicesCards({ locale, t }: { locale: CatalogLocale; t: Awai
           goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string,
         }}>
           {services.map((service, i) => (
-            <CatalogServiceCard key={service.id} service={service} locale={locale} t={t} index={i + 1} sizes={CARD_SIZES}
+            <CatalogServiceCard key={service.id} service={service} locale={locale} t={t} index={i + 1}
               linkLabel={t('home.services.cardLink')} />
           ))}
         </Carousel>

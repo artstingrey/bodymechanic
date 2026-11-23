@@ -3,7 +3,6 @@ import { Link } from '@/i18n/navigation';
 import type { CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/catalog';
 import { CatalogServiceCard } from '@/components/services/CatalogServiceCard';
 import { StateCard } from '@/components/ui/Misc';
-import { COVER_SIZES } from '@/components/ui/Photo';
 
 type Props = CatalogServicesResponse['data'] & { locale: CatalogLocale; category?: string | string[] };
 
@@ -28,7 +27,7 @@ export async function ServiceList({ services, categories, locale, category }: Pr
         <ul className="card-grid">
           {list.map((service, i) => (
             <li key={service.id}>
-              <CatalogServiceCard service={service} locale={locale} t={t} index={i + 1} sizes={COVER_SIZES}
+              <CatalogServiceCard service={service} locale={locale} t={t} index={i + 1}
                 linkLabel={t('common.actions.details')} titleAs="h2" />
             </li>
           ))}
