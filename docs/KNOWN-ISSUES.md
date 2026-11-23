@@ -47,7 +47,7 @@
 |---|---|---|
 | Контакты | `contacts.value.directions`, `.parking`, `.hours`, `.whatsapp`, `.phone`, `.email` | Как добраться, парковка, часы, WhatsApp, телефон, почта |
 | Подвал | `footer.legalEntity`, `footer.socialLinks` | Юридическое название, ссылки на соцсети |
-| Главная | `home.team.people`, `home.reviews.items`, `home.space.photos`, `home.space.description`, `home.todo.studioPhotos` | Команда, отзывы, фото и текст о студии |
+| Главная | `home.team.people`, `home.reviews.items`, `home.space.description`, `home.todo.studioPhotos` | Команда, отзывы, текст о студии и общие фото для заголовков и превью |
 | Вопросы и ответы | `home.faq.duration.todo`, `home.faq.prepare.todo`, `home.faq.reschedule.todo` | Длительность, подготовка, правила переноса |
 | Запись | `booking.review.paymentTodo`, `body3d.todo.zoneRules`, `contraindications.todo`, `forms.todo.ageBounds` | Условия оплаты, правила подбора услуги, противопоказания, политика по возрасту |
 | Услуги и команда | `service.todo.body`, `team.todo.bio`, `mock.todo.pricesDurations` | Тексты страниц услуг, биографии, подтверждение цен и длительности |

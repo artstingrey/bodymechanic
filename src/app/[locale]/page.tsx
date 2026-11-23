@@ -6,8 +6,8 @@ import { PageLd } from '@/components/seo/PageLd';
 import { HeroAtlas } from '@/components/sections/HeroAtlas';
 import { HomeServices } from '@/components/sections/HomeServices';
 import { HomeTeam } from '@/components/sections/HomeTeam';
+import { HomeSpace } from '@/components/sections/HomeSpace';
 import { HomeQuickForm } from '@/components/booking/HomeQuickForm';
-import { ReviewCard, PhotoPlaceholder } from '@/components/ui/Cards';
 import { AccordionItem } from '@/components/ui/Misc';
 import { Todo } from '@/components/ui/Todo';
 import { ScopeMessages } from '@/components/i18n/ScopeMessages';
@@ -103,24 +103,7 @@ export default async function HomePage() {
         </div>
       </section> */}
 
-      {/* 7 Space — branded photo slots until real photos arrive (README §6) */}
-      {/* one compact branded placeholder until the room photos arrive (lead's empty-state policy, design audit F05: three empty
-              plaques were ≈ 950 px of nothing on a phone) */}
-      {/* <section className="section home-sec" aria-labelledby="space-title">
-        <div className="container">
-          <div className="sec-head">
-            <div>
-              <h2 id="space-title" className="h2" data-split="">{t('home.space.title')}</h2>
-              <p className="lead">{t('home.space.text')}</p>
-            </div>
-          </div>
-          
-          <div className="space" data-reveal="">
-            <PhotoPlaceholder className="space__ph" caption={t('placeholder.roomPhoto')} />
-          </div>
-          <Todo as="p">{t('home.space.photos')}</Todo>
-        </div>
-      </section> */}
+      <HomeSpace locale={locale} />
 
       {/* 8 FAQ — first item open (ТЗ §05.8) */}
       <section id="faq" className="section home-sec" aria-labelledby="faq-title">

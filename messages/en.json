@@ -416,7 +416,21 @@
       "title": "A space just for you",
       "text": "Private rooms, a calm setting and time that is entirely yours.",
       "galleryOpen": "Open the gallery",
-      "photos": "TODO(content): 2–3 unfiltered photos of the rooms, with captions and alt text",
+      "alt": {
+        "massageRoom": "Massage table in a wood-paneled room",
+        "reception": "Reception desk and light-colored armchairs",
+        "tea": "Tea and cups on a wooden tray",
+        "equipmentRoom": "Room with a massage table and a white capsule by the window",
+        "equipmentDetail": "Interior of the capsule with lights",
+        "hallway": "Studio hallway with entrances to the rooms",
+        "trainingEquipment": "Exercise machine beside a wall with vertical lighting",
+        "trainingEntrance": "Entrance to the exercise area",
+        "doorPanel": "Control panel at the entrance to a room",
+        "changingArea": "Area with a sink, mirror and robe",
+        "sink": "Stone sink and round mirror",
+        "shower": "Shower with a wooden floor",
+        "waitingArea": "Waiting area with light-colored armchairs by reception"
+      },
       "description": "TODO(content): main block text about the studio and its equipment"
     },
     "todo": {

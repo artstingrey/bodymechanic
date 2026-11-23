@@ -266,11 +266,16 @@
 .reviews__soon { margin: 0; }
 @media (min-width: 768px) { .reviews--empty { grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: 32px; } }
 
-/* ---------- 7 Space: one branded placeholder until the room photos (empty-state policy, F05) ---------- */
-.space { margin: 0; }
-.space__ph { min-height: 240px; border-radius: var(--r-card); background: var(--card-sand); } /* RC-8: the sand plate the client approved */
-.space__ph .ph__cap { left: 18px; bottom: 16px; color: var(--muted-card); } /* --muted is for --bg / --surface only */
-@media (min-width: 768px) { .space__ph { min-height: 360px; } }
+/* ---------- 7 Space ---------- */
+.home-space .car .track > li { width: auto; }
+.home-space .car .track > li > img {
+  flex: none;
+  width: auto;
+  height: clamp(178px, 54vw, 360px);
+  max-width: none;
+  border-radius: var(--r-photo);
+  background: var(--surface);
+}
 /* the crosshair of the map placeholder (contacts) */
 .space__tick { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
 .space__tick::before, .space__tick::after { content: ""; position: absolute; background: color-mix(in srgb, var(--text) 30%, transparent); }
