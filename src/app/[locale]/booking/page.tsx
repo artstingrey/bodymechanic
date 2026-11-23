@@ -2,7 +2,6 @@ import { preload } from 'react-dom';
 import assets from '@/lib/body3d/assets.json';
 import { pageLocale } from '@/lib/locale';
 import { pageMetadata } from '@/lib/seo';
-import { getServices } from '@/lib/api';
 import { BookingFlow } from '@/components/booking/BookingFlow';
 import { ABSORB_PRESET_INLINE } from '@/lib/booking/preset';
 import '@/styles/booking.css';
@@ -28,7 +27,6 @@ const DEEP_LINK_GUARD = "if(/[?&]step=[2-7]/.test(location.search)){var s=docume
  * stored choices are applied after hydration (useBookingFlow).
  */
 export default async function BookingPage() {
-  const services = await getServices(await pageLocale());
   // the default (male) poster from the head, high priority: it is the LCP element of step 1
   preload(assets.posters.male.avif, { as: 'image', type: 'image/avif', fetchPriority: 'high' });
   return (
@@ -39,7 +37,7 @@ export default async function BookingPage() {
     ])}>
     <div className="container bk-page">
       <script dangerouslySetInnerHTML={{ __html: ABSORB_PRESET_INLINE + DEEP_LINK_GUARD }} />
-      <BookingFlow services={services} />
+      <BookingFlow />
     </div>
     </ScopeMessages>
   );

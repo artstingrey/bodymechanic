@@ -21,7 +21,6 @@ import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-s
 import { errorKind, recommendServices } from '@/lib/api';
 import { dubaiToday } from '@/lib/api/dubai';
 import type { ApiErrorKind } from '@/lib/api/errors';
-import type { Service } from '@/lib/api/types';
 import { body, useBody } from '@/lib/body3d/store';
 import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
 import { track } from '@/lib/analytics/track';
@@ -64,7 +63,7 @@ export function useAsync<T>(enabled: boolean, load: (signal: AbortSignal) => Pro
   return { status, data: res.k === k ? res.data : undefined, error: res.k === k ? res.error : undefined, retry: useCallback(() => setNonce((n) => n + 1), []) };
 }
 
-export function useBookingFlow(demoServices: Service[]) {
+export function useBookingFlow() {
   const t = useTranslations();
   const f = useFormatter();
   const locale = useLocale() as Locale;
@@ -342,7 +341,7 @@ export function useBookingFlow(demoServices: Service[]) {
   }, [clear]);
 
   return {
-    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, services: demoServices, ordered, recommended, staffName,
+    t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, ordered, recommended, staffName,
     catalogQ, catalogService, selectService, advanceFromService, selectStaff, profileStaffUnavailable,
     today, availableDates, selectedDate, selectedDatetime,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,

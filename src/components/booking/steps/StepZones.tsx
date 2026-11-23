@@ -12,7 +12,7 @@ import type { Flow } from '../useBookingFlow';
 import { zoneLabel } from '@/lib/body3d/zones';
 
 export function StepZones({ flow }: { flow: Flow }) {
-  const { t, services, markers, canLeaveZones, go, offerRestore, continueDraft, discardDraft } = flow;
+  const { t, locale, markers, canLeaveZones, go, offerRestore, continueDraft, discardDraft } = flow;
   // < 1024 (ТЗ 6.9 / §12): «Помощь / Противопоказания / Цены» open from «?» in a modal bottom sheet (native dialog: focus
   // trap, Esc, focus back on «?»); the panel is rendered only while open
   const help = useRef<HTMLDialogElement>(null);
@@ -71,7 +71,7 @@ export function StepZones({ flow }: { flow: Flow }) {
             <h1 id="st1" tabIndex={-1} className="h2">{t('booking.zones.heading')}</h1>
           </div>
           <a href="#zone-list" className="skip-link-inline">{t('body3d.list.skip')}</a>
-          <LeftPanel prices={services} />
+          <LeftPanel locale={locale} />
         </div>
         {/* 3D-17 / R-3D-01 F-06: the accessible alternative is one step away from the canvas */}
         <div className="booking-3d__model">
@@ -103,7 +103,7 @@ export function StepZones({ flow }: { flow: Flow }) {
             <button type="button" className="iconbtn" aria-label={t('common.actions.close')} onClick={() => help.current?.close()}>
               <svg className="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
             </button></div>
-          {helpOpen ? <LeftPanel prices={services} /> : null}
+          {helpOpen ? <LeftPanel locale={locale} /> : null}
         </div>
       </dialog>
       <ZoneChecklist />

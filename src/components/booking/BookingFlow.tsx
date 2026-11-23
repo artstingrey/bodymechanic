@@ -4,7 +4,6 @@
  * Logic: ./useBookingFlow (Frontend Builder). Views: ./steps/* (visual layer: Web Art Director).
  */
 import { useEffect, useRef } from 'react';
-import type { Service } from '@/lib/api/types';
 import { STEPS, useBookingFlow } from './useBookingFlow';
 import { StepZones } from './steps/StepZones';
 import { StepService } from './steps/StepService';
@@ -17,8 +16,8 @@ import { Stepper } from '@/components/ui/Misc';
 
 const VIEWS = [StepZones, StepService, StepSpecialist, StepTime, StepContacts, StepReview, StepDone];
 
-export function BookingFlow({ services }: { services: Service[] }) {
-  const flow = useBookingFlow(services);
+export function BookingFlow() {
+  const flow = useBookingFlow();
   const { t, ready, step, error } = flow;
 
   // F-04: on every step change move the focus to the step heading (or to the error after slot_taken) — not on first load
