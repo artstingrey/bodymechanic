@@ -1,7 +1,7 @@
 'use client';
 /** Shared states of the booking and the account: error with «Повторить» (R-APP-01 F-07), loading. Structure only. */
 import { useTranslations } from 'next-intl';
-import { WHATSAPP_BASE } from '@/lib/config';
+import { WHATSAPP_URL } from '@/lib/config';
 import type { BookingError } from './useBookingFlow';
 
 const MESSAGE: Record<BookingError, string> = {
@@ -10,7 +10,7 @@ const MESSAGE: Record<BookingError, string> = {
 };
 
 /** role=alert; tabIndex −1 so the flow can move focus onto it (F-04: after slot_taken the focus lands here). */
-export function ErrorBox({ kind, onRetry, id, whatsappHref = WHATSAPP_BASE }: { kind: BookingError; onRetry?: () => void; id?: string; whatsappHref?: string }) {
+export function ErrorBox({ kind, onRetry, id, whatsappHref = WHATSAPP_URL }: { kind: BookingError; onRetry?: () => void; id?: string; whatsappHref?: string }) {
   const t = useTranslations();
   const wa = kind === 'server' || kind === 'tooLate';
   return (

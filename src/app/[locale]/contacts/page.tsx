@@ -5,13 +5,13 @@ import { PageLd } from '@/components/seo/PageLd';
 import { PageHead } from '@/components/sections/PageHead';
 import { isTodo } from '@/components/ui/Todo';
 import { StudioMapFrame } from '@/components/ui/StudioMapFrame';
-import { STUDIO, STUDIO_MAP } from '@/lib/config';
+import { INSTAGRAM_URL, STUDIO, STUDIO_MAP, WHATSAPP_NUMBER, WHATSAPP_URL } from '@/lib/config';
 
 export async function generateMetadata() {
   return pageMetadata(await pageLocale(), 'contacts', '/contacts');
 }
 
-const FIELDS = ['directions', 'parking', 'hours', 'whatsapp', 'phone', 'email'] as const;
+const FIELDS = ['directions', 'parking', 'hours', 'phone', 'email'] as const;
 
 export default async function ContactsPage() {
   const t = await getTranslations();
@@ -27,6 +27,14 @@ export default async function ContactsPage() {
           {contacts.map(([key, value]) => (
             <div key={key}><dt>{t(`contacts.label.${key}`)}</dt><dd>{value}</dd></div>
           ))}
+          <div>
+            <dt>{t('contacts.label.whatsapp')}</dt>
+            <dd><a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">{WHATSAPP_NUMBER}</a></dd>
+          </div>
+          <div>
+            <dt>{t('contacts.label.instagram')}</dt>
+            <dd><a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">{t('contacts.value.instagram')}</a></dd>
+          </div>
         </dl>
         <div className="contacts__map">
           <StudioMapFrame className="contacts__map-frame" title={mapTitle} />

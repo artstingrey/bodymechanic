@@ -4,9 +4,11 @@
  */
 export const BOOKING_SMS_REQUIRED = process.env.NEXT_PUBLIC_BOOKING_SMS_REQUIRED === 'true';
 
+export const WHATSAPP_NUMBER = '+971 58 517 23 80';
 /** The chat without any text: the `href` of a link whose prefilled text carries the visitor's data (components/ui/PrefilledLink, В-4). */
-export const WHATSAPP_BASE = 'https://wa.me/971585172380';
-export const whatsappUrl = (text: string) => text ? `${WHATSAPP_BASE}?text=${encodeURIComponent(text)}` : WHATSAPP_BASE;
+export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER.replace(/\D/g, '')}`;
+export const whatsappUrl = (text: string) => text ? `${WHATSAPP_URL}?text=${encodeURIComponent(text)}` : WHATSAPP_URL;
+export const INSTAGRAM_URL = 'https://www.instagram.com/mechanic.body.uae/';
 /** Booking: demo captcha (Turnstile at stage 2, ТЗ §07). The prototype issues a mock token after a short check. */
 export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
 /** Google Tag Manager container (ТЗ §14, GA4 + Meta Pixel inside). Empty in the prototype → events stay in window.dataLayer. */

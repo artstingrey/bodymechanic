@@ -7,7 +7,7 @@
  */
 import { PrivateLink } from '@/components/layout/PrivateLink';
 import { downloadIcs, GOOGLE_CALENDAR_BASE, googleCalendarUrl, type CalEvent } from '@/lib/booking/calendar';
-import { STUDIO, WHATSAPP_BASE, whatsappUrl } from '@/lib/config';
+import { STUDIO, WHATSAPP_URL, whatsappUrl } from '@/lib/config';
 import { Button } from '@/components/ui/Button';
 import { PrefilledLink } from '@/components/ui/PrefilledLink';
 import { Icon } from '@/components/ui/Icon';
@@ -65,7 +65,7 @@ export function StepDone({ flow }: { flow: Flow }) {
           <button type="button" className="chip" onClick={() => downloadIcs(event, `bm-${r.recordId}-${r.datetime}@bodymechanic`)}><Icon name="calendar" />{t('booking.done.calendarIcs')}</button>
           <PrefilledLink className="chip" href={GOOGLE_CALENDAR_BASE} full={() => googleCalendarUrl(event)}><Icon name="calendar" />{t('booking.done.calendarGoogle')}</PrefilledLink>
           <button type="button" className="chip" onClick={() => window.print()}>{t('booking.done.pdf')}</button>
-          <PrefilledLink className="chip" href={WHATSAPP_BASE} full={() => whatsappUrl(summary)}>{t('booking.done.whatsapp')}</PrefilledLink>
+          <PrefilledLink className="chip" href={WHATSAPP_URL} full={() => whatsappUrl(summary)}>{t('booking.done.whatsapp')}</PrefilledLink>
         </div>
         <div hidden>
           <PrivateLink className="btn btn--text" href="/account" aria-describedby="booking-account-note">

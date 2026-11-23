@@ -16,7 +16,7 @@
 import type { AnchorHTMLAttributes, MouseEvent } from 'react';
 
 type Props = Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'target' | 'rel'> & {
-  /** the service without any data: `WHATSAPP_BASE`, `GOOGLE_CALENDAR_BASE` */
+  /** the service without any data: `WHATSAPP_URL`, `GOOGLE_CALENDAR_BASE` */
   href: string;
   /** the complete address with the visitor's text — called at the click, never rendered */
   full: () => string;

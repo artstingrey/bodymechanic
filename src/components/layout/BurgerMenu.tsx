@@ -18,6 +18,7 @@ import { PrivateLink } from './PrivateLink';
 import { isTodo } from '@/components/ui/Todo';
 import { catalogServiceId } from '@/lib/catalog-service-slugs';
 import { catalogStaffId } from '@/lib/catalog-staff-slug';
+import { INSTAGRAM_URL, WHATSAPP_URL } from '@/lib/config';
 import { useBackCloses } from '@/lib/ui/useBackCloses';
 
 /** put the page back where it was (instant, also one frame later: the browser may scroll after a focus move) */
@@ -174,7 +175,10 @@ export function BurgerDialog() {
                 </li>
               ))}
               {!isDemo && <li className="is-minor is-social" style={{ '--i': ITEMS.length } as CSSProperties}>
-                <a href="https://www.instagram.com/mechanic.body.uae/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label={t('footer.social.whatsapp')}>
+                  <Icon name="whatsapp" />
+                </a>
+                <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
                   <Icon name="instagram" />
                 </a>
               </li>}

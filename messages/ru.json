@@ -990,6 +990,7 @@
       "parking": "Парковка",
       "hours": "Часы работы",
       "whatsapp": "WhatsApp",
+      "instagram": "Instagram",
       "phone": "Телефон",
       "email": "Email"
     },
@@ -1005,6 +1006,7 @@
       "parking": "TODO(content): информация о парковке",
       "hours": "TODO(content): часы работы",
       "whatsapp": "TODO(content): номер WhatsApp",
+      "instagram": "@mechanic.body.uae",
       "phone": "TODO(content): телефон студии",
       "email": "TODO(content): email студии"
     },
