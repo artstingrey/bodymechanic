@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { ButtonLink } from '@/components/ui/Button';
+import { catalogCategoryIds } from '@/content/catalog-categories';
 import { LangSwitch } from './LangSwitch';
 import { BurgerRoot, BurgerButton, BurgerDialog } from './BurgerMenu';
 import { HeaderScroll } from './HeaderScroll';
@@ -18,8 +19,8 @@ export async function Header() {
   const t = await getTranslations();
   const main = [
     // Stable menu links for the studio's public Altegio categories.
-    { key: 'onlineBooking', href: { pathname: '/services', query: { category: 13838712 } } },
-    { key: 'offsiteServices', href: { pathname: '/services', query: { category: 13688468 } } },
+    { key: 'onlineBooking', href: { pathname: '/services', query: { category: catalogCategoryIds.onlineBooking } } },
+    { key: 'offsiteServices', href: { pathname: '/services', query: { category: catalogCategoryIds.offsiteServices } } },
     { key: 'approach', href: '/#approach' },
     { key: 'team', href: '/team' },
     { key: 'prices', href: '/prices' },

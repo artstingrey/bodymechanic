@@ -135,13 +135,13 @@ try {
     }
 
     for (const [locale, allLabel, massageLabel, title, menuLabels] of [
-      ['ru', 'Все услуги', 'Массаж', 'Первый массаж', ['Онлайн запись', 'Услуги вне салона']],
-      ['en', 'All services', 'Massage', 'First massage', ['Online booking', 'Off-site services']],
+      ['ru', 'Все услуги', 'Массаж', 'Первый массаж', ['Онлайн запись', 'Услуги']],
+      ['en', 'All services', 'Massage', 'First massage', ['Online booking', 'Services']],
     ]) {
       const listPath = `/${locale}/services/`;
       await page.goto(`${origin}/${locale}/`);
       const menu = page.locator('.site-nav');
-      for (const [index, id] of [13838712, 13688468].entries()) {
+      for (const [index, id] of [13989203, 13989204].entries()) {
         await expect(menu.getByRole('link', { name: menuLabels[index], exact: true })).toHaveAttribute('href', listPath + '?category=' + id);
       }
       const homeServices = page.locator('section[aria-labelledby="services-title"]');
@@ -164,6 +164,23 @@ try {
     await expect(page.getByText('No services are currently listed.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
     await expect(cards).toHaveCount(0);
+  });
+
+  await fs.writeFile(scenario, 'catalog-category-titles');
+  await run(async (origin) => {
+    for (const [locale, title] of [['ru', 'Услуги'], ['en', 'Services']]) {
+      const listPath = `/${locale}/services/`;
+      const filtered = `${listPath}?category=13989204`;
+      await page.goto(origin + listPath);
+      const menu = page.locator('.site-nav').getByRole('link', { name: title, exact: true });
+      await expect(menu).toHaveAttribute('href', filtered);
+      await expect(categories.filter({ hasText: /^Услуги вне салона$/ })).toHaveAttribute('href', `${listPath}?category=20`);
+      await page.locator('main .list-bar').getByRole('link', { name: title, exact: true }).click();
+      await expect(page).toHaveURL(origin + filtered);
+      await expect(page.locator('main .list-bar .chip[aria-current="page"]')).toHaveText(title);
+      await titles.getByRole('link', { name: /Mobile massage/ }).click();
+      await expect(page.locator('.svc-hero .eyebrow')).toHaveText(title);
+    }
   });
 
   await page.route('https://images.example.test/**', (route) => route.abort());

@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { catalogCategoryTitles } from '@/content/catalog-categories';
 import type { CatalogCategory, CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/catalog';
 import { isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
@@ -101,10 +102,14 @@ export async function getCatalogServices(locale: CatalogLocale, { withBusinessDu
     getCachedServices(locationId, currency, locale),
     businessToken && withBusinessDuration ? getCachedBusinessDurations(locationId).catch(() => null) : null,
   ]);
-  const data = durations ? {
-    categories: catalog.categories,
-    services: catalog.services.map((service) => ({ ...service, durationMin: durations[service.id] ?? service.durationMin })),
-  } : catalog;
+  const data = {
+    categories: catalog.categories.map((category) => ({
+      ...category, title: catalogCategoryTitles.get(category.id)?.[locale] ?? category.title,
+    })),
+    services: durations
+      ? catalog.services.map((service) => ({ ...service, durationMin: durations[service.id] ?? service.durationMin }))
+      : catalog.services,
+  };
   return { data, meta: { source: 'altegio', locale } };
 }
 

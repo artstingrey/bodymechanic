@@ -21,7 +21,7 @@ export async function generateMetadata() {
 async function PricesCatalog({ locale }: { locale: CatalogLocale }) {
   await connection();
   const t = await getTranslations({ locale });
-  const catalog = await getCatalogServices(locale, { withBusinessDuration: false }).catch(() => null);
+  const catalog = await getCatalogServices(locale).catch(() => null);
   const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   const labels = {
     unknown: () => t('home.services.priceUnknown'),
@@ -51,6 +51,7 @@ async function PricesCatalog({ locale }: { locale: CatalogLocale }) {
                 <tr>
                   <th scope="col">{t('prices.col.service')}</th>
                   <th scope="col">{t('prices.col.price')}</th>
+                  <th scope="col">{t('services.card.durationLabel')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,6 +63,9 @@ async function PricesCatalog({ locale }: { locale: CatalogLocale }) {
                       </Link>
                     </th>
                     <td className="tn price-table__price">{formatCatalogServicePrice(service, locale, labels)}</td>
+                    <td className="tn price-table__duration">
+                      {service.durationMin !== null ? t('home.services.duration', { minutes: service.durationMin }) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>

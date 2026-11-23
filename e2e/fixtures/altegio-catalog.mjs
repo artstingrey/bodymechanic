@@ -111,6 +111,7 @@ globalThis.fetch = async (input, init) => {
     const scenario = readFileSync(process.env.CATALOG_TEST_SCENARIO, 'utf8');
     console.info('[business-services-fixture]', scenario);
     if (scenario === 'business-forbidden') return new Response(null, { status: 403 });
+    if (scenario === 'service-detail') return Response.json({ success: true, data: [{ id: 13982355, duration: 4500 }] });
     assert.equal(scenario, 'success');
     return Response.json({ success: true, data: [
       { id: 42, duration: 1200, title: 'Private fixture title', price_min: 500, technical_break_duration: 600 },
@@ -245,6 +246,15 @@ globalThis.fetch = async (input, init) => {
       return scenario !== 'lp-missing' || id !== 13982363;
     });
     return Response.json({ success: true, data: { services: selected } });
+  }
+  if (scenario === 'catalog-category-titles') {
+    return Response.json({ success: true, data: {
+      category: [
+        { id: 13989204, title: 'Услуги вне салона' },
+        { id: 20, title: 'Услуги вне салона' },
+      ],
+      services: [{ id: 93201, title: 'Mobile massage', category_id: 13989204 }],
+    } });
   }
   if (scenario === 'catalog-list-slow') {
     assert.equal(staff, false);

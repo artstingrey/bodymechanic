@@ -13,7 +13,7 @@ const release = `${scenario}.release`;
 const cacheFiles = new Set();
 const token = 'fixture-partner-token';
 
-async function run(check, currency = 'USD') {
+async function run(check, currency = 'USD', businessToken = '') {
   return withProductionServer(async (origin, logs) => {
     try {
       await check(origin, logs);
@@ -26,6 +26,7 @@ async function run(check, currency = 'USD') {
   }, { preload, env: {
     ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
     ALTEGIO_PARTNER_TOKEN: token,
+    ALTEGIO_BUSINESS_TOKEN: businessToken,
     ALTEGIO_CURRENCY: currency,
     CATALOG_TEST_SCENARIO: scenario,
   } });
@@ -104,19 +105,20 @@ try {
 
   await fs.writeFile(scenario, 'service-detail');
   await run(async (origin) => {
-    for (const [locale, columns, sports, from, unknown] of [
-      ['ru', ['Услуга', 'Цена'], 'Спортивный массаж из каталога', 'От', 'Стоимость уточняется'],
-      ['en', ['Service', 'Price'], 'Sports massage', 'From', 'Price to be confirmed'],
+    for (const [locale, columns, sports, from, unknown, minuteUnit] of [
+      ['ru', ['Услуга', 'Цена', 'Длительность'], 'Спортивный массаж из каталога', 'От', 'Стоимость уточняется', 'мин'],
+      ['en', ['Service', 'Price', 'Duration'], 'Sports massage', 'From', 'Price to be confirmed', 'min'],
     ]) {
       const pricesUrl = `${origin}/${locale}/prices/`;
       const listPath = `/${locale}/services/`;
       const slugs = ['sports', 'service-91201', 'service-91202', 'service-91203', 'service-91204'];
       const row = (slug) => tables.locator('tbody tr').filter({ has: page.locator(`a[href="${listPath}${slug}/"]`) });
       const price = (slug) => row(slug).locator('.price-table__price');
+      const duration = (slug) => row(slug).locator('.price-table__duration');
       await page.setViewportSize({ width: 1280, height: 850 });
       await page.goto(pricesUrl);
       await expect(tables.first().locator('thead th')).toHaveText(columns);
-      await expect(tables.locator('tbody td:not(.price-table__price)')).toHaveCount(0);
+      await expect(row('sports').locator('td')).toHaveCount(2);
       await expect(row('sports').locator('a')).toHaveText(sports);
       await expect(price('sports')).toHaveText(/80\s*–\s*160/);
       await expect(price('sports')).toContainText('USD');
@@ -124,11 +126,15 @@ try {
       await expect(price('service-91202')).toHaveText(new RegExp(`^${from}\\s+(?:USD\\s+55[,.]5|55[,.]5\\s+USD)$`));
       await expect(price('service-91203')).toHaveText(/^(?:USD\s+125|125\s+USD)$/);
       await expect(price('service-91204')).toHaveText(unknown);
+      await expect(duration('sports')).toHaveText(`75 ${minuteUnit}`);
+      await expect(duration('service-91201')).toHaveText(`90 ${minuteUnit}`);
+      await expect(duration('service-91202')).toBeEmpty();
 
       const longTitle = row('service-91201').locator('th');
       await expect(longTitle).toBeVisible();
       const desktopHeight = await longTitle.evaluate((cell) => cell.getBoundingClientRect().height);
       await page.setViewportSize({ width: 320, height: 850 });
+      await expect(duration('sports')).toBeVisible();
       await expect.poll(() => longTitle.evaluate((cell) => cell.getBoundingClientRect().height)).toBeGreaterThan(desktopHeight);
       assert.ok(await page.locator('.table-wrap').evaluateAll((wraps) => wraps.every((el) => el.scrollWidth <= el.clientWidth)));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -136,6 +142,7 @@ try {
       const expected = new Map(await Promise.all(slugs.map(async (slug) => [slug, {
         title: await row(slug).locator('a').innerText(),
         price: await price(slug).innerText(),
+        duration: await duration(slug).innerText(),
       }])));
       const serviceCount = await tables.locator('tbody tr').count();
       await page.goto(origin + listPath);
@@ -144,6 +151,7 @@ try {
         const card = page.locator('main .card-grid article').filter({ has: page.locator(`a[href="${listPath}${slug}/"]`) });
         await expect(card.locator('h2')).toHaveText(facts.title);
         await expect(card.locator('dd').first()).toHaveText(facts.price);
+        if (facts.duration) await expect(card.locator('dd').nth(1)).toHaveText(facts.duration);
       }
 
       for (const slug of ['sports', 'service-91201']) {
@@ -152,6 +160,7 @@ try {
         await expect(page).toHaveURL(`${origin}${listPath}${slug}/`);
         await expect(page.locator('.svc-hero h1')).toHaveText(expected.get(slug).title);
         await expect(page.locator('.svc-hero dd').first()).toHaveText(expected.get(slug).price);
+        await expect(page.locator('.svc-hero dd').nth(1)).toHaveText(expected.get(slug).duration);
       }
 
       await page.goto(pricesUrl);
@@ -165,7 +174,7 @@ try {
         await bookingPage.close();
       }
     }
-  });
+  }, 'USD', 'fixture-business-token');
 
   await run(async (origin) => {
     for (const [locale, unknown] of [['ru', 'Стоимость уточняется'], ['en', 'Price to be confirmed']]) {
@@ -182,7 +191,7 @@ try {
 
   assert.deepEqual(browserRequests, []);
   assert.deepEqual(pageErrors, []);
-  console.log('Prices: RU/EN, category order, price formats, mobile layout, navigation, loading, empty catalog and retry: OK');
+  console.log('Prices: RU/EN, category order, price and duration, mobile layout, navigation, loading, empty catalog and retry: OK');
 } finally {
   await browser?.close();
   await Promise.all([...cacheFiles, scenario, release].map((file) => fs.rm(file, { force: true })));
