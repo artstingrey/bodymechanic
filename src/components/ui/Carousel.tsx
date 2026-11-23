@@ -1,6 +1,6 @@
 'use client';
 /**
- * Native scroll snap for touch and trackpads, with optional mouse dragging for photo tracks.
+ * Native scroll snap for touch and trackpads, with mouse dragging on scrollable tracks.
  */
 import { Children, useCallback, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { IconButton } from './Button';
@@ -29,18 +29,18 @@ function nearestOffset(offsets: number[], position: number) {
 
 const scrollBehavior = (): ScrollBehavior => matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
 
-export function Carousel({ label, children, t, hideCount, mouseDrag }: {
+export function Carousel({ label, children, t, hideCount }: {
   label: string;
   children: ReactNode;
   /** deck strings (raw templates, serialisable from server components): a11y.carousel.prev / next / goTo «{n}» / position «{current} {total}» */
   t: { label: string; prev: string; next: string; goTo: string; position: string };
   hideCount?: boolean;
-  mouseDrag?: boolean;
 }) {
   const position = (c: number, total: number) => t.position.replace('{current}', String(c)).replace('{total}', String(total));
   const track = useRef<HTMLUListElement>(null);
   const thumb = useRef<HTMLElement>(null);
-  const drag = useRef<{ pointerId: number; startX: number; scrollLeft: number; active: boolean } | null>(null);
+  const drag = useRef<{ pointerId: number; startX: number; startY: number; scrollLeft: number; active: boolean } | null>(null);
+  const suppressClick = useRef(false);
   const settleFrame = useRef<number | null>(null);
   const items = Children.toArray(children);
   const [edges, setEdges] = useState({ start: true, end: items.length <= 1 });
@@ -117,12 +117,19 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
 
   const startDrag = (event: PointerEvent<HTMLUListElement>) => {
     const el = event.currentTarget;
+    suppressClick.current = false;
     if (event.pointerType !== 'mouse') {
       stopSettling(el);
       return;
     }
-    if (event.button !== 0 || el.scrollWidth <= el.clientWidth) return;
-    drag.current = { pointerId: event.pointerId, startX: event.clientX, scrollLeft: el.scrollLeft, active: false };
+    if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || el.scrollWidth <= el.clientWidth) return;
+    drag.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: el.scrollLeft,
+      active: false,
+    };
   };
 
   const moveDrag = (event: PointerEvent<HTMLUListElement>) => {
@@ -131,8 +138,14 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
     const el = event.currentTarget;
     const distance = state.startX - event.clientX;
     if (!state.active) {
+      const vertical = Math.abs(event.clientY - state.startY);
+      if (vertical >= 6 && vertical > Math.abs(distance)) {
+        drag.current = null;
+        return;
+      }
       if (Math.abs(distance) < 6) return;
       state.active = true;
+      suppressClick.current = true;
       el.dataset.dragging = '';
       if (settleFrame.current !== null) {
         state.scrollLeft = el.scrollLeft;
@@ -140,6 +153,7 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
       }
       el.setPointerCapture(event.pointerId);
     }
+    event.preventDefault();
     el.scrollLeft = state.scrollLeft + distance;
   };
 
@@ -154,7 +168,7 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
     const start = nearestOffset(offsets, state.scrollLeft);
     let left = nearestOffset(offsets, el.scrollLeft);
     const distance = state.startX - event.clientX;
-    // Advance short, deliberate swipes even when a wide photo is still the nearest snap point.
+    // Advance short, deliberate swipes even when the current slide is still the nearest snap point.
     if (event.type === 'pointerup' && left === start && Math.abs(distance) >= 36) {
       left = adjacentOffset(offsets, start, distance > 0 ? 1 : -1) ?? start;
     }
@@ -163,16 +177,25 @@ export function Carousel({ label, children, t, hideCount, mouseDrag }: {
 
   return (
     <div className="car" role="region" aria-roledescription={t.label} aria-label={label} data-nocount={hideCount || undefined}>
-      <ul className="track" ref={track} data-mouse-drag={mouseDrag || undefined}
-        onPointerDown={mouseDrag ? startDrag : undefined}
-        onPointerMove={mouseDrag ? moveDrag : undefined}
-        onPointerUp={mouseDrag ? endDrag : undefined}
-        onPointerCancel={mouseDrag ? endDrag : undefined}
-        onPointerLeave={mouseDrag ? endDrag : undefined}
-        onLostPointerCapture={mouseDrag ? endDrag : undefined}
-        onWheel={mouseDrag ? (event) => {
+      <ul className="track" ref={track} data-scrollable={!(edges.start && edges.end) || undefined}
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={endDrag}
+        onLostPointerCapture={endDrag}
+        onDragStart={(event) => {
+          if (drag.current) event.preventDefault();
+        }}
+        onClickCapture={(event) => {
+          if (!suppressClick.current || event.detail === 0) return;
+          suppressClick.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onWheel={(event) => {
           if (event.deltaX || event.shiftKey) stopSettling(event.currentTarget);
-        } : undefined}>
+        }}>
         {items.map((c, i) => <li key={i} aria-label={position(i + 1, items.length)}>{c}</li>)}
       </ul>
       {items.length > 1 ? (

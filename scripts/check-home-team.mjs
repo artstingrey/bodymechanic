@@ -283,7 +283,24 @@ try {
         await expect(page.locator('main h1')).toHaveText(locale === 'en' ? 'Team' : 'Команда');
         await expect(page.locator('main .staff b')).toHaveText(names);
         await page.goto(`${origin}/${locale}/`);
-        await block.locator('.team-intro a').click();
+        const bookingLink = block.locator('.team-intro a');
+        if (width === 1280) {
+          await bookingLink.scrollIntoViewIfNeeded();
+          await expect(track).toHaveAttribute('data-scrollable', 'true');
+          const box = await bookingLink.boundingBox();
+          assert.ok(box);
+          const x = box.x + box.width / 2;
+          const y = box.y + box.height / 2;
+          await page.mouse.move(x, y);
+          await page.mouse.down();
+          await page.mouse.move(x - 100, y, { steps: 6 });
+          await page.mouse.up();
+          await expect.poll(scrollLeft).toBeGreaterThan(0);
+          await expect(page).toHaveURL(`${origin}/${locale}/`);
+          await prev.press('Space');
+          await expect.poll(scrollLeft).toBe(0);
+        }
+        await bookingLink.click();
         await expect(page).toHaveURL(`${origin}/${locale}/booking/`);
         await expect(page.locator('main #st1')).toBeVisible();
       });

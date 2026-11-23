@@ -31,7 +31,7 @@ export async function HomeSpace({ locale }: { locale: CatalogLocale }) {
             <p className="lead">{t('home.space.text')}</p>
           </div>
         </div>
-        <Carousel label={t('home.space.title')} mouseDrag t={{
+        <Carousel label={t('home.space.title')} t={{
           label: t('a11y.carousel.label'), prev: t('a11y.carousel.prev'), next: t('a11y.carousel.next'),
           goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string,
         }}>
