@@ -18,10 +18,10 @@ const portraitUrl = 'https://images.example.test/portrait.webp';
 const locales = {
   ru: { lang: 'ru-RU', title: 'Команда', loading: 'Загружаем команду…', retry: 'Повторить',
     error: 'Не удалось загрузить команду.', empty: 'Профили специалистов пока не опубликованы.',
-    photoUnavailable: 'Фото недоступно', specialization: 'Восстановительный массаж', back: 'Все специалисты' },
+    photoUnavailable: 'Фото недоступно', back: 'Все специалисты' },
   en: { lang: 'en-US', title: 'Team', loading: 'Loading the team…', retry: 'Try again',
     error: 'We couldn’t load the team.', empty: 'No specialist profiles are currently listed.',
-    photoUnavailable: 'Photo unavailable', specialization: 'Recovery massage', back: 'All specialists' },
+    photoUnavailable: 'Photo unavailable', back: 'All specialists' },
 };
 
 function run(check) {
@@ -112,8 +112,7 @@ try {
       for (const [index, id] of ids.entries()) {
         await expect(links.nth(index)).toHaveAttribute('href', `/${locale}/team/staff-${id}/`);
       }
-      await expect(cards.locator('.cap')).toHaveText(['Job title', 'Therapist', copy.specialization]);
-      await expect(cards.nth(3).locator('.cap')).toHaveCount(0);
+      await expect(cards.locator('.cap')).toHaveCount(0);
 
       const portrait = cards.first().getByRole('img', { name: names[0], exact: true });
       await portrait.scrollIntoViewIfNeeded();

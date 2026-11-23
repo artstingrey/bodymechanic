@@ -28,9 +28,9 @@ async function TeamCatalog({ locale, t }: { locale: CatalogLocale; t: Awaited<Re
       error={t('home.team.errorLoad')} retry={t('home.team.retry')} loading={t('home.team.loading')}>
       {staff?.length ? (
         <ul className="card-grid card-grid--4 team-grid">
-          {staff.map(({ id, name, position, specialization, imageUrl }) => (
+          {staff.map(({ id, name, imageUrl }) => (
             <li key={id}>
-              <StaffCard name={name} note={position ?? specialization} href={`/team/${catalogStaffSlug(id)}`}
+              <StaffCard name={name} href={`/team/${catalogStaffSlug(id)}`}
                 photo={<HomeTeamPhoto key={imageUrl} src={imageUrl} alt={name} unavailable={t('home.team.photoUnavailable')} />} />
             </li>
           ))}
