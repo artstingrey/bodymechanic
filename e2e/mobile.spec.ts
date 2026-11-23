@@ -523,7 +523,7 @@ test('no word of a heading (H1–H3) or a button splits across lines or is cut b
  */
 type GeoBox = { k: string; b: number[] };
 const DEV16: { path: string; sel: string[]; draft?: boolean }[] = [
-  { path: '/ru/', sel: ['.site-header', 'h1', '.atlas-stage', '.atlas-index li', '.photo', '.photo-cap'] },
+  { path: '/ru/', sel: ['.site-header', 'h1', '.atlas-stage', '.atlas-index li', '.photo'] },
   { path: '/ru/booking/', sel: ['.b3d-slot[data-mode="booking"]', '#st1', '[data-testid="b3d-marker"]'], draft: true },
   { path: '/ru/lp/a/', sel: ['#lp-h1', '.lp-copy .sub', '.lp-form input', '.lp-form .fine'] },
 ];

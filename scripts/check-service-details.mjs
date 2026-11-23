@@ -77,16 +77,9 @@ async function browserChecks(origin) {
     await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({
       necessary: true, analytics: false, marketing: false, at: 'gate',
     })));
-    await page.route(/api\.alteg\.io|\/api\/catalog\//, async (route) => {
+    await page.route(/api\.alteg\.io|\/api\/catalog\/|images\.example\.test/, async (route) => {
       unexpectedRequests.push(route.request().url());
       await route.abort();
-    });
-    await page.route('https://images.example.test/**', async (route) => {
-      assert.equal(route.request().headers().referer, undefined);
-      assert.equal(route.request().headers().authorization, undefined);
-      return route.request().url().endsWith('broken.webp')
-        ? route.fulfill({ status: 404 })
-        : route.fulfill({ path: 'public/photos/services/classic-640.webp', contentType: 'image/webp' });
     });
     const hero = page.locator('.svc-hero');
     const heading = hero.locator('h1');
@@ -119,8 +112,10 @@ async function browserChecks(origin) {
       await expect(hero.locator('.hero-lead')).toHaveText(description);
       await expect(hero.locator('.eyebrow')).toHaveText(category);
       await expect(facts).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/, '']);
-      await expect(hero.locator('.badge, img')).toHaveCount(0);
-      await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
+      await expect(hero.locator('.badge')).toHaveCount(0);
+      const photo = hero.locator('.svc-hero__photo img');
+      await expect(photo).toHaveAttribute('src', '/photos/website-services/sports-massage-640.webp');
+      await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
       await checkSectionVisibility(locale);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
       await expect(wideSections.first().getByRole('status')).toHaveText(locale === 'ru'
@@ -148,7 +143,8 @@ async function browserChecks(origin) {
       await expect(wideSections.last().locator(`a[href^="/${locale}/journal/"]`)).toHaveCount(2);
       await expect(page.locator('.doc-sections .staff')).toHaveCount(0);
       await expect(facts).toHaveText([/^(?:AED\s+)?0(?:\s+AED)?$/, /90\s+(мин|min)/]);
-      await expect.poll(() => hero.locator('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+      await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
+      await expect(hero.locator('.svc-hero__photo img')).toHaveCount(0);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
       assert.ok(await heading.evaluate((element) => element.scrollWidth <= element.clientWidth));
       const [photoBox, textBox] = await Promise.all([hero.locator('.svc-hero__photo').boundingBox(), hero.locator('.svc-hero__text').boundingBox()]);
@@ -171,6 +167,7 @@ async function browserChecks(origin) {
       }
     }
     await page.goto(origin + paths.page('en', 'manual'));
+    await expect(hero.getByText('Illustrative photo', { exact: true })).toHaveCount(0);
     const demoCta = hero.getByRole('link', { name: 'Book', exact: true });
     await expect(demoCta).toHaveAttribute('href', '/en/booking/');
     await expect(hero.locator('.facts .badge')).toHaveCount(0);
@@ -179,6 +176,9 @@ async function browserChecks(origin) {
     await demoCta.click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
     await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
+    await page.route('**/photos/website-services/sports-massage-*.webp', (route) => route.fulfill({ status: 404 }));
+    await page.goto(origin + paths.page('en', 'sports'));
+    await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
     assert.deepEqual(unexpectedRequests, []);
   } finally {
     await browser.close();

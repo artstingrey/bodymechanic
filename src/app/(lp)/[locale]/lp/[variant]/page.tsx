@@ -158,7 +158,6 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
               </span>
             )))}
             {pill}
-            <figcaption className="tag">{t('placeholder.illustrativePhoto')}</figcaption>
           </figure>
           <div className="lp-copy">
             <h1 id="lp-h1">{h1a} <span className="acc">{h1b}</span></h1>

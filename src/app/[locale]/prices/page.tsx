@@ -21,7 +21,7 @@ export async function generateMetadata() {
 async function PricesCatalog({ locale }: { locale: CatalogLocale }) {
   await connection();
   const t = await getTranslations({ locale });
-  const catalog = await getCatalogServices(locale).catch(() => null);
+  const catalog = await getCatalogServices(locale, { withBusinessDuration: false }).catch(() => null);
   const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   const labels = {
     unknown: () => t('home.services.priceUnknown'),

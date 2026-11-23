@@ -3,7 +3,7 @@ import 'server-only';
 import type { CatalogCategory, CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/catalog';
 import { isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
-import { fetchBookServices } from '../altegio/services';
+import { fetchBookServices, fetchBusinessServices } from '../altegio/services';
 import { getAltegioConfig } from '../config';
 import { cachePublicCatalog } from './cache';
 
@@ -13,6 +13,10 @@ function positiveId(value: unknown): number | null {
 
 function price(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function durationInMinutes(seconds: unknown): number | null {
+  return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0 ? seconds / 60 : null;
 }
 
 function publicDescription(comment: unknown): string | null {
@@ -50,7 +54,6 @@ function normalizeCatalog(data: unknown, currency: string | null): CatalogServic
   });
   const services = data.services.map((value: unknown) => {
     if (!isRecord(value)) throw new AltegioError('invalidResponse');
-    const seconds = value.seance_length;
     return {
       ...identity(value),
       description: publicDescription(value.comment),
@@ -58,7 +61,7 @@ function normalizeCatalog(data: unknown, currency: string | null): CatalogServic
       priceMin: price(value.price_min),
       priceMax: price(value.price_max),
       currency,
-      durationMin: typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0 ? seconds / 60 : null,
+      durationMin: durationInMinutes(value.seance_length),
       imageUrl: imageUrl(value.image),
     };
   });
@@ -75,9 +78,33 @@ const getCachedServices = cachePublicCatalog('book-services-v2', async (location
   }
 });
 
-export async function getCatalogServices(locale: CatalogLocale): Promise<CatalogServicesResponse> {
-  const { locationId, currency } = getAltegioConfig();
-  const data = await getCachedServices(locationId, currency, locale);
+// Base duration is independent of locale. Cache only the service IDs and durations.
+const getCachedBusinessDurations = cachePublicCatalog('business-service-durations-v2', async (locationId: number) => {
+  const data = await fetchBusinessServices(locationId);
+  if (!Array.isArray(data)) {
+    console.warn('[altegio]', { operation: 'business_services', code: 'UPSTREAM_INVALID_RESPONSE' });
+    throw new AltegioError('invalidResponse');
+  }
+  const durations: Partial<Record<number, number>> = {};
+  for (const service of data) {
+    if (!isRecord(service)) continue;
+    const id = positiveId(service.id);
+    const duration = durationInMinutes(service.duration);
+    if (id !== null && duration !== null) durations[id] = duration;
+  }
+  return durations;
+});
+
+export async function getCatalogServices(locale: CatalogLocale, { withBusinessDuration = true } = {}): Promise<CatalogServicesResponse> {
+  const { locationId, currency, businessToken } = getAltegioConfig();
+  const [catalog, durations] = await Promise.all([
+    getCachedServices(locationId, currency, locale),
+    businessToken && withBusinessDuration ? getCachedBusinessDurations(locationId).catch(() => null) : null,
+  ]);
+  const data = durations ? {
+    categories: catalog.categories,
+    services: catalog.services.map((service) => ({ ...service, durationMin: durations[service.id] ?? service.durationMin })),
+  } : catalog;
   return { data, meta: { source: 'altegio', locale } };
 }
 

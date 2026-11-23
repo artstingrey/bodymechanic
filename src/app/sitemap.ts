@@ -22,7 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const catalogs = await Promise.all(locales.map(async (locale) => ({
     locale,
-    results: await Promise.allSettled([getCatalogServices(locale), getCatalogStaff(locale)]),
+    results: await Promise.allSettled([getCatalogServices(locale, { withBusinessDuration: false }), getCatalogStaff(locale)]),
   })));
   for (const { locale, results: [services, staff] } of catalogs) {
     if (services.status === 'fulfilled') {

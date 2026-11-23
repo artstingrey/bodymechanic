@@ -326,7 +326,6 @@
 .home-sec .svc { gap: 14px; padding: 12px 12px 36px; transition: transform 240ms var(--e-out), box-shadow 240ms var(--e-out); }
 .home-sec .svc .photo { aspect-ratio: 4 / 4.6; background: var(--surface); }
 .home-sec .svc .photo .go { background: color-mix(in srgb, var(--bg) 94%, transparent); box-shadow: var(--sh-1); }
-.home-sec .svc .photo-cap { margin: -4px 0 0; padding: 0 6px; font-size: 15px; line-height: 1.45; }
 .home-sec .svc .body { padding: 0; }
 .home-sec .svc .head, .home-sec .svc .d { padding-inline: 6px; }
 .home-sec .svc .idx { letter-spacing: 0.04em; }
@@ -347,13 +346,11 @@
 @media (hover: hover) { .home-sec .svc:hover { transform: translateY(-3px); } }
 .home-sec .svc:active { transform: scale(0.985); transition-duration: 90ms; }
 
-[aria-labelledby="services-title"] .svc .photo { aspect-ratio: 4 / 5; }
 [aria-labelledby="services-title"] .ph.home-service-image { border-radius: var(--r-photo); }
 [aria-labelledby="services-title"] .svc .head > div { width: 100%; }
 [aria-labelledby="services-title"] .svc .data:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
 [aria-labelledby="services-title"] .svc:active { transform: none; }
 .svc .photo .home-service-image { height: 100%; }
-.home-service-image__caption { position: absolute; inset: auto 0 0; padding: 6px 10px; background: var(--surface); font-size: var(--fs-caption); }
 .home-catalog-state { display: grid; min-height: 9rem; align-content: center; justify-items: start; gap: 12px; }
 
 /* specialists: the frame's proportion and gaps; the placeholder inside is the site's own */

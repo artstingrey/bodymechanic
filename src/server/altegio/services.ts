@@ -8,3 +8,7 @@ export function fetchBookServices(locationId: number, locale: CatalogLocale, sta
   if (staffId !== undefined) query.set('staff_id', String(staffId));
   return altegioGet('book_services', `book_services/${locationId}?${query}`, bookingLanguages[locale]);
 }
+
+export function fetchBusinessServices(locationId: number): Promise<unknown> {
+  return altegioGet('business_services', `locations/${locationId}/services`, bookingLanguages.en, { business: true });
+}

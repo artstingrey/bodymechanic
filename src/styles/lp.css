@@ -114,7 +114,6 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .lp-media { position: relative; margin-inline: calc(var(--lp-g) * -1); aspect-ratio: 390 / 196; overflow: hidden; background: var(--card-sand); border-radius: var(--r-photo); }
 .lp-media picture, .lp-media img { width: 100%; height: 100%; }
 .lp-media img { object-fit: cover; }
-.lp-media .tag { position: absolute; top: 6px; right: 6px; padding: 4px 8px; border-radius: 6px; background: rgba(247, 244, 240, .88); font-size: 13px; line-height: 1.2; color: var(--text); }
 .co { position: absolute; left: var(--x); top: var(--y); width: 0; height: 0; }
 .co i { position: absolute; left: -11px; top: -11px; width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 0 1.5px #fff, inset 0 0 0 1.5px var(--text); background: rgba(255, 255, 255, .25); }
 .co i::after { content: ""; position: absolute; left: 8px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
@@ -129,22 +128,19 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/1.5 
 .offer-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 12px 4px 6px; border-radius: 22px; /* one line = a pill; wrapped (narrow, zoomed text) = a rounded box, the badge stays on the dark ground (F-05) */ background: var(--dark); color: var(--bg); font-size: 13px; font-weight: 700; line-height: 1.25; }
 .offer-pill b { flex: none; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: var(--accent); color: #fff; font-variant-numeric: tabular-nums; }
 .lp-media .offer-pill { position: absolute; right: 12px; bottom: 10px; left: 12px; width: fit-content; margin-left: auto; }
-/* «Пример оффера» (R-LP-03 F-02, while the offer is an example): a light chip. On the photo it is a corner tag top-left,
-   mirroring «Иллюстративное фото» (no extra height in the first screen, clear of the call-outs); in the copy column it
-   wraps inside the pill; in the final block it is a line */
+/* The example offer label sits at the top left of the photo, stays clear of the call-outs,
+   and has a separate place in the copy column and the final block. */
 .lp .ex { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--r-pill); background: var(--bg); color: var(--text);
   box-shadow: 0 0 0 1px rgba(38, 34, 31, .2); font-size: 13px; font-weight: 700; line-height: 1.2; letter-spacing: .04em; text-transform: uppercase; }
 .lp-media .ex--photo { position: absolute; top: 6px; left: 6px; min-height: 0; padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
 @media (min-width: 768px) { .lp-media .ex--photo { display: none; } }
 /* in the copy column «Пример оффера» is its own line under the pill (F-05) */
 .lp-copy .ex--copy { display: none; justify-self: start; }
-/* narrow phones with the photo (R-LP-03 M-06): the two corner tags must not meet — ≤ 360 the example tag drops the capitals
-   (≈ 20 px shorter), ≤ 325 it leaves the photo for its line in the copy column */
+/* On narrow phones the example tag drops the capitals. At ≤ 325 px it moves into the copy column. */
 @media (max-width: 360px) { .lp-media .ex--photo { text-transform: none; letter-spacing: 0; } }
 @media (max-width: 325px) { .lp-media .ex--photo { display: none; } .lp-copy .ex--copy { display: inline-flex; } }
-/* The example offer label uses the same pill across the landing (8 % Carbon on light,
-   12 % Bone on the dark final block); on the photo it takes the plate of «Иллюстративное фото», so each surface has one look.
-   The long final line «Пример оффера — условия уточняются» in sentence case: one line on 320 (L22, was two inside the pill) */
+/* The example offer label uses a translucent background for each surface.
+   The final label uses sentence case to fit on one line at 320 px. */
 .lp .ex { background: rgba(38, 34, 31, .08); box-shadow: none; }
 .lp-media .ex--photo { background: rgba(247, 244, 240, .88); text-transform: none; letter-spacing: 0; }
 .lp-final .ex { background: rgba(247, 244, 240, .12); color: var(--bg); text-transform: none; letter-spacing: 0; }
@@ -282,7 +278,6 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-card:nth-child(3), .lp .car .track > :nth-child(3) > .lp-card { background: var(--card-sky); }
 .lp-card .ph { position: relative; aspect-ratio: 4 / 4.6; border-radius: var(--r-photo); overflow: hidden; }
 .lp-card .ph picture, .lp-card .ph img { width: 100%; height: 100%; object-fit: cover; }
-.lp-card .ph :is(.tag, .home-service-image__caption) { position: absolute; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; background: rgba(247, 244, 240, .88); font-size: 13px; }
 .lp-card .home-service-image { height: 100%; }
 .lp-card .bd { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 14px 6px 0; }
 .lp-card .n { font-size: 13px; font-weight: 800; color: var(--accent-ink-card); font-variant-numeric: tabular-nums; }
@@ -460,7 +455,6 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
   .lp-media { aspect-ratio: auto; height: min(360px, 48svh); margin-inline: 0; border-radius: var(--r-card); } /* landscape phones: a low band */
   .lp-form { padding-inline: 20px; } /* the reference's card; its block padding stays: 1024×768 has 17 px over the form button */
   .lp-media .co[data-crop="band"][data-phone="true"], .lp-media .offer-pill { display: none; }
-  .lp-media .tag { top: auto; right: auto; left: 12px; bottom: 10px; }
   .lp-copy .offer-pill, .lp-copy .ex--copy { display: inline-flex; }
   .lp h1 { font-size: 44px; }
   .lp-form .fields { grid-template-columns: minmax(0, 1fr) minmax(min(14.5rem, 66%), 1fr); }

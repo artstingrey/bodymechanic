@@ -25,19 +25,24 @@ function retryAfter(value: string | null) {
 
 /** path and operation are supplied by server code only. */
 async function requestAltegio<T>(operation: string, path: string, language: string,
-  decode: (response: Response) => Promise<T>, body?: object): Promise<T> {
+  decode: (response: Response) => Promise<T>, { body, business = false }: { body?: object; business?: boolean } = {}): Promise<T> {
   const started = Date.now();
   let status: number | undefined;
   const signal = AbortSignal.timeout(TIMEOUT_MS);
 
   try {
-    const { partnerToken } = getAltegioConfig();
+    const { partnerToken, businessToken } = getAltegioConfig();
+    let authorization = `Bearer ${partnerToken}`;
+    if (business) {
+      if (!businessToken || !/^[A-Za-z0-9._~+/-]+=*$/.test(businessToken)) throw new AltegioError('unavailable');
+      authorization += `, User ${businessToken}`;
+    }
     const response = await fetch(`${API_BASE}${path}`, {
       ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
       headers: {
         Accept: 'application/vnd.api.v2+json',
         'Accept-Language': language,
-        Authorization: `Bearer ${partnerToken}`,
+        Authorization: authorization,
         'Content-Type': 'application/json',
       },
       cache: 'no-store',
@@ -65,7 +70,8 @@ async function requestAltegio<T>(operation: string, path: string, language: stri
   }
 }
 
-export function altegioGet(operation: string, path: string, language: string, allowBareRecord = false): Promise<unknown> {
+export function altegioGet(operation: string, path: string, language: string,
+  { allowBareRecord = false, business = false }: { allowBareRecord?: boolean; business?: boolean } = {}): Promise<unknown> {
   return requestAltegio(operation, path, language, async (response) => {
     const payload: unknown = await response.json();
     if (allowBareRecord && isRecord(payload) && !('success' in payload)) return payload;
@@ -73,7 +79,7 @@ export function altegioGet(operation: string, path: string, language: string, al
       throw new AltegioError('invalidResponse');
     }
     return payload.data;
-  });
+  }, { business });
 }
 
 export function altegioPost(operation: 'book_check' | 'book_record', locationId: number, language: string, body: object) {
@@ -88,5 +94,5 @@ export function altegioPost(operation: 'book_check' | 'book_record', locationId:
       }
     }
     return { status: response.status, payload, empty: !text.trim() };
-  }, body);
+  }, { body });
 }

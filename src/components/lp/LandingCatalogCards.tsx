@@ -39,7 +39,7 @@ export async function LandingCatalogCards({ catalog, locale, percent, t }: {
         return (
           <article key={service.id} className="lp-card" data-service-id={service.id}>
             <div className="ph">
-              <CatalogServicePhoto service={service} title={title} sizes={PHOTO_SIZES} t={t} />
+              <CatalogServicePhoto serviceId={service.id} title={title} sizes={PHOTO_SIZES} t={t} />
             </div>
             <div className="bd">
               <span className="n">{String(i + 1).padStart(2, '0')}</span>

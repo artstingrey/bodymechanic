@@ -70,7 +70,7 @@ export async function respondWithBooking(request: NextRequest, resource: keyof t
   }
 
   try {
-    const { data: { services } } = await getCatalogServices(locale);
+    const { data: { services } } = await getCatalogServices(locale, { withBusinessDuration: false });
     if (!services.some(({ id }) => id === serviceId)) {
       return errorResponse(404, 'SERVICE_NOT_FOUND', 'The public service was not found.');
     }

@@ -7,13 +7,13 @@ type Href = Parameters<typeof Link>[0]['href'];
 export type CardTone = 'lav' | 'sand' | 'sky';
 
 /**
- * Service card (ui-kit «Карточка услуги»): pastel card, 4:5 photo with «Иллюстративное фото», index 01, title, short text,
+ * Service card (ui-kit «Карточка услуги»): pastel card, photo, index 01, title, short text,
  * Цена | Длительность table pinned to the bottom. The title link covers the whole card (one tab stop); hover lifts 2 px,
  * the photo never moves inside its mask (no parallax, README п.15).
  */
-export function ServiceCard({ href, index, title, description, price, duration, priceLabel, durationLabel, tone = 'sand', photo, photoCaption, linkLabel, badge, titleAs: H = 'h3' }: {
+export function ServiceCard({ href, index, title, description, price, duration, priceLabel, durationLabel, tone = 'sand', photo, linkLabel, badge, titleAs: H = 'h3' }: {
   index?: number; title: string; description?: string; price?: ReactNode; duration?: ReactNode; priceLabel?: string; durationLabel?: string;
-  tone?: CardTone; photo?: ReactNode; photoCaption?: string; badge?: ReactNode; titleAs?: 'h2' | 'h3';
+  tone?: CardTone; photo?: ReactNode; badge?: ReactNode; titleAs?: 'h2' | 'h3';
 } & ({ href: Href; linkLabel: string } | { href?: undefined; linkLabel?: never })) {
   // the arrow sits in the photo's top-right corner, so the title takes the card's full width (design audit F10: «Спортивный /
   // массаж» wrapped and hung because a 44 px arrow shared the title row); without a photo it stays in the head row
@@ -24,7 +24,6 @@ export function ServiceCard({ href, index, title, description, price, duration, 
   return (
     <article className={`svc svc--${tone}`}>
       <div className="photo" data-reveal="clip">{photo}{photo ? go : null}</div>
-      {photo && photoCaption ? <p className="photo-cap">{photoCaption}</p> : null}
       <div className="body">
         {/* the title link stretches over the WHOLE card (photo and arrow included, R-CODE-02 F-03): nothing between it and
             .svc is positioned; the arrow sits in the head row in normal flow and lets clicks through */}

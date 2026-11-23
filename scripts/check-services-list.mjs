@@ -39,7 +39,7 @@ try {
   const pageErrors = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.hostname === 'api.alteg.io' || url.pathname.startsWith('/api/catalog/services')) {
+    if (['api.alteg.io', 'images.example.test'].includes(url.hostname) || url.pathname.startsWith('/api/catalog/services')) {
       browserRequests.push(request.url());
     }
   });
@@ -166,11 +166,7 @@ try {
     await expect(cards).toHaveCount(0);
   });
 
-  await page.route('https://images.example.test/**', async (route) => {
-    assert.equal(route.request().headers().referer, undefined);
-    if (route.request().url().endsWith('/broken.webp')) return route.fulfill({ status: 404 });
-    await route.fulfill({ path: 'public/photos/services/sports-640.webp', contentType: 'image/webp' });
-  });
+  await page.route('https://images.example.test/**', (route) => route.abort());
   await fs.writeFile(scenario, 'service-detail');
   await run(async (origin) => {
     const locales = {
@@ -210,11 +206,13 @@ try {
       await expect(unknown.locator('dd')).toHaveText([labels.unknown]);
       await expect(unknown.locator('.d, img')).toHaveCount(0);
       await expect(unknown.locator('.ph')).toBeAttached();
-      await expect(sports.locator('.ph')).toBeVisible();
+      await expect(long.locator('.ph')).toBeVisible();
+      await expect(long.locator('img')).toHaveCount(0);
       await expect(cards.locator('.badge')).toHaveCount(0);
-      const photo = long.locator('img');
+      const photo = sports.locator('img');
       await photo.scrollIntoViewIfNeeded();
-      await expect(photo).toHaveAttribute('alt', labels.longTitle);
+      await expect(photo).toHaveAttribute('alt', labels.sports);
+      await expect(photo).toHaveAttribute('src', '/photos/website-services/sports-massage-640.webp');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 
       const grid = page.locator('main .card-grid');

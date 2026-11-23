@@ -67,15 +67,9 @@ async function browserPage(browser, viewport, check) {
     if (message.type() === 'error' && !message.location().url.includes('images.example.test')) failures.push(message.text());
     if (message.type() === 'warning' && /hydrat/i.test(message.text())) failures.push(message.text());
   });
-  await page.route(/api\.alteg\.io|\/api\/catalog\/services/, async (route) => {
+  await page.route(/api\.alteg\.io|\/api\/catalog\/services|images\.example\.test/, async (route) => {
     failures.push(`Unexpected browser request: ${route.request().url()}`);
     await route.abort();
-  });
-  await page.route('https://images.example.test/**', async (route) => {
-    assert.equal(route.request().headers().authorization, undefined);
-    assert.equal(route.request().headers().referer, undefined);
-    if (route.request().url().endsWith('broken.webp')) return route.fulfill({ status: 404 });
-    await route.fulfill({ path: 'public/photos/services/sports-640.webp' });
   });
   try {
     await check(page, page.locator(section));
@@ -169,12 +163,11 @@ try {
         await expect(priceAt(4)).toHaveText(locale === 'ru' ? 'Стоимость уточняется' : 'Price to be confirmed');
         await expect(prices).toHaveCount(6);
         await expect(cards.first().locator('dd').nth(1)).toHaveText(/100\s+(мин|min)/);
-        await cards.first().scrollIntoViewIfNeeded();
-        const photo = cards.first().getByRole('img', { name: longTitle });
-        await expect.poll(() => photo.evaluate((el) => el.naturalWidth)).toBeGreaterThan(0);
+        await expect(cards.first().locator('.ph')).toBeVisible();
+        await expect(cards.first().locator('img')).toHaveCount(0);
         await expect(cards.nth(1).locator('.ph')).toBeVisible();
         await expect(cards.nth(4).locator('.ph')).toBeAttached();
-        assert.equal(await block.locator('.photo').first().evaluate((el) => getComputedStyle(el).aspectRatio), '4 / 5');
+        assert.equal(await block.locator('.photo').first().evaluate((el) => getComputedStyle(el).aspectRatio), '4 / 4.6');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.equal(await cards.first().locator('h3').evaluate((el) => el.scrollWidth <= el.clientWidth), true);
         await block.screenshot({ path: path.join(shots, `${locale}-${width}.png`), style: shotStyle });
@@ -259,6 +252,13 @@ try {
     ]) {
       await browserPage(browser, { width: locale === 'ru' ? 390 : 1280, height: 850 }, async (page, block) => {
         const homeUrl = `${origin}/${locale}/`;
+        await page.goto(homeUrl);
+        const classic = block.locator('article').filter({ has: page.locator(`a[href="/${locale}/services/classic/"]`) });
+        const photo = classic.locator('img');
+        await photo.scrollIntoViewIfNeeded();
+        await expect(photo).toHaveAttribute('src', '/photos/website-services/classic-massage-640.webp');
+        await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
+        await expect(block.getByText(/Иллюстративное фото|Illustrative photo/i)).toHaveCount(0);
         for (const [slug, title] of [['sports', sportsTitle], ['service-91206', 'Новая услуга']]) {
           await page.goto(homeUrl);
           const detailPath = `/${locale}/services/${slug}/`;

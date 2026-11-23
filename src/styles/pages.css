@@ -45,7 +45,6 @@
 .svc-hero__photo picture, .svc-hero__photo img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r-card); }
 .svc-hero__photo .ph { width: 100%; aspect-ratio: 4 / 5; }
 .svc-hero__text .h1, .svc-hero__text [aria-current="page"], .svc-hero__text .eyebrow { overflow-wrap: anywhere; }
-.svc-hero__photo .photo-cap { font-size: var(--fs-caption); color: var(--muted); margin: 6px 4px 0; }
 /* tablets 600–1023 (AD's V1, lead: D-03 and the order «price → button → description → photo» stay): the full-width 4:5 photo
    was ≈ 940×1100 on Fold 7 984 — capped at 60 % of the screen, cropped by object-fit around the photo's focal point */
 @media (min-width: 600px) and (max-width: 1023px) { .svc-hero__photo picture, .svc-hero__photo img, .svc-hero__photo .ph { max-height: 60svh; } }

@@ -96,14 +96,28 @@ globalThis.fetch = async (input, init) => {
 
   assert.equal(init?.method ?? (input instanceof Request ? input.method : 'GET'), 'GET');
   const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
-  assert.equal(headers.get('authorization'), 'Bearer fixture-partner-token');
+  const [, api, version, resource, location, staffPath, date, ...extra] = url.pathname.split('/');
+  const business = resource === 'locations' && staffPath === 'services';
+  assert.equal(headers.get('authorization'), business ? 'Bearer fixture-partner-token, User fixture-business-token' : 'Bearer fixture-partner-token');
   assert.equal(headers.get('accept'), 'application/vnd.api.v2+json');
   assert.equal(headers.get('content-type'), 'application/json');
   const language = headers.get('accept-language');
   assert.ok(language === 'ru-RU' || language === 'en-US');
   assert.equal(init?.redirect ?? input.redirect, 'error');
   const signal = init?.signal ?? input.signal;
-  const [, api, version, resource, location, staffPath, date, ...extra] = url.pathname.split('/');
+  if (business) {
+    assert.equal(url.href, `https://api.alteg.io/api/v1/locations/${process.env.ALTEGIO_LOCATION_ID}/services`);
+    assert.equal(init?.cache ?? input.cache, 'no-store');
+    const scenario = readFileSync(process.env.CATALOG_TEST_SCENARIO, 'utf8');
+    console.info('[business-services-fixture]', scenario);
+    if (scenario === 'business-forbidden') return new Response(null, { status: 403 });
+    assert.equal(scenario, 'success');
+    return Response.json({ success: true, data: [
+      { id: 42, duration: 1200, title: 'Private fixture title', price_min: 500, technical_break_duration: 600 },
+      { id: 43, duration: 0 },
+      { id: 44, duration: 1200, title: 'Unpublished fixture service' },
+    ] });
+  }
   if (resource === 'book_dates' || resource === 'book_times') {
     assert.equal(url.origin, 'https://api.alteg.io');
     assert.equal(api, 'api');
@@ -295,7 +309,7 @@ globalThis.fetch = async (input, init) => {
     ];
     return Response.json({ success: true, data: { services: scenario === 'home-single' ? services.slice(0, 1) : services } });
   }
-  assert.equal(scenario, 'success');
+  assert.ok(['success', 'business-forbidden'].includes(scenario), scenario);
   return Response.json({
     success: true,
     data: {

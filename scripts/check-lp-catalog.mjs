@@ -63,15 +63,11 @@ async function checkCatalog(browser, variant, isChrome) {
   const browserRequests = [];
   page.on('request', (request) => {
     const url = new URL(request.url());
-    if (url.hostname === 'api.alteg.io' || url.pathname.startsWith('/api/catalog/services')) {
+    if (['api.alteg.io', 'images.example.test'].includes(url.hostname) || url.pathname.startsWith('/api/catalog/services')) {
       browserRequests.push(url.href);
     }
   });
-  await page.route('https://images.example.test/live.webp', (route) => route.fulfill({
-    contentType: 'image/svg+xml',
-    body: '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500"/>',
-  }));
-  await page.route('https://images.example.test/broken.webp', (route) => route.fulfill({ status: 404 }));
+  await page.route('https://images.example.test/**', (route) => route.abort());
   const section = page.locator('[aria-labelledby="lp-services"]');
   const cards = section.locator('.lp-card');
   const carousel = section.locator('.car');
@@ -119,6 +115,7 @@ async function checkCatalog(browser, variant, isChrome) {
       }
       await expect(cards).toHaveCount(5);
       assert.deepEqual(await cardIds(), ids);
+      await expect(page.getByText(/Иллюстративное фото|Illustrative photo/i)).toHaveCount(0);
       await expect(finalOffer).not.toHaveText(neutralOffer);
       const selected = (await finalOffer.textContent()).replace(/\s+/g, ' ').trim();
       await expectOffer(selected);
@@ -139,13 +136,10 @@ async function checkCatalog(browser, variant, isChrome) {
       await expect(cards.nth(1).locator('dt')).toHaveCount(1);
       const loadedPhoto = cards.nth(0).locator('img');
       await loadedPhoto.scrollIntoViewIfNeeded();
-      await expect(loadedPhoto).toHaveAttribute('referrerpolicy', 'no-referrer');
-      await expect.poll(() => loadedPhoto.evaluate((img) => img.naturalWidth)).toBe(400);
-      const unavailable = messages.home.services.photoUnavailable;
-      await cards.nth(1).scrollIntoViewIfNeeded();
-      await expect(cards.nth(1).getByRole('img', { name: unavailable })).toBeVisible();
-      await expect(cards.nth(2).getByRole('img', { name: unavailable })).toBeVisible();
-      await expect(cards.nth(3).getByRole('img', { name: unavailable })).toBeVisible();
+      await expect.poll(() => loadedPhoto.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+      for (const [index, name] of ['sports-massage', 'classic-massage', 'ice-bath', 'infrared-capsule', 'functional-training'].entries()) {
+        await expect(cards.nth(index).locator('img')).toHaveAttribute('src', `/photos/website-services/${name}-640.webp`);
+      }
 
       for (const width of [320, 390, 768, 1280]) {
         await page.setViewportSize({ width, height: 850 });

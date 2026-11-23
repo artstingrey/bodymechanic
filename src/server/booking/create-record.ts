@@ -93,7 +93,7 @@ function parseReceipts(payload: unknown, composite: boolean): Receipt[] {
 async function readCreatedRecord(locationId: number, locale: BookingRecordRequest['locale'], { recordId, hash }: Receipt) {
   try {
     const record = await altegioGet('read_booking_record',
-      `book_record/${locationId}/${recordId}/${encodeURIComponent(hash)}`, bookingLanguages[locale], true);
+      `book_record/${locationId}/${recordId}/${encodeURIComponent(hash)}`, bookingLanguages[locale], { allowBareRecord: true });
     if (!isRecord(record) || record.id !== recordId || record.deleted !== false ||
       typeof record.datetime !== 'string' || !Array.isArray(record.services)) return null;
     // The public detail endpoint also returns offsets such as +0400.

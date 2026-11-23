@@ -1,24 +1,18 @@
 import type { getTranslations } from 'next-intl/server';
-import { homeServiceIllustrations } from '@/content/home-services';
-import type { CatalogService } from '@/lib/contracts/catalog';
+import { servicePhotos } from '@/content/home-services';
 import { HomeServicePhoto } from '@/components/sections/HomeServicePhoto';
-import { Photo, hasPhoto } from '@/components/ui/Photo';
 
-export function CatalogServicePhoto({ service, title, sizes, t }: {
-  service: CatalogService;
+export function CatalogServicePhoto({ serviceId, title, sizes, t, detail }: {
+  serviceId: number;
   title: string;
   sizes: string;
   t: Awaited<ReturnType<typeof getTranslations>>;
+  detail?: boolean;
 }) {
-  const illustration = homeServiceIllustrations.get(service.id);
-  const localPhoto = illustration && hasPhoto('services', illustration)
-    ? <Photo set="services" id={illustration} sizes={sizes} alt={title} />
-    : undefined;
-  const src = service.imageUrl && new URL(service.imageUrl).hostname.replace(/\.$/, '') !== 'api.alteg.io'
-    ? service.imageUrl : null;
-
+  const photo = servicePhotos.get(serviceId);
+  const basePath = photo && `/photos/website-services/${photo}`;
   return (
-    <HomeServicePhoto key={`${src}:${illustration}`} src={src} alt={title} illustration={localPhoto}
-      caption={t('placeholder.illustrativePhoto')} unavailable={t('home.services.photoUnavailable')} />
+    <HomeServicePhoto key={photo} basePath={basePath} alt={title} sizes={sizes} detail={detail}
+      unavailable={t('home.services.photoUnavailable')} />
   );
 }

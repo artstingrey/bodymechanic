@@ -10,7 +10,7 @@ const url = (set: string, id: string, w: number, fmt: string) =>
 /**
  * Final illustrative photo (site/visuals/final, R-VIS-01; files + manifest synced by Frontend Builder): <picture> AVIF → WebP,
  * srcset 640 / 1280 / 2000, object-position = the manifest focal point. The 2000 master is an 8.5 % upscale — callers pass
- * `sizes` so it is fetched only on 2K / retina widths. Always shown with «Иллюстративное фото» (caption or alt) by the caller.
+ * `sizes` so it is fetched only on 2K / retina widths.
  */
 export function Photo({ set, id: slug, alt, sizes, className, priority }: {
   set: 'services' | 'journal'; id: string; alt: string; sizes: string; className?: string;

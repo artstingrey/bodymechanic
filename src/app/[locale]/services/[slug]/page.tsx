@@ -12,8 +12,7 @@ import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { getCatalogServiceDetail } from '@/server/catalog/service-detail';
 import { PageHead } from '@/components/sections/PageHead';
-import { HomeServicePhoto } from '@/components/sections/HomeServicePhoto';
-import { homeServiceIllustrations } from '@/content/home-services';
+import { CatalogServicePhoto } from '@/components/services/CatalogServicePhoto';
 import { BookingLink } from '@/components/booking/BookingLink';
 import { StaffCard } from '@/components/ui/Cards';
 import { Photo, hasPhoto } from '@/components/ui/Photo';
@@ -106,12 +105,6 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
   ) : null;
   const body = t('service.todo.body');
   const placeholder = isTodo(body) ? null : <p>{body}</p>;
-  const illustration = detail.source === 'altegio' ? homeServiceIllustrations.get(s.id) : undefined;
-  const imageUrl = detail.source === 'altegio' ? detail.service.imageUrl : null;
-  // The API is server-only, including when a catalog image points to its host.
-  const photoSrc = imageUrl && new URL(imageUrl).hostname.replace(/\.$/, '') !== 'api.alteg.io' ? imageUrl : null;
-  const caption = t('placeholder.illustrativePhoto');
-  const photo = (id: string) => <Photo set="services" id={id} alt={`${caption}: ${s.title}`} sizes={PHOTO_SIZES} priority="high" />;
   const price = detail.source === 'altegio' ? formatCatalogServicePrice(detail.service, locale, {
     unknown: () => t('home.services.priceUnknown'), from: (price) => t('home.services.priceFrom', { price }),
   }) : facts.priceShort(detail.service);
@@ -127,10 +120,9 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
       <div className="svc-hero">
         <div className="svc-hero__photo">
           {detail.source === 'altegio'
-            ? <HomeServicePhoto key={`${s.id}:${photoSrc}:${illustration}`} src={photoSrc} alt={s.title} detail
-                illustration={illustration && hasPhoto('services', illustration) ? photo(illustration) : undefined}
-                caption={caption} unavailable={t('home.services.photoUnavailable')} />
-            : hasPhoto('services', s.slug) ? <>{photo(s.slug)}<p className="photo-cap">{caption}</p></> : null}
+            ? <CatalogServicePhoto serviceId={s.id} title={s.title} sizes={PHOTO_SIZES} t={t} detail />
+            : hasPhoto('services', s.slug)
+              ? <Photo set="services" id={s.slug} alt={s.title} sizes={PHOTO_SIZES} priority="high" /> : null}
         </div>
         <div className="svc-hero__text">
           <PageHead crumbs={[{ href: '/services', label: t('services.title') }, { label: s.title }]} eyebrow={s.categoryTitle} title={s.title} up />

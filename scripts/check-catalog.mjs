@@ -7,9 +7,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { withProductionServer } from './check-server.mjs';
 
 const endpoint = '/api/catalog/services';
-const missingEnv = { ALTEGIO_LOCATION_ID: '', ALTEGIO_PARTNER_TOKEN: '', ALTEGIO_CURRENCY: '' };
+const missingEnv = { ALTEGIO_LOCATION_ID: '', ALTEGIO_PARTNER_TOKEN: '', ALTEGIO_BUSINESS_TOKEN: '', ALTEGIO_CURRENCY: '' };
 const token = 'fixture-partner-token';
-const privateValues = [token, 'fixture raw upstream detail'];
+const businessToken = 'fixture-business-token';
+const privateValues = [token, businessToken, 'fixture raw upstream detail', 'Private fixture title', 'Unpublished fixture service'];
 const scenarioDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-catalog-'));
 const scenarioFile = path.join(scenarioDir, 'scenario');
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -90,6 +91,7 @@ const createdEntries = new Set();
 const fixtureEnv = () => ({
   ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
   ALTEGIO_PARTNER_TOKEN: token,
+  ALTEGIO_BUSINESS_TOKEN: '',
   ALTEGIO_CURRENCY: 'AED',
   CATALOG_TEST_SCENARIO: scenarioFile,
 });
@@ -199,11 +201,46 @@ try {
     assert.deepEqual(keys, [path.basename(await readCreatedEntry())]);
   }, { env: fixtureEnv(), preload });
 
+  await setScenario('success');
+  const businessEnv = { ...env, ALTEGIO_BUSINESS_TOKEN: businessToken };
+  await withProductionServer(async (origin, logs) => {
+    const data = { ...firstData, services: [{ ...firstData.services[0], durationMin: 20 }, firstData.services[1]] };
+    await checkData(origin, data)('en');
+    const durationCache = await readCreatedEntry();
+    const entry = JSON.parse(await fs.readFile(durationCache, 'utf8'));
+    assert.equal(entry.revalidate, 14_400);
+    assert.deepEqual(JSON.parse(entry.data.body), { 42: 20, 44: 20 });
+    await checkData(origin, data)('ru');
+    await readCreatedEntry();
+
+    const response = await fetch(`${origin}${endpoint}/service-42?locale=ru`);
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).data.service, { ...data.services[0], slug: 'service-42' });
+    for (const route of ['/ru/', '/ru/services/', '/ru/services/service-42/']) {
+      const page = await fetch(origin + route);
+      assert.equal(page.status, 200);
+      const html = await page.text();
+      assert.match(html, /<dt>Длительность<\/dt><dd\b[^>]*>20\sмин<\/dd>/, route);
+      assert.ok(privateValues.every((value) => !html.includes(value)), 'page contains private data');
+    }
+    assert.equal((logs().match(/\[business-services-fixture\]/g) ?? []).length, 1);
+    assert.ok(privateValues.every((value) => !logs().includes(value)), 'logs contain private data');
+    // Page rendering may also fill caches for related catalog data.
+    for (const file of await newEntries()) createdEntries.add(path.join(cacheDir, file));
+  }, { env: businessEnv, preload });
+
+  await setScenario('business-forbidden');
+  await withProductionServer(async (origin, logs) => {
+    await checkData(origin, firstData)('en');
+    await readCreatedEntry();
+    assert.match(logs(), /operation: 'business_services'/);
+  }, { env: { ...fixtureEnv(), ALTEGIO_BUSINESS_TOKEN: businessToken }, preload });
+
   const chunks = path.resolve('.next/static');
   for (const file of await fs.readdir(chunks, { recursive: true })) {
     if (!file.endsWith('.js')) continue;
     const js = await fs.readFile(path.join(chunks, file), 'utf8');
-    assert.ok([...privateValues, 'ALTEGIO_PARTNER_TOKEN', 'api.alteg.io'].every((value) => !js.includes(value)),
+    assert.ok([...privateValues, 'ALTEGIO_PARTNER_TOKEN', 'ALTEGIO_BUSINESS_TOKEN', 'api.alteg.io'].every((value) => !js.includes(value)),
       `client bundle contains server integration data: ${file}`);
   }
   console.log('Catalog DTO, HTTP failures, response body cancellation, public output and four-hour production cache: OK');

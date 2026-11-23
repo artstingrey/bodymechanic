@@ -6,6 +6,7 @@ export function getAltegioConfig() {
   const location = process.env.ALTEGIO_LOCATION_ID?.trim() ?? '';
   const locationId = Number(location);
   const partnerToken = process.env.ALTEGIO_PARTNER_TOKEN?.trim() ?? '';
+  const businessToken = process.env.ALTEGIO_BUSINESS_TOKEN?.trim() || null;
   const currency = process.env.ALTEGIO_CURRENCY?.trim() || null;
 
   if (!/^\d+$/.test(location) || !Number.isSafeInteger(locationId) || locationId <= 0 ||
@@ -13,5 +14,5 @@ export function getAltegioConfig() {
     throw new AltegioError('unavailable');
   }
 
-  return { locationId, partnerToken, currency };
+  return { locationId, partnerToken, businessToken, currency };
 }

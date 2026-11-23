@@ -11,7 +11,7 @@ import { QuickBookingFields } from './QuickBookingFields';
 
 async function ServiceOptions({ locale }: { locale: CatalogLocale }) {
   await connection();
-  const catalog = await getCatalogServices(locale).catch(() => null);
+  const catalog = await getCatalogServices(locale, { withBusinessDuration: false }).catch(() => null);
   const t = await getTranslations({ locale });
   const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   const services = catalog?.data.services.map((service) => ({

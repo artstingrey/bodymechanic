@@ -328,8 +328,7 @@ test('floating pill: costs the first screen nothing, stays on screen while scrol
 const CALLOUT_AIR = 8;
 /**
  * Hero call-out problems: a label leaving the photo (it clips them — RC-1: RU zone names cut by 55–122 px on every phone),
- * text spilling out of its plate, or less than CALLOUT_AIR px to the photo tag «Иллюстративное фото», the example badge,
- * the offer pill or another call-out.
+ * text spilling out of its plate, or less than CALLOUT_AIR px to the example badge, the offer pill or another call-out.
  */
 async function calloutProblems(page: Page) {
   return page.evaluate((air) => {
@@ -337,8 +336,8 @@ async function calloutProblems(page: Page) {
     if (!mb.width) return []; // ≤ 600 px high phones: no photo band
     const shown = (e: Element) => e.getBoundingClientRect().width > 0;
     const plates = [...m.querySelectorAll('.co > span')].filter(shown);
-    const others = [...m.querySelectorAll('.tag, .ex--photo, .offer-pill')].filter(shown);
-    const label = (e: Element) => e.classList.contains('tag') ? 'the photo tag' : e.classList.contains('ex--photo') ? 'the example badge'
+    const others = [...m.querySelectorAll('.ex--photo, .offer-pill')].filter(shown);
+    const label = (e: Element) => e.classList.contains('ex--photo') ? 'the example badge'
       : e.classList.contains('offer-pill') ? 'the offer pill' : `«${e.textContent!.trim()}»`;
     // separation of two boxes: > 0 = the air between them on the axis where they are apart, ≤ 0 = they overlap
     const gap = (a: DOMRect, b: DOMRect) => Math.max(b.left - a.right, a.left - b.right, b.top - a.bottom, a.top - b.bottom);
@@ -359,7 +358,7 @@ async function calloutProblems(page: Page) {
 /** tablets / desktops, checked once per engine (A-iphone-16 = WebKit, A-pixel-9 = Chrome) on top of the device's own size */
 const CALLOUT_WIDE = [{ width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 1280, height: 800 }, { width: 1440, height: 900 }, { width: 1920, height: 1080 }];
 
-test('hero call-outs: every label inside the photo, ≥ 8 px from the tag, the badges and each other (all four pages, every device of the LP matrix)', async ({ page }, ti) => {
+test('hero call-outs: every label inside the photo, ≥ 8 px from the badges and each other (all four pages, every device of the LP matrix)', async ({ page }, ti) => {
   const sizes = [page.viewportSize()!, ...(['A-iphone-16', 'A-pixel-9'].includes(ti.project.name) ? CALLOUT_WIDE : [])];
   const bad: string[] = [];
   for (const url of PAGES) {
