@@ -315,7 +315,7 @@
 }
 
 /* ---------- RC-8: the approved home page (review/skill-bakeoff/variant-final.html), values shared components take only here ----------
-   .svc, .staff, .review, .acc and .btn also live on other pages, which must not change: .home-sec = the home page's sections below the hero.
+   .staff, .review, .acc and .btn also live on other pages. .home-sec scopes these styles to the home sections below the hero.
    Labels stay ≥ 13 px (the reference's 12 px labels fail layout-smoke). */
 .home-sec { line-height: 1.55; }
 .home-sec > .container > .h2 { margin-bottom: 28px; }
@@ -328,37 +328,6 @@
   .home-sec .btn--text:hover .i { transform: translateX(3px); }
 }
 
-/* service cards: the facts' line runs the card's width, the text sits 6 px inside it */
-.home-sec .svc { gap: 14px; padding: 12px 12px 36px; transition: transform 240ms var(--e-out), box-shadow 240ms var(--e-out); }
-.home-sec .svc .photo { aspect-ratio: 4 / 4.6; background: var(--surface); }
-.home-sec .svc .photo .go { background: color-mix(in srgb, var(--bg) 94%, transparent); box-shadow: var(--sh-1); }
-.home-sec .svc .body { padding: 0; }
-.home-sec .svc .head, .home-sec .svc .d { padding-inline: 6px; }
-.home-sec .svc .idx { letter-spacing: 0.04em; }
-.home-sec .svc .t { font-size: var(--fs-h3); line-height: 1.2; letter-spacing: -0.015em; }
-.home-sec .svc .d { margin: 0 0 6px; font-size: 15px; line-height: 1.45; text-wrap: pretty; } /* + the column's 8 = 14 above the facts */
-.home-sec .svc .data { column-gap: 12px; padding: 12px 6px 0; }
-.home-sec .svc .data div { padding: 0; }
-.home-sec .svc .data div + div { border-left: 0; padding-left: 0; }
-.home-sec .svc .data dt { letter-spacing: 0.06em; }
-.home-sec .svc .data dd { gap: 4px 6px; font-size: 15px; font-weight: 700; letter-spacing: normal; }
-.home-sec .svc .badge { height: 22px; padding: 0 8px; background: color-mix(in srgb, var(--text) 10%, transparent); }
-/* the title column is 100cqi − 12 px here (.head's padding), not − 16 px as in ui.css */
-@media (max-width: 767px) { .home-sec .svc .t[data-fit] { font-size: clamp(14px, calc((100cqi - 12px) / var(--tail)), var(--fs-h3)); } }
-@container (max-width: 15.25rem) {
-  .home-sec .svc .data { grid-template-columns: minmax(0, 1fr); } /* 320–344: «Длительность» at 13 px does not fit half a card */
-  .home-sec .svc .data div + div { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); }
-}
-@media (hover: hover) { .home-sec .svc:hover { transform: translateY(-3px); } }
-.home-sec .svc:active { transform: scale(0.985); transition-duration: 90ms; }
-
-.home-sec[aria-labelledby="services-title"] { --service-photo-fit: cover; }
-[aria-labelledby="services-title"] .ph.home-service-image { border-radius: var(--r-photo); }
-[aria-labelledby="services-title"] .svc .head > div { width: 100%; }
-[aria-labelledby="services-title"] .svc .data:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
-[aria-labelledby="services-title"] .svc:active { transform: none; }
-.svc .photo .home-service-image { height: 100%; }
-.home-service-image[data-printed-price] > img { object-fit: var(--service-photo-fit, contain); }
 .home-catalog-state { display: grid; min-height: 9rem; align-content: center; justify-items: start; gap: 12px; }
 
 /* specialists: the frame's proportion and gaps; the placeholder inside is the site's own */
@@ -376,7 +345,7 @@
 .home-sec .acc .panel { max-width: 62ch; padding: 0 0 20px; font-size: var(--fs-body); }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-sec .btn--primary:hover, .home-sec .team-intro .btn--secondary:hover, .home-sec .svc:hover, .home-sec .svc:active { transform: none; }
+  .home-sec .btn--primary:hover, .home-sec .team-intro .btn--secondary:hover { transform: none; }
 }
 /* hero fallback (static front-view poster, Frontend Builder): nothing rotates → no «drag to rotate» hint */
 .atlas:has(.b3d-slot:is([data-mode2d], [data-status="timeout"], [data-status="error"])) > .cap { visibility: hidden; }

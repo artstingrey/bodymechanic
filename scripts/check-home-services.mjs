@@ -167,7 +167,7 @@ try {
         await expect(cards.first().locator('img')).toHaveCount(0);
         await expect(cards.nth(1).locator('.ph')).toBeVisible();
         await expect(cards.nth(4).locator('.ph')).toBeAttached();
-        assert.equal(await block.locator('.photo').first().evaluate((el) => getComputedStyle(el).aspectRatio), '4 / 4.6');
+        assert.equal(await block.locator('.photo').first().evaluate((el) => getComputedStyle(el).aspectRatio), '4 / 4.8');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.equal(await cards.first().locator('h3').evaluate((el) => el.scrollWidth <= el.clientWidth), true);
         await block.screenshot({ path: path.join(shots, `${locale}-${width}.png`), style: shotStyle });

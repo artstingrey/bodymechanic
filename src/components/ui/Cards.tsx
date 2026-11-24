@@ -11,8 +11,8 @@ export type CardTone = 'lav' | 'sand' | 'sky';
  * Цена | Длительность table pinned to the bottom. The title link covers the whole card (one tab stop); hover lifts 2 px,
  * the photo never moves inside its mask (no parallax, README п.15).
  */
-export function ServiceCard({ href, index, title, description, price, duration, priceLabel, durationLabel, tone = 'sand', photo, linkLabel, badge, titleAs: H = 'h3' }: {
-  index?: number; title: string; description?: string; price?: ReactNode; duration?: ReactNode; priceLabel?: string; durationLabel?: string;
+export function ServiceCard({ href, serviceId, index, title, description, price, duration, priceLabel, durationLabel, tone = 'sand', photo, linkLabel, badge, titleAs: H = 'h3' }: {
+  serviceId?: number; index?: number; title: string; description?: string; price?: ReactNode; duration?: ReactNode; priceLabel?: string; durationLabel?: string;
   tone?: CardTone; photo?: ReactNode; badge?: ReactNode; titleAs?: 'h2' | 'h3';
 } & ({ href: Href; linkLabel: string } | { href?: undefined; linkLabel?: never })) {
   // the arrow sits in the photo's top-right corner, so the title takes the card's full width (design audit F10: «Спортивный /
@@ -22,7 +22,7 @@ export function ServiceCard({ href, index, title, description, price, duration, 
   // phones (ui.css .svc .t[data-fit]); only with a photo — without one the arrow shares the title row
   const tail = photo ? tailEm(title, 16) : undefined;
   return (
-    <article className={`svc svc--${tone}`}>
+    <article className={`svc svc--${tone}`} data-service-id={serviceId}>
       <div className="photo" data-reveal="clip">{photo}{photo ? go : null}</div>
       <div className="body">
         {/* the title link stretches over the WHOLE card (photo and arrow included, R-CODE-02 F-03): nothing between it and

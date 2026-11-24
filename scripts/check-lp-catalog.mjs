@@ -69,7 +69,7 @@ async function checkCatalog(browser, variant, isChrome) {
   });
   await page.route('https://images.example.test/**', (route) => route.abort());
   const section = page.locator('[aria-labelledby="lp-services"]');
-  const cards = section.locator('.lp-card');
+  const cards = section.locator('.svc');
   const carousel = section.locator('.car');
   const track = carousel.locator('.track');
   const hero = page.locator('.lp-hero');
@@ -122,7 +122,9 @@ async function checkCatalog(browser, variant, isChrome) {
       assert.match(selected, /USD/);
       const colors = await cards.evaluateAll((elements) => elements.map((card) => getComputedStyle(card).backgroundColor));
       assert.equal(new Set(colors.slice(0, 3)).size, 3);
-      assert.deepEqual(colors.slice(3), [colors[0], colors[0]]);
+      assert.deepEqual(colors.slice(3), colors.slice(0, 2));
+      await expect(cards.first().locator('.photo')).toHaveCSS('aspect-ratio', '4 / 4.8');
+      await expect(cards.first().locator('.photo img')).toHaveCSS('object-fit', 'cover');
       const pricedCards = [0, 1, 2, 4];
       for (const [i, cardIndex] of pricedCards.entries()) {
         await expect(cards.nth(cardIndex).locator('dd .price')).toHaveText(sale[i]);
@@ -131,7 +133,7 @@ async function checkCatalog(browser, variant, isChrome) {
       await expect(cards.nth(3).locator('dd')).toHaveText(messages.home.services.priceUnknown);
       await expect(cards.nth(3).locator('s')).toHaveCount(0);
       await expect(cards.nth(0).locator('h3')).toHaveText(locale === 'ru' ? 'Спортивный массаж из CRM' : 'Sports massage');
-      await expect(cards.nth(0).locator('.bd p')).toHaveText(locale === 'ru' ? 'Описание из CRM.' : en.home.services.cards['13982355'].description);
+      await expect(cards.nth(0).locator('.d')).toHaveText(locale === 'ru' ? 'Описание из CRM.' : en.home.services.cards['13982355'].description);
       await expect(cards.nth(0).locator('dd').nth(1)).toHaveText(locale === 'ru' ? '75 мин' : '75 min');
       await expect(cards.nth(1).locator('dt')).toHaveCount(1);
       const loadedPhoto = cards.nth(0).locator('img');
@@ -148,7 +150,7 @@ async function checkCatalog(browser, variant, isChrome) {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         assert.deepEqual(await cards.evaluateAll((elements) => elements.flatMap((card) => {
           const bounds = card.getBoundingClientRect();
-          const content = card.querySelectorAll('.bd h3, .bd p, dl, dt, dd, .price, s');
+          const content = card.querySelectorAll('.t, .d, dl, dt, dd, .price, s');
           return Array.from(content).flatMap((element) => {
             const outside = element.getBoundingClientRect().right - bounds.right;
             const overflow = element.scrollWidth - element.clientWidth;

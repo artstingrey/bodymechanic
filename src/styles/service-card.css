@@ -1,0 +1,91 @@
+.svc { position: relative; display: flex; flex-direction: column; border-radius: var(--r-card); padding: 10px; min-width: 0; background: var(--card-sand);
+  transition: transform var(--d-hover) var(--e-out), box-shadow var(--d-hover) var(--e-out); }
+.svc--lav { background: var(--card-lavender); } .svc--sand { background: var(--card-sand); } .svc--sky { background: var(--card-sky); }
+.svc .photo { position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-photo); background: color-mix(in srgb, var(--accent) 10%, var(--card-sand)); overflow: hidden; }
+.svc .photo picture, .svc .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.svc .body { display: flex; flex-direction: column; gap: 8px; padding: 12px 8px 8px; flex: 1; }
+.svc .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.svc .head > div { display: grid; gap: 8px; min-width: 0; }
+.svc .idx { font-size: var(--fs-micro); font-weight: 800; color: var(--accent-ink-card); font-variant-numeric: tabular-nums; }
+.svc .t { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 0; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; text-wrap: balance; } /* F10: no hanging word */ /* «Ортопедичес-кая» by syllables at 320 (lang on <html>); overflow-wrap stays as the fallback where the engine has no dictionary */
+.svc .t a { color: inherit; text-decoration: none; }
+.svc .t a::after { content: ""; position: absolute; inset: 0; z-index: 1; border-radius: var(--r-card); } /* whole card is the target */
+.svc .d { font-size: 14px; color: var(--muted-card); margin: 0 0 12px; }
+.svc .go { flex: none; margin: -4px 0 0; width: 44px; height: 44px; border-radius: 50%; background: var(--surface); color: var(--text);
+  display: flex; align-items: center; justify-content: center; pointer-events: none; }
+/* on the photo (F10, lead): light disc + dark 1.5 px ring + dark arrow. The ring gives ≥ 3:1 against light photo areas and the disc
+   against dark ones, so the control reads on any photo and on the placeholder; clicks go to the card's cover link */
+.svc .photo .go { position: absolute; top: 10px; right: 10px; margin: 0; box-shadow: inset 0 0 0 1.5px var(--text); }
+.svc .data { display: grid; grid-template-columns: repeat(2, minmax(min-content, 1fr)); border-top: 1px solid var(--hairline); margin: auto 0 0; } /* 13 px caps labels never split mid-word («Длительность») */
+.svc .data dt { overflow-wrap: break-word; } /* keeps the word whole in the min-content columns */
+.svc .data div { padding: 10px 0 0; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.svc .data div + div { border-left: 1px solid var(--hairline); padding-left: 12px; }
+.svc .data dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted-card); }
+.svc .data dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 16px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.svc .data dd > * { white-space: nowrap; }
+/* the card is narrower than two fact columns (carousel on 320–360, or text scaled up): price and duration stack (lead, R-FINAL-2 b) */
+.svc { container-type: inline-size; }
+/* a long last-line unit (Cards → lib/typo tailEm, --tail in em): the title steps down just enough to keep two words on its last
+   line on phones (reviewer, RC-2: «…с инфракрасной / капсулой»); 100cqi − 16 px = the title column (.body padding) */
+@media (max-width: 767px) { .svc .t[data-fit] { font-size: clamp(14px, calc((100cqi - 16px) / var(--tail)), 20px); } }
+@container (max-width: 15.25rem) { /* content box: 375 → 248 px keeps two columns, 360 → 236 px stacks */
+  .svc .data { grid-template-columns: minmax(0, 1fr); }
+  .svc .data div + div { border-left: 0; padding-left: 0; margin-top: 10px; border-top: 1px solid var(--hairline); }
+  .svc .data dt { overflow-wrap: anywhere; }
+}
+.svc:has(a:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.svc a:focus-visible { outline: none; }
+@media (hover: hover) { .svc:hover { transform: translateY(-2px); box-shadow: var(--sh-2); } }
+
+/* Photo placeholder, one brand style (PhotoPlaceholder; lead's empty-state policy, design audit F05/F06): Bone tone, the emblem
+   tone-on-tone (mask of the kit's mono mark), number in the atlas style top-left, caption (+ «Демо») bottom-left. */
+.ph { position: relative; overflow: hidden; border-radius: var(--r-card); background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
+.ph::before { content: ""; position: absolute; inset: 16% 22% 24%; background: color-mix(in srgb, var(--text) 8%, transparent);
+  -webkit-mask: url(/brand/bm-full-mono-dark.svg) center / contain no-repeat; mask: url(/brand/bm-full-mono-dark.svg) center / contain no-repeat; }
+.ph__num { position: absolute; left: 16px; top: 14px; font-size: 22px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ph__cap { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; line-height: 1.3; color: var(--muted); }
+
+/* service cards: the facts' line runs the card's width, the text sits 6 px inside it */
+.car .svc { gap: 14px; padding: 12px 12px 36px; transition: transform 240ms var(--e-out), box-shadow 240ms var(--e-out); }
+.car .svc .photo { aspect-ratio: 4 / 4.8; background: var(--surface); }
+.car .svc .photo .go { background: color-mix(in srgb, var(--bg) 94%, transparent); box-shadow: var(--sh-1); }
+.car .svc .body { padding: 0; }
+.car .svc .head, .car .svc .d { padding-inline: 6px; }
+.car .svc .idx { letter-spacing: 0.04em; }
+.car .svc .t { font-size: var(--fs-h3); line-height: 1.2; letter-spacing: -0.015em; }
+.car .svc .d { margin: 0 0 6px; font-size: 15px; line-height: 1.45; text-wrap: pretty; } /* + the column's 8 = 14 above the facts */
+.car .svc .data { column-gap: 12px; padding: 12px 6px 0; }
+.car .svc .data div { padding: 0; }
+.car .svc .data div + div { border-left: 0; padding-left: 0; }
+.car .svc .data dt { letter-spacing: 0.06em; }
+.car .svc .data dd { gap: 4px 6px; font-size: 15px; font-weight: 700; letter-spacing: normal; }
+.car .svc .badge { height: 22px; padding: 0 8px; background: color-mix(in srgb, var(--text) 10%, transparent); }
+/* The carousel title column has 6 px of padding on each side. */
+@media (max-width: 767px) { .car .svc .t[data-fit] { font-size: clamp(14px, calc((100cqi - 12px) / var(--tail)), var(--fs-h3)); } }
+@container (max-width: 15.25rem) {
+  .car .svc .data { grid-template-columns: minmax(0, 1fr); } /* 320–344: «Длительность» at 13 px does not fit half a card */
+  .car .svc .data div + div { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline); }
+}
+@media (hover: hover) { .car .svc:hover { transform: translateY(-3px); } }
+.car .svc:active { transform: none; }
+
+.svc .photo .ph { border-radius: var(--r-photo); }
+.svc .photo .home-service-image { height: 100%; }
+.svc .head > div { width: 100%; }
+.svc .data:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+.svc .data dd > .price-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
+.svc .price-row > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.svc .price-row s { font-weight: 600; color: var(--muted-card); }
+[aria-labelledby="services-title"] .svc:active { transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .svc:hover, .car .svc:hover { transform: none; }
+}

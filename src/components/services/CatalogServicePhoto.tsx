@@ -8,9 +8,9 @@ export function CatalogServicePhoto({ serviceId, title, t, detail }: {
   t: Awaited<ReturnType<typeof getTranslations>>;
   detail?: boolean;
 }) {
-  const photo = catalogServicePhoto(serviceId);
+  const src = catalogServicePhoto(serviceId);
   return (
-    <HomeServicePhoto key={photo?.src} src={photo?.src} hasPrintedPrice={photo?.hasPrintedPrice} alt={title} detail={detail}
+    <HomeServicePhoto key={src} src={src} alt={title} detail={detail}
       unavailable={t('home.services.photoUnavailable')} />
   );
 }

@@ -11,14 +11,11 @@ export function homeServiceDescription(locale: CatalogLocale, service: CatalogSe
   return locale === 'en' ? editorial ?? service.description : service.description ?? editorial;
 }
 
-const testPhoto = (name: string) => ({
-  src: `/website-services/test/${encodeURIComponent(name)}.png`,
-  hasPrintedPrice: true,
-});
+const testPhoto = (name: string) => `/website-services/test/${encodeURIComponent(name)}.png`;
 
 const servicePhotos = new Map([
   [13688504, testPhoto('Home-service')],
-  [13706788, { src: '/website-services/classic-massage.webp', hasPrintedPrice: false }],
+  [13706788, '/website-services/classic-massage.webp'],
   [13982351, testPhoto('ice-bath')],
   [13982353, testPhoto('Individual-Ice-Bath-session +infrared-capsule')],
   [13982355, testPhoto('sports-massage')],

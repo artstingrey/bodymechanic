@@ -116,6 +116,7 @@ async function browserChecks(origin) {
       await expect(hero.locator('.badge')).toHaveCount(0);
       const photo = hero.locator('.svc-hero__photo img');
       await expect(photo).toHaveAttribute('src', '/website-services/test/sports-massage.png');
+      await expect(photo).toHaveCSS('object-fit', 'cover');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
       await checkSectionVisibility(locale);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());

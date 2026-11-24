@@ -231,6 +231,7 @@ try {
       await photo.scrollIntoViewIfNeeded();
       await expect(photo).toHaveAttribute('alt', labels.sports);
       await expect(photo).toHaveAttribute('src', '/website-services/test/sports-massage.png');
+      await expect(photo).toHaveCSS('object-fit', 'cover');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 
       const grid = page.locator('main .card-grid');

@@ -3,8 +3,8 @@
 import { useCallback, useState } from 'react';
 import { PhotoPlaceholder } from '@/components/ui/Cards';
 
-export function HomeServicePhoto({ src, alt, unavailable, detail = false, hasPrintedPrice = false }: {
-  src?: string; alt: string; unavailable: string; detail?: boolean; hasPrintedPrice?: boolean;
+export function HomeServicePhoto({ src, alt, unavailable, detail = false }: {
+  src?: string; alt: string; unavailable: string; detail?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const checkImage = useCallback((frame: HTMLDivElement | null) => {
@@ -17,7 +17,7 @@ export function HomeServicePhoto({ src, alt, unavailable, detail = false, hasPri
   }
 
   return (
-    <div className="home-service-image" ref={checkImage} data-printed-price={hasPrintedPrice || undefined}>
+    <div className="home-service-image" ref={checkImage}>
       {/* eslint-disable-next-line @next/next/no-img-element -- serve the supplied images directly */}
       <img src={src} alt={alt} width={1600} height={2000}
         loading={detail ? 'eager' : 'lazy'}
