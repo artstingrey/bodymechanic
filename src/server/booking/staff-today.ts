@@ -33,8 +33,8 @@ async function loadSlots(locationId: number, locale: CatalogLocale, staffId: num
   // Run one request at a time and stop on the first failure, including a rate limit.
   for (const serviceId of new Set(services.map(({ id }) => id))) {
     checkCooldown(locationId);
-    const times = await getBookingTimes(locale, serviceId, staffId, date, { ignoreOtherDates: true });
-    slots.push(...times.map((time) => ({ ...time, serviceId })));
+    const times = await getBookingTimes(locale, [serviceId], staffId, date, { ignoreOtherDates: true });
+    slots.push(...times.map(({ datetime, time }) => ({ datetime, time, serviceId })));
   }
   return slots;
 }

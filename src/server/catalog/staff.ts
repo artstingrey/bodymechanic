@@ -50,7 +50,7 @@ function normalizeStaff(data: unknown): CatalogStaffMember[] {
   return staff;
 }
 
-const getCachedStaff = cachePublicCatalog('book-staff-v1', async (locationId: number, locale: CatalogLocale, serviceId?: number) => {
+async function loadStaff(locationId: number, locale: CatalogLocale, serviceId?: number) {
   const data = await fetchBookStaff(locationId, locale, serviceId);
   try {
     return { staff: normalizeStaff(data) };
@@ -58,7 +58,9 @@ const getCachedStaff = cachePublicCatalog('book-staff-v1', async (locationId: nu
     console.warn('[altegio]', { operation: 'book_staff', code: 'UPSTREAM_INVALID_RESPONSE' });
     throw error;
   }
-});
+}
+
+const getCachedStaff = cachePublicCatalog('book-staff-v1', loadStaff);
 
 export async function getCatalogStaff(locale: CatalogLocale): Promise<CatalogStaffResponse> {
   const { locationId } = getAltegioConfig();
@@ -71,4 +73,19 @@ export async function getCatalogServiceStaff(locale: CatalogLocale, serviceId: n
   const { locationId } = getAltegioConfig();
   const { staff } = await getCachedStaff(locationId, locale, serviceId);
   return staff;
+}
+
+/** Online Booking does not document whether its staff filter matches every selected service. */
+export async function getCommonServiceStaff(locale: CatalogLocale, serviceIds: readonly number[]): Promise<CatalogStaffMember[]> {
+  if (serviceIds.length === 1) return getCatalogServiceStaff(locale, serviceIds[0]);
+  const { locationId } = getAltegioConfig();
+  const { staff } = await loadStaff(locationId, locale, serviceIds[0]);
+  let common = staff;
+  for (const serviceId of serviceIds.slice(1)) {
+    if (!common.length) break;
+    const { staff } = await loadStaff(locationId, locale, serviceId);
+    const ids = new Set(staff.map(({ id }) => id));
+    common = common.filter(({ id }) => ids.has(id));
+  }
+  return common;
 }

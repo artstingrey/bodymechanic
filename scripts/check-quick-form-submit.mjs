@@ -20,7 +20,7 @@ const date = new Date(now + 7 * day).toISOString().slice(0, 10);
 const datetime = `${new Date(now + 6 * day).toISOString().slice(0, 10)}T23:20:00.123+03:00`;
 const serviceId = '13982355';
 const specialist = '91601';
-const attemptStorage = 'bm.quickBooking.pending';
+const resultStorage = 'bm.bookingResult.form';
 const privateValues = /fixture-partner-token|fixture-record-hash-secret|fixture-private-|visitor\d*@example\.test|\+97150\d{7}/;
 const messages = {};
 for (const locale of ['en', 'ru']) {
@@ -61,7 +61,10 @@ async function openForm(browser, origin, locale, analytics, staffId, suffix, sel
   const button = form.getByRole('button', { name: copy.home.form.submit, exact: true });
   await expect(button).toBeEnabled();
   await expect(form.getByTestId('captcha')).toBeHidden();
-  await form.locator('#qf-service').selectOption(selectedService);
+  const service = form.locator('#qf-service');
+  await service.click();
+  await form.locator(`#qf-service-options input[value="${selectedService}"]`).check();
+  await service.press('Escape');
   if (staffId !== 0) await form.locator('#qf-staff').selectOption(String(staffId));
   await form.locator('#qf-date').selectOption(date);
   const time = form.locator('#qf-time');
@@ -188,7 +191,8 @@ try {
     const [first, second] = en.requests;
     assert.notEqual(first.idempotencyKey, second.idempotencyKey);
     assert.deepEqual(second, {
-      serviceId: Number(serviceId), staffId: 0, datetime, locale: 'en', consent: true, idempotencyKey: second.idempotencyKey,
+      serviceIds: [Number(serviceId)], staffId: Number(specialist), datetime, locale: 'en', consent: true,
+      idempotencyKey: second.idempotencyKey, recoveryKey: second.recoveryKey,
       contact: { fullname: 'fixture-private-fullname', phone: en.phone, email: en.email },
       age: 38, condition: 'fixture-private-note',
     });
@@ -198,7 +202,9 @@ try {
     assert.equal(await calls('POST book_record'), 1);
     assert.equal(await calls('POST locations'), 0);
     assert.equal(JSON.parse(await fs.readFile(comments, 'utf8')), '[Сайт/форма] Age: 38\nCondition: fixture-private-note');
-    assert.equal(await en.page.evaluate((key) => sessionStorage.getItem(key), attemptStorage), null);
+    const saved = await en.page.evaluate((key) => sessionStorage.getItem(key), resultStorage);
+    assert.equal(JSON.parse(saved).status, 'created');
+    assert.doesNotMatch(saved, privateValues);
     await en.page.close();
 
     await scenario('checked-json');
@@ -225,11 +231,18 @@ try {
     assert.deepEqual(await successEvents(timeout.page), []);
     await timeout.form.evaluate((form) => form.requestSubmit());
     assert.equal(timeout.requests.length, 1);
-    assert.equal(await timeout.page.evaluate((storage) => sessionStorage.getItem(storage), attemptStorage), null);
+    const stored = await timeout.page.evaluate((key) => sessionStorage.getItem(key), resultStorage);
+    assert.equal(JSON.parse(stored).attempt.idempotencyKey, timeout.requests[0].idempotencyKey);
+    assert.doesNotMatch(stored, privateValues);
     await timeout.page.reload({ waitUntil: 'networkidle' });
-    await expect(timeout.button).toBeEnabled();
-    await expect(timeout.form.getByText(timeout.copy.home.form.feedback.unknown)).toHaveCount(0);
-    assert.equal(timeout.requests.length, 1);
+    await expect(timeout.button).toBeDisabled();
+    await expect(timeout.form.getByText(timeout.copy.home.form.feedback.unknown)).toBeVisible();
+    await timeout.form.getByRole('button', { name: timeout.copy.booking.done.checkStatus }).click();
+    await expect.poll(() => timeout.requests.length).toBe(2);
+    assert.deepEqual(timeout.requests[1], {
+      idempotencyKey: timeout.requests[0].idempotencyKey, recoveryKey: timeout.requests[0].recoveryKey, locale: 'ru',
+    });
+    await expect(timeout.form.getByText(timeout.copy.home.form.feedback.unknown)).toBeVisible();
     assert.equal(await calls('POST book_record'), 1);
     await timeout.page.close();
 
@@ -246,6 +259,14 @@ try {
     assert.equal(accepted, 201);
     assert.equal(await calls('POST book_record'), 1);
     assert.deepEqual(await successEvents(lost.page), []);
+    await lost.page.reload({ waitUntil: 'networkidle' });
+    await lost.form.getByRole('button', { name: lost.copy.booking.done.checkStatus }).click();
+    await assertConfirmed(lost.page, lost.copy);
+    assert.equal(await calls('POST book_record'), 1);
+    assert.deepEqual(lost.requests[1], {
+      idempotencyKey: lost.requests[0].idempotencyKey, recoveryKey: lost.requests[0].recoveryKey, locale: 'en',
+    });
+    assert.equal((await successEvents(lost.page)).length, 1);
     await lost.page.close();
   });
 

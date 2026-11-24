@@ -584,10 +584,12 @@ test.describe('form validation (R-CODE-02 F-05)', () => {
       services: [{ id, title: 'Sports massage', categoryId: null, priceMin: 750, priceMax: 750, currency: 'AED', durationMin: 60 }],
       categories: [],
     } } }));
-    await page.route('**/api/booking/staff?*', (route) => route.fulfill({ json: { data: { serviceId: id, staff: [] } } }));
-    await page.route('**/api/booking/dates?*', (route) => route.fulfill({ json: { data: { serviceId: id, staffId: 0, dates: [date] } } }));
+    const serviceIds = [id];
+    const staff = [{ id: 1, name: 'Fixture specialist' }, { id: 2, name: 'Other fixture specialist' }];
+    await page.route('**/api/booking/staff?*', (route) => route.fulfill({ json: { data: { serviceIds, staff } } }));
+    await page.route('**/api/booking/dates?*', (route) => route.fulfill({ json: { data: { serviceIds, staffId: 0, dates: [date] } } }));
     await page.route('**/api/booking/times?*', (route) => route.fulfill({ json: { data: {
-      serviceId: id, staffId: 0, date, times: [{ datetime: `${date}T${time}:00+04:00`, time }],
+      serviceIds, staffId: 0, date, times: [{ datetime: `${date}T${time}:00+04:00`, time }],
     } } }));
     await page.goto(`/en/booking/?step=5&service=${id}&date=${date}&time=${time}`, { waitUntil: 'networkidle' });
     await expect(page.locator('form.bk-form input[type="checkbox"]')).toHaveCount(1);

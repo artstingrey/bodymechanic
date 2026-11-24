@@ -25,6 +25,7 @@
     "test:service-staff": "node scripts/check-service-staff.mjs",
     "test:staff-profile": "node scripts/check-staff-profile.mjs",
     "test:booking-services": "node scripts/check-booking-services.mjs",
+    "test:booking-service-sets": "node scripts/check-booking-service-sets.mjs",
     "test:booking-review": "node scripts/check-booking-review.mjs",
     "test:booking-availability": "node scripts/check-booking-availability.mjs",
     "test:booking-record": "node scripts/check-booking-record.mjs",

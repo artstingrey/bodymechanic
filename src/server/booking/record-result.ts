@@ -1,12 +1,12 @@
 import 'server-only';
 
 import type {
-  BookingRecordData, BookingRecordErrorCode, BookingRecordField, BookingRecordResponse,
+  BookingRecordErrorCode, BookingRecordField, BookingRecordResponse, BookingRecordSetConfirmation,
 } from '@/lib/contracts/booking-record';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 
 export type RecordOutcome =
-  | { status: number; data: BookingRecordData; retryAfter?: string }
+  | { status: number; data: BookingRecordSetConfirmation | { status: 'processing' | 'unknown' }; retryAfter?: string }
   | { status: number; code: BookingRecordErrorCode; fields?: BookingRecordField[]; retryAfter?: string };
 
 export const processing: RecordOutcome = { status: 202, data: { status: 'processing' }, retryAfter: '2' };
@@ -25,10 +25,16 @@ const messages = {
   UPSTREAM_RATE_LIMITED: ['Too many booking attempts. Try again later.', 'Слишком много попыток записи. Повторите позже.'],
 } satisfies Partial<Record<BookingRecordErrorCode, [string, string]>>;
 
-export function recordResponse(outcome: RecordOutcome, locale: CatalogLocale) {
+export function recordResponse(outcome: RecordOutcome, locale: CatalogLocale, legacySelection = false) {
   let body: BookingRecordResponse;
   if ('data' in outcome) {
-    body = { data: outcome.data };
+    const data = outcome.data;
+    if (legacySelection && data.status === 'created') {
+      const { recordId, datetime, staff, parts } = data;
+      body = { data: { status: 'created', recordId, serviceId: data.serviceIds[0], datetime, staff, parts } };
+    } else {
+      body = { data };
+    }
   } else {
     const copy: Partial<Record<BookingRecordErrorCode, [string, string]>> = messages;
     const message = (copy[outcome.code] ?? ['The booking request could not be accepted.', 'Не удалось принять запрос на запись.'])[locale === 'ru' ? 1 : 0];

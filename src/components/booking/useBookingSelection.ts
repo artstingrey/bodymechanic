@@ -3,10 +3,11 @@
 import { useCallback, useState } from 'react';
 import type { Contact } from '@/lib/api/types';
 import { draftExpired } from '@/lib/booking/draft-ttl';
+import { equalBookingServices, normalizeBookingServices, validBookingId } from '@/lib/contracts/booking-services';
 import { isLegacyStaffId, restoreServiceId } from './service-catalog';
 
 export interface Selection {
-  serviceId: number | null;
+  serviceIds: number[];
   staffId: number; // 0 = any (ТЗ §08)
   /** Retain the profile's specialist while the visitor considers services. A window may belong to one service. */
   staffPreset?: { serviceId?: number } | null;
@@ -21,8 +22,8 @@ export interface Selection {
   contact: Contact & { consent: boolean };
 }
 const KEY = 'bm.bookingSteps';
-const VERSION = 2;
-const EMPTY: Selection = { serviceId: null, staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false } };
+const VERSION = 3;
+const EMPTY: Selection = { serviceIds: [], staffId: 0, date: null, datetime: null, contact: { fullname: '', phone: '', email: '', consent: false } };
 /** every write stamps the time of the change: the name and the phone are dropped a day after it (lib/booking/draft-ttl, Ж-5) */
 const persist = (next: Selection) => { try { sessionStorage.setItem(KEY, JSON.stringify({ ...next, version: VERSION, savedAt: Date.now() })); } catch { /* ignore */ } };
 
@@ -38,22 +39,24 @@ export function useBookingSelection() {
     let stored: Selection = EMPTY;
     try {
       const raw = sessionStorage.getItem(KEY);
-      const { savedAt, version, ...kept } = (raw ? JSON.parse(raw) : {}) as Partial<Selection> & { savedAt?: number; version?: number };
+      const { savedAt, version, serviceId, ...kept } = (raw ? JSON.parse(raw) : {}) as Partial<Selection> &
+        { serviceId?: number | null; savedAt?: number; version?: number };
       if (draftExpired(savedAt)) sessionStorage.removeItem(KEY); // Ж-5: older than a day → gone
       else if (raw) {
         const { fullname = '', phone = '', email = '', age, consent = false } = kept.contact ?? {};
-        stored = { ...EMPTY, ...kept, contact: { fullname, phone, email, age, consent } };
-        if (version !== VERSION) stored = {
-          ...stored,
-          serviceId: restoreServiceId(stored.serviceId),
-          staffId: isLegacyStaffId(stored.staffId) ? 0 : stored.staffId,
-          date: null, datetime: null, wantDate: null, wantTime: null,
-        };
+        const restoredId = restoreServiceId(serviceId ?? null);
+        const serviceIds = version === VERSION ? normalizeBookingServices(undefined, kept.serviceIds) ?? [] : restoredId ? [restoredId] : [];
+        const staffId = validBookingId(kept.staffId, 0) && !isLegacyStaffId(kept.staffId) ? kept.staffId : 0;
+        stored = { ...EMPTY, ...kept, serviceIds, staffId, contact: { fullname, phone, email, age, consent } };
+        if (version !== VERSION && version !== 2) {
+          stored = { ...stored, date: null, datetime: null, wantDate: null, wantTime: null };
+        }
+        if (version !== VERSION) sessionStorage.setItem(KEY, JSON.stringify({ ...stored, version: VERSION, savedAt }));
       }
     } catch { /* ignore */ }
     let next = stored;
     if (Object.keys(preset).length) {
-      const changedService = preset.serviceId !== undefined && preset.serviceId !== stored.serviceId;
+      const changedService = preset.serviceIds !== undefined && !equalBookingServices(preset.serviceIds, stored.serviceIds);
       const changedStaff = preset.staffId !== undefined && preset.staffId !== stored.staffId;
       next = {
         ...stored,
@@ -67,8 +70,8 @@ export function useBookingSelection() {
     setSel(next);
     return next;
   }, []);
-  const update = useCallback((patch: Partial<Selection>) => {
-    setSel((s) => { const next = { ...s, ...patch }; persist(next); return next; });
+  const update = useCallback((patch: Partial<Selection> | ((selection: Selection) => Partial<Selection>)) => {
+    setSel((s) => { const next = { ...s, ...(typeof patch === 'function' ? patch(s) : patch) }; persist(next); return next; });
   }, []);
   /** one contact field, merged into the LATEST state: handlers built from a stale render must not undo each other's
    *  changes (two quick events — autofill, a tap right after typing — restored the default phone; iPhone gate) */

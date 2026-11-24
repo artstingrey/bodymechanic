@@ -18,21 +18,22 @@ import { useSearchParams } from 'next/navigation';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
-import { errorKind, recommendServices } from '@/lib/api';
+import { recommendServices } from '@/lib/api';
 import { dubaiToday } from '@/lib/api/dubai';
 import type { ApiErrorKind } from '@/lib/api/errors';
 import { body, useBody } from '@/lib/body3d/store';
-import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
+import { catalogServiceDuration, formatCatalogServicePrice, formatCatalogServiceTotal } from '@/lib/catalog-service-price';
 import { track } from '@/lib/analytics/track';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';
 import { collect, messageArgs, normalizePhone, requiredEmail, rules, type ErrorCode } from '@/lib/forms/validate';
-import { clearResult, loadResult, saveResult, type StoredBooking } from '@/lib/booking/result';
 import { PRESET_PARAMS, absorbPresetFromUrl, entryBroughtService, takePreset, type HandOver } from '@/lib/booking/preset';
 import type { Locale } from '@/i18n/routing';
 import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
-import { getAvailableDates, getAvailableTimes } from './booking-availability';
-import { getBookingStaff } from './booking-staff';
-import { bookingRejectionNotice, sendBooking } from './booking-submit';
+import { updateBookingServices } from '@/lib/contracts/booking-services';
+import { bookingUrl, getBookingOptions } from './useBookingOptions';
+import { useAsync } from './useAsync';
+import { bookingRejectionNotice } from './booking-submit';
+import { useBookingAttempt, type BookingAttemptOutcome } from './useBookingAttempt';
 import { confirmedCatalogId, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
 import { useBookingSelection } from './useBookingSelection';
 
@@ -44,25 +45,6 @@ const NO_PARAMS: Pick<URLSearchParams, 'get'> = new URLSearchParams();
 export const STEPS = ['zones', 'service', 'specialist', 'time', 'contacts', 'review', 'done'] as const;
 export type BookingError = ApiErrorKind | 'slotTaken';
 
-/** Async data with loading / error / retry, without setState in the effect body (state is keyed by the request). */
-export function useAsync<T>(enabled: boolean, load: (signal: AbortSignal) => Promise<T>, key: unknown[], refreshOnEntry = false) {
-  const [nonce, setNonce] = useState(0);
-  const serialized = JSON.stringify([...key, nonce]);
-  const identity = useMemo(() => ({ serialized, enabled }), [serialized, enabled]);
-  const k = refreshOnEntry ? identity : serialized;
-  const [res, setRes] = useState<{ k: typeof k; data?: T; error?: ApiErrorKind }>({ k: '' });
-  useEffect(() => {
-    if (!enabled) return;
-    const request = new AbortController();
-    load(request.signal).then((data) => { if (!request.signal.aborted) setRes({ k, data }); }, (e) => { if (!request.signal.aborted) { setRes({ k, error: errorKind(e) }); track('booking_error', { reason: errorKind(e) }); } });
-    return () => request.abort();
-    // `k` captures every input of `load` (the caller passes them in `key`)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [k, enabled]);
-  const status: 'idle' | 'loading' | 'error' | 'ready' = !enabled ? 'idle' : res.k !== k ? 'loading' : res.error ? 'error' : 'ready';
-  return { status, data: res.k === k ? res.data : undefined, error: res.k === k ? res.error : undefined, retry: useCallback(() => setNonce((n) => n + 1), []) };
-}
-
 export function useBookingFlow() {
   const t = useTranslations();
   const f = useFormatter();
@@ -70,7 +52,8 @@ export function useBookingFlow() {
   const router = useRouter();
   const urlParams = useClientSearchParams();
   const [ready, setReady] = useState(false); // hydrated: the URL and the stored choices are in effect
-  const [stored, setStored] = useState<StoredBooking | null>(null);
+  const { stored, busy, book, check, clear: clearResult } = useBookingAttempt('3d', locale);
+  const [reviewNotice, setReviewNotice] = useState<ReturnType<typeof bookingRejectionNotice>>();
   const result = stored?.status === 'created' ? stored : null;
   const lockedStep = stored ? (result ? 7 : 6) : null;
   const sp = ready && urlParams ? urlParams : NO_PARAMS;
@@ -102,7 +85,7 @@ export function useBookingFlow() {
     const fromStaffProfile = p.staffProfile === true && !legacyStaff;
     const profileWindow = fromStaffProfile && !!p.date && !!p.time;
     const s = load({
-      ...(presetServiceId !== null || profileWindow ? { serviceId: presetServiceId } : {}),
+      ...(presetServiceId !== null || profileWindow ? { serviceIds: presetServiceId === null ? [] : [presetServiceId] } : {}),
       ...(p.staff && !legacyStaff ? { staffId: p.staff } : {}),
       ...(fromStaffProfile ? { staffPreset: { serviceId: presetServiceId ?? undefined }, wantDate: null, wantTime: null } : {}),
       ...(p.date && !legacyStaff ? { wantDate: p.date, wantTime: p.time ?? null, date: null, datetime: null } : {}),
@@ -110,9 +93,8 @@ export function useBookingFlow() {
     // a service this visit brought itself is not «a draft found» — also after F5 on the same history entry and after the
     // language switch (`own`: the flag of the entry in the other language came along)
     const ownService = entryBroughtService(presetServiceId !== null || fromStaffProfile || !!p.own);
-    const hasSavedSelection = s.serviceId !== null || !!(s.contact.fullname || s.contact.phone || s.contact.email || s.contact.age);
+    const hasSavedSelection = s.serviceIds.length > 0 || !!(s.contact.fullname || s.contact.phone || s.contact.email || s.contact.age);
     setSelRestored(hasSavedSelection && !ownService);
-    setStored(loadResult());
     setReady(true);
     // once, on mount: a later hand-over on the same page does not override the choice (as ?service= did not)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,23 +103,59 @@ export function useBookingFlow() {
 
   const catalogQ = useAsync(ready && step >= 2, (signal) => getBookingCatalog(locale, signal), ['catalog', locale]);
   const catalog = catalogQ.data;
+  const [removedServices, setRemovedServices] = useState<number[]>([]);
+  const [changedAfterRemoval, setChangedAfterRemoval] = useState(false);
+  const missingFromCatalog = catalogQ.status === 'ready' ? sel.serviceIds.filter((id) => !catalog?.services.some((item) => item.id === id)) : [];
+  const selectedIds = sel.serviceIds.filter((id) => !removedServices.includes(id) && !missingFromCatalog.includes(id));
+  const serviceSelected = catalogQ.status === 'ready' && selectedIds.length > 0 && selectedIds.length === sel.serviceIds.length;
+  const selection = { serviceIds: selectedIds, locale };
+  const staffQ = useAsync((step >= 3 || reviewNotice === 'serviceUnavailable') && serviceSelected,
+    (signal) => getBookingOptions('staff', bookingUrl('staff', selection), signal), ['staff', locale, selectedIds], true);
+  const staff = staffQ.data ?? [];
+  const staffReady = staffQ.status === 'ready' && staff.length > 0;
+  const soleStaff = staffReady && staff.length === 1 ? staff[0].id : null;
+  const profileStaffUnavailable = !!sel.staffPreset && staffQ.status === 'ready' && !staff.some(({ id }) => id === sel.staffId);
+  const staffId = soleStaff ?? sel.staffId;
+  const staffName = staffReady ? staff.find(({ id }) => id === staffId)?.name ?? null : null;
+  const staffUnavailable = staffReady && staffId !== 0 && !staffName;
+  const needsStaff = step >= 4 && staffQ.status === 'ready' && (!staffReady || profileStaffUnavailable || staffUnavailable);
+  const serviceRemoved = removedServices.length > 0 && !changedAfterRemoval;
+  const needsService = step >= 3 && (!sel.serviceIds.length || serviceRemoved || missingFromCatalog.length > 0 || !!staffQ.missing);
+  const selectStaff = useCallback((staffId: number) => {
+    update({ staffId, staffPreset: null, date: null, datetime: null, wantDate: null, wantTime: null });
+  }, [update]);
+  useEffect(() => {
+    if (stored || profileStaffUnavailable) return;
+    if (soleStaff !== null && soleStaff !== sel.staffId) {
+      if (sel.staffId === 0) update({ staffId: soleStaff });
+      else selectStaff(soleStaff);
+    }
+    else if (staffUnavailable) selectStaff(0);
+  }, [stored, soleStaff, sel.staffId, staffUnavailable, profileStaffUnavailable, selectStaff, update]);
+
+  const staffCatalogQ = useAsync(serviceSelected && staffId > 0 && (step === 2 || staffReady && !!staffName),
+    (signal) => getBookingCatalog(locale, signal, staffId).catch(() => null), ['staff-catalog', locale, staffId], true);
+  const catalogByStaff = staffCatalogQ.status === 'ready' ? staffCatalogQ.data?.services : undefined;
   const services = useMemo(() => {
     if (!catalog) return [];
     const categories = new Map(catalog.categories.map(({ id, title }) => [id, title]));
+    const staffServices = new Map(catalogByStaff?.map((item) => [item.id, item]));
     const translations = t.raw('home.services.cards') as HomeServiceTranslations;
-    return catalog.services.map((item) => ({
-      id: item.id,
-      title: homeServiceTitle(locale, item, translations),
-      currency: item.currency,
-      durationMin: item.durationMin,
-      categoryTitle: item.categoryId === null ? undefined : categories.get(item.categoryId),
-      price: formatCatalogServicePrice(item, locale, {
-        unknown: () => t('home.services.priceUnknown'),
-        from: (price) => t('home.services.priceFrom', { price }),
-      }),
-      duration: item.durationMin === null ? null : t('home.services.duration', { minutes: item.durationMin }),
-    }));
-  }, [catalog, locale, t]);
+    return catalog.services.filter(({ id }) => !removedServices.includes(id)).map((item) => {
+      const detail = staffServices.get(item.id) ?? item;
+      return {
+        ...detail,
+        id: item.id,
+        title: homeServiceTitle(locale, item, translations),
+        categoryTitle: item.categoryId === null ? undefined : categories.get(item.categoryId),
+        price: formatCatalogServicePrice(detail, locale, {
+          unknown: () => t('home.services.priceUnknown'),
+          from: (price) => t('home.services.priceFrom', { price }),
+        }),
+        duration: detail.durationMin === null ? null : t('home.services.duration', { minutes: detail.durationMin }),
+      };
+    });
+  }, [catalog, catalogByStaff, locale, removedServices, t]);
   const recommended = useMemo(() => recommendServices(markers.map((m) => m.zoneId))
     .map(confirmedCatalogId)
     .filter((id): id is number => id !== undefined && services.some((s) => s.id === id)), [markers, services]);
@@ -145,55 +163,57 @@ export function useBookingFlow() {
     const ra = recommended.indexOf(a.id), rb = recommended.indexOf(b.id);
     return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb);
   }), [services, recommended]);
-  const catalogService = services.find((s) => s.id === sel.serviceId) ?? null;
-  const needsService = step >= 3 && (sel.serviceId === null || (catalogQ.status === 'ready' && !catalogService));
-  useEffect(() => {
-    if (!stored && catalogQ.status === 'ready' && sel.serviceId !== null && !catalogService) {
-      update({ serviceId: null, staffId: sel.staffPreset ? sel.staffId : 0, date: null, datetime: null, wantDate: null, wantTime: null });
-    }
-  }, [stored, catalogQ.status, sel.serviceId, sel.staffId, sel.staffPreset, catalogService, update]);
-  const selectService = (serviceId: number) => {
-    const firstChoice = sel.serviceId === null;
-    const retainWindow = firstChoice || (sel.staffPreset && sel.wantTime && sel.staffPreset.serviceId === undefined);
-    update({
-      serviceId, date: null, datetime: null,
-      ...(!firstChoice && !sel.staffPreset ? { staffId: 0 } : {}),
-      ...(!retainWindow ? { wantDate: null, wantTime: null } : {}),
+  const selectedServices = selectedIds.flatMap((id) => services.find((item) => item.id === id) ?? []);
+  const serviceTitle = selectedServices.map(({ title }) => title).join(' · ');
+  const price = formatCatalogServiceTotal(selectedServices, locale, {
+    unknown: () => t('home.services.priceUnknown'),
+    from: (price) => t('home.services.priceFrom', { price }),
+  });
+  const servicePrice = staffId && selectedServices.some(({ id }) => !catalogByStaff?.some((item) => item.id === id)) &&
+    price !== t('home.services.priceUnknown') ? t('booking.service.estimate', { price }) : price;
+  const selectService = (id: number, checked: boolean) => {
+    setChangedAfterRemoval(true);
+    setReviewNotice(undefined);
+    update((current) => {
+      const retainPreference = !current.serviceIds.length || !!current.staffPreset;
+      return { serviceIds: updateBookingServices(current.serviceIds, id, checked), date: null, datetime: null,
+        ...(current.staffPreset ? {} : { staffId: 0 }),
+        ...(retainPreference ? {} : { wantDate: null, wantTime: null }) };
     });
   };
-  const advanceFromService = () => go(sel.staffPreset && sel.wantDate && sel.wantTime ? 4 : 3);
+  const advanceFromService = () => {
+    setChangedAfterRemoval(true);
+    go(sel.staffPreset && sel.wantDate && sel.wantTime ? 4 : 3);
+  };
 
-  const catalogServiceId = catalogService?.id;
-  const staffQ = useAsync(step >= 3 && catalogServiceId !== undefined,
-    (signal) => getBookingStaff(locale, catalogServiceId!, signal), ['staff', locale, catalogServiceId], !!sel.staffPreset);
-  const staffName = staffQ.status === 'ready' ? staffQ.data?.find(({ id }) => id === sel.staffId)?.name ?? null : null;
-  const staffUnavailable = staffQ.status === 'ready' && sel.staffId !== 0 && staffName === null;
-  const profileStaffUnavailable = !!sel.staffPreset && staffUnavailable;
-  const needsStaff = step >= 4 && profileStaffUnavailable;
-  const selectStaff = useCallback((staffId: number) => {
-    update({ staffId, staffPreset: null, date: null, datetime: null, wantDate: null, wantTime: null });
-  }, [update]);
-  useEffect(() => {
-    if (!stored && staffUnavailable && !profileStaffUnavailable) selectStaff(0);
-  }, [stored, staffUnavailable, profileStaffUnavailable, selectStaff]);
-
-  const availabilityEnabled = step >= 4 && !result && catalogServiceId !== undefined && staffQ.status === 'ready' && !staffUnavailable;
-  const availabilitySelection = { serviceId: catalogServiceId!, staffId: sel.staffId, locale };
-  const datesQ = useAsync(availabilityEnabled, (signal) => getAvailableDates(availabilitySelection, signal),
-    ['dates', locale, catalogServiceId, sel.staffId], true);
+  const availabilityEnabled = step >= 4 && !result && serviceSelected && staffReady && !staffUnavailable && !profileStaffUnavailable;
+  const availabilitySelection = { ...selection, staffId };
+  const datesQ = useAsync(availabilityEnabled, (signal) => getBookingOptions('dates', bookingUrl('dates', availabilitySelection), signal),
+    ['dates', locale, selectedIds, staffId], true);
   const today = dubaiToday();
   const availableDates = datesQ.status === 'ready' ? datesQ.data!.filter((date) => date >= today) : [];
   const preferredDate = sel.date ?? sel.wantDate ?? null;
   const selectedDate = preferredDate && availableDates.includes(preferredDate) ? preferredDate : null;
-  const [takenSeq, setTakenSeq] = useState(0); // refresh after a slot conflict when record creation is connected
   const timesQ = useAsync(availabilityEnabled && selectedDate !== null,
-    (signal) => getAvailableTimes(availabilitySelection, selectedDate!, signal),
-    ['times', locale, catalogServiceId, sel.staffId, selectedDate, takenSeq], true);
+    (signal) => getBookingOptions('times', bookingUrl('times', { ...availabilitySelection, date: selectedDate! }), signal),
+    ['times', locale, selectedIds, staffId, selectedDate], true);
   const slots = timesQ.status === 'ready' ? timesQ.data : undefined;
   const savedSlot = slots?.find(({ datetime }) => datetime === sel.datetime);
   const wantedSlot = !sel.datetime && selectedDate === sel.wantDate
     ? slots?.find(({ time }) => time === sel.wantTime) : undefined;
-  const selectedDatetime = (savedSlot ?? wantedSlot)?.datetime ?? null;
+  const selectedSlot = savedSlot ?? wantedSlot;
+  const selectedDatetime = selectedSlot?.datetime ?? null;
+  const durationMin = catalogServiceDuration(selectedServices, selectedSlot?.durationSeconds);
+  const serviceDuration = durationMin === null ? null : t(selectedIds.length > 1 && selectedSlot?.durationSeconds === undefined
+    ? 'booking.service.durationEstimate' : 'home.services.duration', { minutes: durationMin });
+  const removed = [...missingFromCatalog, ...(staffQ.missing ?? []), ...(datesQ.missing ?? []), ...(timesQ.missing ?? [])]
+    .filter((id) => sel.serviceIds.includes(id));
+  if (!stored && removed.length) {
+    setRemovedServices((current) => [...new Set([...current, ...removed])]);
+    setChangedAfterRemoval(false);
+    update((current) => ({ serviceIds: current.serviceIds.filter((id) => !removed.includes(id)),
+      staffId: current.staffPreset ? current.staffId : 0, date: null, datetime: null, wantDate: null, wantTime: null }));
+  }
   useEffect(() => {
     if (stored) return;
     if (datesQ.status === 'ready' && sel.date && !selectedDate) update({ date: null, datetime: null });
@@ -251,7 +271,7 @@ export function useBookingFlow() {
     return true;
   };
   /** the first step that still needs input (step 1 may be skipped) */
-  const firstIncomplete = useCallback(() => (!sel.serviceId ? 2 : !sel.datetime ? 4 : !contactOk ? 5 : 6), [sel.serviceId, sel.datetime, contactOk]);
+  const firstIncomplete = useCallback(() => (!sel.serviceIds.length ? 2 : !sel.datetime ? 4 : !contactOk ? 5 : 6), [sel.serviceIds.length, sel.datetime, contactOk]);
 
   // ТЗ §14 booking_step: once per step change (step 7 only with a result — without it the flow redirects); this flow = source 3d
   const trackedStep = useRef(0);
@@ -261,19 +281,15 @@ export function useBookingFlow() {
     track('booking_step', { step, source: '3d' });
   }, [ready, step, result]);
 
-  // Lock synchronously before the first await, including before React disables the button.
-  const activeAttempt = useRef(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<BookingError | null>(null);
-  const [reviewNotice, setReviewNotice] = useState<ReturnType<typeof bookingRejectionNotice>>();
-  const canConfirm = step === 6 && !!catalogService && !!selectedDatetime && contactOk && !stored;
+  const canConfirm = step === 6 && serviceSelected && availabilityEnabled && !!selectedDatetime && contactOk && !stored;
   async function confirm() {
-    if (activeAttempt.current || !canConfirm || !catalogService || !selectedDatetime) return;
+    if (!canConfirm || !selectedDatetime) return;
     const idempotencyKey = globalThis.crypto?.randomUUID?.();
     if (!idempotencyKey) { setReviewNotice('unavailable'); return; }
     const { fullname, phone, email, age } = sel.contact;
     const input: BookingRecordRequest = {
-      source: '3d', serviceId: catalogService.id, staffId: sel.staffId, datetime: selectedDatetime, locale,
+      source: '3d', serviceIds: selectedIds, staffId, datetime: selectedDatetime, locale,
       contact: { fullname: fullname.trim(), phone: normalizePhone(phone), email: email!.trim() }, age,
       consent: true, idempotencyKey,
       body3d: {
@@ -281,71 +297,68 @@ export function useBookingFlow() {
         markers: markers.map(({ zoneId, intensity, note }) => ({ zoneId, intensity, note })),
       },
     };
-    activeAttempt.current = true;
-    const at = new Date().toISOString();
-    const pending = { status: 'unknown', at } as const;
-    // A reload during the request must never start a second creation.
-    saveResult(pending);
-    setStored(pending);
     setReviewNotice(undefined);
     setError(null);
-    setBusy(true);
-    const response = await sendBooking(input);
-    setBusy(false);
+    finishBooking(await book(input, { title: serviceTitle, price: price === t('home.services.priceUnknown') ? undefined : price }));
+  }
+
+  function finishBooking(response: BookingAttemptOutcome) {
+    if (!response) return;
     if (response.status === 'created') {
-      const snapshot = {
-        ...response.data, serviceTitle: catalogService.title, durationMin: catalogService.durationMin,
-        zones: markers.map(({ zoneId }) => zoneId), at,
-      };
-      saveResult(snapshot);
-      setStored(snapshot);
       clear();
       body.resetDraft();
-      if (catalogService.currency === 'AED') track('booking_success', {
-        service_id: response.data.serviceId, staff_id: response.data.staff?.id ?? input.staffId, currency: 'AED', source: '3d',
+      if (selectedServices.length > 0 && selectedServices.every(({ currency }) => currency === 'AED')) track('booking_success', {
+        service_id: response.data.services.length === 1 ? response.data.services[0].id : undefined,
+        staff_id: response.data.staff?.id ?? response.attempt.staffId, currency: 'AED', source: '3d',
       });
       return;
     }
     if (response.status === 'rejected') {
       const { code } = response.error;
-      clearResult();
-      setStored(null);
-      activeAttempt.current = false;
       track('booking_error', { reason: code.toLowerCase() });
       if (code === 'SLOT_TAKEN') {
         setError('slotTaken');
         update({ datetime: null, wantTime: null });
-        setTakenSeq((n) => n + 1);
+        datesQ.retry();
+        timesQ.retry();
         go(4);
+      } else if (code === 'SERVICE_NOT_FOUND') {
+        update({ date: null, datetime: null });
+        catalogQ.retry();
+        staffQ.retry();
+        go(2);
+        setReviewNotice(bookingRejectionNotice(code));
+      } else if (code === 'STAFF_NOT_FOUND') {
+        selectStaff(0);
+        staffQ.retry();
+        go(3);
       } else {
         setReviewNotice(bookingRejectionNotice(code));
       }
       return;
     }
-    const uncertain = { status: response.status, at };
-    saveResult(uncertain);
-    setStored(uncertain);
   }
+
+  const checkStatus = async () => { finishBooking(await check()); };
 
   const startOver = useCallback(() => {
     // Remove the completed step before clearing the result so the deep-link guard cannot redirect to step 2.
     window.history.replaceState(null, '', window.location.pathname);
-    activeAttempt.current = false;
     clearResult();
-    setStored(null);
     clear();
     body.resetDraft();
     setError(null);
     setRestoreDismissed(true);
-  }, [clear]);
+  }, [clear, clearResult]);
 
   return {
     t, ready, step, go, locale, slotUnfit, model, markers, generalNote, sel, update, updateContact, ordered, recommended, staffName,
-    catalogQ, catalogService, selectService, advanceFromService, selectStaff, profileStaffUnavailable,
+    catalogQ, serviceSelected, selectedIds, serviceTitle, servicePrice, serviceDuration, selectService, advanceFromService, selectStaff,
+    staffId, staffReady, profileStaffUnavailable, serviceRemoved,
     today, availableDates, selectedDate, selectedDatetime,
     staffQ, datesQ, timesQ, time, day, when, canLeaveZones, contactOk, firstIncomplete,
     contactErrors: contactV.errors, contactAttempt: contactV.attempt, contactMsg, contactField, submitContacts,
-    busy, error, setError, confirm, result, startOver, canConfirm, reviewNotice, stored,
+    busy, error, setError, confirm, checkStatus, result, startOver, canConfirm, reviewNotice, stored,
     offerRestore: step === 1 && !restoreDismissed && (restoredDraft || selRestored),
     continueDraft: () => { setRestoreDismissed(true); body.dismissRestored(); if (selRestored) go(firstIncomplete()); },
     discardDraft: () => { setRestoreDismissed(true); clear(); body.resetDraft(); },

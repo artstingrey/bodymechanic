@@ -15,7 +15,7 @@ async function ServiceOptions({ locale }: { locale: CatalogLocale }) {
   const t = await getTranslations({ locale });
   const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   const services = catalog?.data.services.map((service) => ({
-    id: service.id, title: homeServiceTitle(locale, service, translations),
+    ...service, title: homeServiceTitle(locale, service, translations),
   })) ?? null;
   return <QuickBookingFields locale={locale} services={services} />;
 }

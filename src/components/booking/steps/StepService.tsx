@@ -8,12 +8,13 @@ import { Summary } from './Summary';
 import type { Flow } from '../useBookingFlow';
 
 export function StepService({ flow }: { flow: Flow }) {
-  const { t, ordered, recommended, catalogQ, catalogService, selectService, advanceFromService, go } = flow;
+  const { t, ordered, recommended, catalogQ, selectedIds, serviceSelected, serviceRemoved, reviewNotice, selectService, advanceFromService, go } = flow;
   return (
     <section aria-labelledby="st2" className="bk-step bk-grid">
       <Summary flow={flow} />
       <div className="bk-main">
         <h1 id="st2" tabIndex={-1} className="h2">{t('booking.service.heading')}</h1>
+        {(serviceRemoved || reviewNotice === 'serviceUnavailable') && <p role="alert" className="hint">{t('booking.service.removed')}</p>}
         {catalogQ.status === 'loading' && <Loading label={t('common.state.loading')} />}
         {catalogQ.status === 'error' && (
           <StateCard kind="error" text={t('booking.service.loadError')} action={
@@ -21,12 +22,12 @@ export function StepService({ flow }: { flow: Flow }) {
           } />
         )}
         {catalogQ.status === 'ready' && (ordered.length > 0 ? (
-          <BookingServiceOptions name="service" services={ordered} selected={catalogService?.id ?? null}
+          <BookingServiceOptions name="service" services={ordered} selected={selectedIds}
             recommended={recommended[0]} suggestedLabel={t('booking.service.suggested')} onSelect={selectService} />
         ) : <p className="hint" role="status">{t('booking.service.empty')}</p>)}
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(1)}>{t('common.actions.back')}</Button>
-          <Button disabled={!catalogService} onClick={advanceFromService}>{t('common.actions.next')}</Button>
+          <Button disabled={!serviceSelected} onClick={advanceFromService}>{t('common.actions.next')}</Button>
         </div>
       </div>
     </section>

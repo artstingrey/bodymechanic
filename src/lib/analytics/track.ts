@@ -29,7 +29,7 @@ export interface AnalyticsEvents {
   /** a booking step was shown: 1–7 */
   booking_step: { step: number; source: BookingSource };
   /** a record was created (status «created»; «queued» is not a created record yet) */
-  booking_success: { service_id: number; staff_id: number; value?: number; currency: 'AED'; source: BookingSource };
+  booking_success: { service_id?: number; staff_id: number; value?: number; currency: 'AED'; source: BookingSource };
   /** an error or a slot conflict: slot_taken | network | server | captcha | … */
   booking_error: { reason: string };
   /** «Мои записи» */

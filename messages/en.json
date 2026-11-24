@@ -242,7 +242,7 @@
       "ageRange": "Age must be between {min} and {max}",
       "noteTooLong": "No more than {max} characters",
       "consentRequired": "We need your consent to continue",
-      "serviceRequired": "Choose a service",
+      "serviceRequired": "Choose at least one service",
       "datetimeRequired": "Choose a date and time",
       "summary": "Please check the highlighted fields"
     },
@@ -488,7 +488,7 @@
       "retry": "Try again",
       "availability": {
         "services": { "loading": "Loading services…", "empty": "There are no services available for online booking.", "error": "We couldn’t load the services." },
-        "staff": { "loading": "Loading specialists…", "empty": "No specialists are listed for this service.", "error": "We couldn’t load the specialists." },
+        "staff": { "loading": "Loading specialists…", "empty": "No specialist provides all the selected services. Try changing your selection.", "error": "We couldn’t load the specialists." },
         "dates": { "loading": "Loading dates…", "empty": "There are no available dates.", "error": "We couldn’t load the dates." },
         "times": { "loading": "Loading times…", "empty": "There are no free times on this date.", "error": "We couldn’t load the times." }
       }
@@ -725,7 +725,10 @@
       "heading": "Mark the areas on the model"
     },
     "service": {
-      "heading": "Choose a service",
+      "heading": "Choose services",
+      "estimate": "Estimated price · {price}",
+      "durationEstimate": "About {minutes} min",
+      "removed": "A selected service is no longer available. Check your selection and choose a new time.",
       "filter": "Category",
       "filterAll": "All",
       "suggested": "Matched to your areas",
@@ -743,7 +746,7 @@
       "noSlots": "No available times at the moment",
       "rating": "Rating {rating}",
       "loadError": "We couldn’t load the specialists.",
-      "empty": "No specialists are listed for this service.",
+      "empty": "No specialist provides all the selected services. Go back to change your selection.",
       "nextUnavailable": "To choose a time and book, use the <form>form on the home page</form>."
     },
     "time": {
@@ -802,6 +805,8 @@
       "references": "Booking references",
       "date": "Date and time",
       "specialist": "Specialist",
+      "duration": "Duration",
+      "checkStatus": "Check booking status",
       "address": "Address",
       "calendar": "Add to calendar",
       "calendarIcs": ".ics file (Apple, Outlook)",

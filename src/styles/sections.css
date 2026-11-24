@@ -308,10 +308,22 @@
 .qform .captcha[hidden] { display: none; }
 .qform__choice { min-width: 0; }
 .qform__choice select { width: 100%; min-width: 0; }
+.qform__services { position: relative; }
+.qform__services-trigger { width: 100%; border: 0; padding: 8px 40px 8px 14px; text-align: start; font: 400 16px/1.4 var(--font-sans); cursor: pointer; }
+.qform__services-trigger:disabled { opacity: var(--disabled-opacity); background: var(--bg); cursor: default; }
+.qform__services-trigger:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.qform__services-trigger span { min-width: 0; overflow-wrap: anywhere; }
+.qform__services-options { position: absolute; inset: calc(100% + 6px) 0 auto; z-index: 2; max-height: min(300px, 65vh); overflow: auto;
+  border-radius: var(--r-field); background: var(--surface); box-shadow: 0 0 0 1px var(--field-border), 0 8px 24px #0002; padding: 6px 12px; }
+.qform__services-options .check { min-height: 44px; }
 .qform__option-status:not(:empty) { margin: 6px 0; }
 .qform__option-status:empty { margin: 0; }
-.qform__receipt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 8px 16px; margin: 0; }
+.qform__receipt { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(0, 2fr); gap: 8px 16px; margin: 0; }
 .qform__receipt dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 360px) {
+  .qform__receipt { grid-template-columns: minmax(0, 1fr); row-gap: 4px; }
+  .qform__receipt dd:not(:last-child) { margin-bottom: 8px; }
+}
 
 /* ---------- RC-8: the approved home page (review/skill-bakeoff/variant-final.html), values shared components take only here ----------
    .svc, .staff, .review, .acc and .btn also live on other pages, which must not change: .home-sec = the home page's sections below the hero.

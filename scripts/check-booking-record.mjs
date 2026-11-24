@@ -12,6 +12,7 @@ const journal = `${scenarioFile}.journal`;
 const marker = `${scenarioFile}.created`;
 const release = `${scenarioFile}.release`;
 const comments = `${scenarioFile}.comments`;
+const selectionFile = `${scenarioFile}.selection`;
 const preload = new URL('../e2e/fixtures/altegio-record.mjs', import.meta.url).href;
 const day = 86_400_000;
 const date = new Date(Date.now() + 7 * day).toISOString().slice(0, 10);
@@ -42,7 +43,7 @@ function request(overrides = {}) {
 }
 
 async function scenario(name) {
-  for (const file of [marker, release, comments]) await fs.rm(file, { force: true });
+  for (const file of [marker, release, comments, selectionFile]) await fs.rm(file, { force: true });
   await fs.writeFile(journal, '');
   await fs.writeFile(scenarioFile, name);
 }
@@ -89,9 +90,194 @@ async function post(origin, body, { status, code, ip, headers, retryAfter, raw }
   return { status: response.status, ...json };
 }
 
+async function lookup(origin, { idempotencyKey, recoveryKey }, status, overrides = {}) {
+  const response = await fetch(`${origin}/api/booking/record/status`, {
+    method: 'POST', headers: {
+      'Content-Type': 'application/json', Origin: bookingOrigin, 'Sec-Fetch-Site': 'same-origin', [ipHeader]: '192.0.2.253',
+      ...overrides,
+    },
+    body: JSON.stringify({ idempotencyKey, recoveryKey, locale: 'en' }),
+  });
+  assert.equal(response.status, status);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('x-booking-outcome'), [201, 202, 409].includes(status) ? 'stored' : null);
+  const text = await response.text();
+  assert.doesNotMatch(text, secrets);
+  return JSON.parse(text).data;
+}
+
 const createCall = 'POST book_record';
 const checkCall = 'POST book_check';
 const confirmed = { status: 'created', recordId: 12345, serviceId: 13982355, datetime, staff: { id: 91601, name: 'Example specialist' } };
+
+async function checkServiceSets(origin) {
+  const serviceIds = [91201, 13982355];
+  const specialist = { id: 91601, name: 'Specialist 91601' };
+  const setRequest = (ids = serviceIds, overrides = {}) => request({
+    serviceId: undefined, serviceIds: ids, recoveryKey: randomUUID(), ...overrides,
+  });
+  const created = (ids, staff = specialist) => ({
+    status: 'created', recordId: 12345, serviceIds: ids, services: ids.map((id) => ({ id, title: `Service ${id}` })),
+    datetime, staff, durationSeconds: ids.length * 1800 + 300,
+  });
+  const slot = (ids) => ({ datetime, time: '00:20', durationSeconds: ids.length * 1800 + 300 });
+  const triple = [91201, 91203, 13982355];
+  const disjoint = [91204, 13982355];
+
+  async function get(resource, ids, options = {}, status = 200) {
+    const query = new URLSearchParams(Object.entries(options));
+    ids.forEach((id) => query.append('serviceIds', String(id)));
+    const response = await fetch(`${origin}/api/booking/${resource}?${query}`);
+    assert.equal(response.status, status);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    const json = await response.json();
+    return json.data ?? json.error;
+  }
+
+  await scenario('multi-normal');
+  for (const [ids, legacy] of [[[], undefined], [[0], undefined], [[null], undefined], [['91201'], undefined],
+    [[1.5], undefined], [[Number.MAX_SAFE_INTEGER + 1], undefined], [serviceIds, serviceIds[0]], [[91201], 13982355]]) {
+    const result = await post(origin, setRequest(ids, { serviceId: legacy }), { status: 400, code: 'INVALID_FIELDS' });
+    assert.deepEqual(result.error.fields, ['serviceIds']);
+  }
+  for (const [ids, opts] of [[[''], {}], [[0], {}], [[91201], { serviceId: 13982355 }], [serviceIds, { serviceId: 91201 }]]) {
+    assert.equal((await get('staff', ids, opts, 400)).code, 'INVALID_QUERY');
+  }
+  assert.deepEqual(await history(), []);
+  assert.deepEqual(await get('staff', [91201, 91201], { serviceId: 91201 }), {
+    serviceIds: [91201], staff: [specialist, { id: 91602, name: 'Specialist 91602' }, { id: 91603, name: 'Specialist 91603' }],
+  });
+  assert.deepEqual(await get('staff', [13982355, 91203, 91201, 91203], { locale: 'ru' }), {
+    serviceIds: triple, staff: [specialist],
+  });
+  const dates = { staffId: 0, locale: 'ru' };
+  const times = { ...dates, date };
+  assert.deepEqual(await get('dates', triple, dates), { serviceIds: triple, staffId: 0, dates: [date] });
+  assert.deepEqual(await get('times', triple, times), { serviceIds: triple, staffId: 0, date, times: [slot(triple)] });
+  assert.deepEqual(await get('times', serviceIds, { ...times, staffId: 91602 }), {
+    serviceIds, staffId: 91602, date, times: [slot(serviceIds)],
+  });
+  assert.deepEqual(await get('staff', disjoint), { serviceIds: disjoint, staff: [] });
+  assert.deepEqual(await get('dates', disjoint, dates), { serviceIds: disjoint, staffId: 0, dates: [] });
+  assert.deepEqual(await get('times', disjoint, times), { serviceIds: disjoint, staffId: 0, date, times: [] });
+  assert.equal((await get('times', triple, { ...times, staffId: 91602 }, 404)).code, 'STAFF_NOT_FOUND');
+  assert.equal((await get('staff', [91201, 99999], {}, 404)).code, 'SERVICE_NOT_FOUND');
+  const availableCalls = await history();
+  assert.ok(availableCalls.includes('WINDOW ru-RU 91601 91201,91203,13982355'));
+  assert.ok(availableCalls.includes('WINDOW ru-RU 91602 91201,13982355'));
+  assert.ok(availableCalls.includes('ASSIGNMENTS ru-RU 91203'));
+
+  await scenario('multi-service-removed');
+  assert.equal((await get('times', triple, times, 404)).code, 'SERVICE_NOT_FOUND');
+  await post(origin, setRequest(triple), { status: 404, code: 'SERVICE_NOT_FOUND' });
+  assert.deepEqual(await history(), ['GET book_services', 'GET book_services']);
+
+  await scenario('multi-normal');
+  const home = setRequest([13982355, 91201, 13982355]);
+  const same = { ...home, serviceIds };
+  assert.deepEqual((await post(origin, home, { status: 201 })).data, created(serviceIds));
+  assert.deepEqual((await post(origin, same, { status: 201 })).data, created(serviceIds));
+  assert.deepEqual(await lookup(origin, home, 201), created(serviceIds));
+  assert.deepEqual(await lookup(origin, { ...home, idempotencyKey: randomUUID() }, 202), { status: 'unknown' });
+  assert.deepEqual(await lookup(origin, { ...home, recoveryKey: randomUUID() }, 202), { status: 'unknown' });
+  await lookup(origin, { ...home, recoveryKey: undefined }, 400);
+  await lookup(origin, home, 403, { Origin: 'https://foreign.fixture.test' });
+  await post(origin, { ...home, serviceIds: triple }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
+  assert.equal((await history()).filter((call) => call === createCall).length, 1);
+  assert.deepEqual((await post(origin, { ...home, serviceIds: triple, idempotencyKey: randomUUID() }, { status: 201 })).data, created(triple));
+  const calls = await history();
+  for (const ids of [serviceIds, triple]) {
+    assert.equal(calls.filter((call) => call === `APPOINTMENT book_check 91601 ${ids.join(',')}`).length, 1);
+    assert.equal(calls.filter((call) => call === `APPOINTMENT book_record 91601 ${ids.join(',')}`).length, 1);
+  }
+
+  for (const [source, locale, extra] of [
+    ['3d', 'ru', { staffId: 91601, body3d: { model: 'female', markers: [{ zoneId: 'knee_l' }] } }],
+    ['lp', 'en', { condition: 'fixture-private-note' }],
+    ['lp', 'ru', { condition: 'fixture-private-note' }],
+  ]) {
+    for (const ids of [serviceIds, triple]) {
+      await scenario('multi-normal');
+      const input = setRequest(ids, { source, locale, ...extra });
+      assert.deepEqual((await post(origin, input, { status: 201 })).data, created(ids));
+      assert.ok((await history()).includes(`APPOINTMENT book_record 91601 ${ids.join(',')}`));
+      assert.ok((await history()).includes(`WINDOW ${locale === 'ru' ? 'ru-RU' : 'en-US'} 91601 ${ids.join(',')}`));
+      assert.match(await fs.readFile(comments, 'utf8'), source === 'lp' ? /LP/ : /3D/);
+    }
+  }
+  await scenario('empty-201');
+  const oldHome = request();
+  assert.deepEqual((await post(origin, oldHome, { status: 201 })).data, confirmed);
+  const { serviceId, ...oldHomePayload } = oldHome;
+  const { serviceId: ignored, ...expected } = confirmed;
+  assert.equal(ignored, serviceId);
+  assert.deepEqual((await post(origin, { ...oldHomePayload, serviceIds: [serviceId] }, { status: 201 })).data, {
+    ...expected, serviceIds: [serviceId], services: [{ id: serviceId, title: 'Sports massage' }],
+  });
+  assert.equal((await history()).filter((call) => call === createCall).length, 1);
+
+  await scenario('multi-next-staff');
+  assert.deepEqual(await get('times', serviceIds, times), { serviceIds, staffId: 0, date, times: [slot(serviceIds)] });
+  assert.deepEqual((await post(origin, setRequest(), { status: 201 })).data,
+    created(serviceIds, { id: 91602, name: 'Specialist 91602' }));
+
+  await scenario('multi-no-window');
+  assert.equal((await get('times', [13982355], times)).times.length, 1);
+  assert.deepEqual((await get('times', serviceIds, times)).times, []);
+  assert.deepEqual((await get('dates', serviceIds, dates)).dates, []);
+  await post(origin, setRequest(), { status: 409, code: 'SLOT_TAKEN' });
+  assert.ok(!(await history()).includes(checkCall));
+
+  for (const [mode, ids, code, status, overrides, sent] of [
+    ['multi-normal', disjoint, 'STAFF_NOT_FOUND', 404],
+    ['multi-normal', triple, 'STAFF_NOT_FOUND', 404, { staffId: 91602 }],
+    ['multi-normal', [91201, 99999], 'SERVICE_NOT_FOUND', 404],
+    ['multi-normal', [91201, 13983057], 'PREPAYMENT_REQUIRED', 422, { source: 'lp' }],
+    ['multi-normal', serviceIds, 'INVALID_FIELDS', 400, { source: 'lp', staffId: 91601 }],
+    ['multi-check-conflict', serviceIds, 'SLOT_TAKEN', 409],
+    ['multi-create-conflict', serviceIds, 'SLOT_TAKEN', 409, {}, true],
+  ]) {
+    await scenario(mode);
+    await post(origin, setRequest(ids, overrides), { status, code });
+    assert.equal((await history()).includes(createCall), Boolean(sent));
+  }
+
+  const mixed = [91201, 13982379];
+  await scenario('multi-normal');
+  assert.deepEqual((await post(origin, setRequest(mixed), { status: 201 })).data, created(mixed));
+  await scenario('multi-composite-parts');
+  const parts = (await post(origin, setRequest(mixed), { status: 201 })).data;
+  assert.deepEqual(parts.serviceIds, mixed);
+  assert.deepEqual(parts.parts.map(({ recordId, title }) => [recordId, title]), [[12345, 'Service 91201'], [12346, 'Service 13982379']]);
+  assert.equal(parts.durationSeconds, 7200);
+
+  for (const mode of ['multi-missing-detail', 'multi-extra-detail', 'multi-duplicate-detail', 'multi-wrong-staff',
+    'multi-wrong-quantity', 'multi-composite-expanded']) {
+    await scenario(mode);
+    const input = setRequest(mode === 'multi-composite-expanded' ? mixed : serviceIds);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      assert.equal((await post(origin, input, { status: 202 })).data.status, 'unknown');
+    }
+    assert.deepEqual(await lookup(origin, input, 202), { status: 'unknown' });
+    assert.equal((await history()).filter((call) => call === createCall).length, 1);
+    await post(origin, { ...input, serviceIds: triple }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
+  }
+
+  await scenario('multi-hold-record');
+  const input = setRequest();
+  const pending = post(origin, input, { status: 201 });
+  try {
+    await waitForCall(createCall);
+    assert.equal((await post(origin, { ...input, serviceIds: [...serviceIds].reverse() }, { status: 202, retryAfter: '2' })).data.status, 'processing');
+    assert.deepEqual(await lookup(origin, input, 202), { status: 'processing' });
+  } finally {
+    await fs.writeFile(release, '');
+    await pending;
+  }
+  assert.deepEqual((await post(origin, input, { status: 201 })).data, created(serviceIds));
+  assert.deepEqual(await lookup(origin, input, 201), created(serviceIds));
+  assert.equal((await history()).filter((call) => call === createCall).length, 1);
+}
 
 async function check3DRecord(origin) {
   const body3d = {
@@ -156,6 +342,7 @@ try {
   }, { BOOKING_ORIGIN: '' });
 
   await run(check3DRecord);
+  await run(checkServiceSets);
   await scenario('empty-201');
   await run(async (origin, logs) => {
     await post(origin, request(), { status: 403, code: 'INVALID_ORIGIN', headers: { Origin: 'https://elsewhere.fixture.test' } });
@@ -356,8 +543,8 @@ try {
     assert.equal((await history()).length, 10);
   });
 
-  console.log('Booking record: validation, composite confirmations, conflicts, limits, unknown outcomes and same-instance retries OK');
+  console.log('Booking record: single services, service sets, composite confirmations, conflicts, limits and same-instance retries OK');
 } finally {
-  for (const file of [journal, marker, release, comments, scenarioFile]) await fs.rm(file, { force: true });
+  for (const file of [journal, marker, release, comments, selectionFile, scenarioFile]) await fs.rm(file, { force: true });
   await fs.rmdir(dir);
 }

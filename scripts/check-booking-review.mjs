@@ -172,7 +172,8 @@ try {
       const submitted = posts.at(-1);
       assert.equal(submitted.source, '3d');
       assert.equal(submitted.datetime, datetime);
-      assert.equal(submitted.staffId, 0);
+      assert.equal(submitted.staffId, 91601);
+      assert.deepEqual(submitted.serviceIds, [13982355]);
       assert.equal(submitted.consent, true);
       assert.equal('healthConsent' in submitted.body3d, false);
       assert.deepEqual(submitted.body3d.markers, [{ zoneId: 'knee_l', intensity: 5, note: 'fixture-private-marker' }]);
@@ -214,16 +215,17 @@ try {
       }, { times: 1 });
       await confirm.click();
       await expect(page.getByText(messages.home.form.feedback.unknown, { exact: true })).toBeVisible();
-      await expect(confirm).toBeDisabled();
+      const checkStatus = page.getByRole('button', { name: messages.booking.done.checkStatus });
+      await expect(checkStatus).toBeEnabled();
       await expect(page.locator('#st6')).toHaveText(messages.booking.review.heading);
       assert.equal(await creates(), 1);
       assert.equal(posts[0].staffId, 91601);
       await page.reload();
       await expect(page.getByText(messages.home.form.feedback.unknown, { exact: true })).toBeVisible();
-      await expect(confirm).toBeDisabled();
+      await expect(checkStatus).toBeEnabled();
       await page.goto(booking);
       await expect(page).toHaveURL(`${booking}?step=6`);
-      await expect(confirm).toBeDisabled();
+      await expect(checkStatus).toBeEnabled();
       assert.equal(posts.length, 1);
       assert.equal(await creates(), 1);
     } finally {
@@ -247,7 +249,24 @@ try {
       }
     });
   }
-  console.log('3D booking: review and confirmed receipt, composite parts, calendar, print, restart and unknown outcome OK');
+  await scenario('empty-201');
+  await run(async (origin) => {
+    const page = await browser.newPage();
+    const receipt = {
+      version: 2, status: 'created', recordId: 12345, serviceId: 13982355,
+      datetime, serviceTitle: 'Saved single service', durationMin: null, at: new Date().toISOString(),
+    };
+    try {
+      await page.addInitScript((saved) => sessionStorage.setItem('bm.bookingResult', JSON.stringify(saved)), receipt);
+      await page.goto(`${origin}/en/booking/?step=7`);
+      await expect(page.locator('.booking-done')).toContainText('Saved single service');
+      await expect(page.locator('.booking-done')).toContainText('12345');
+      assert.equal(await creates(), 0);
+    } finally {
+      await page.close();
+    }
+  });
+  console.log('3D booking: review, modern and legacy receipts, composite parts, calendar, print, restart and unknown outcome OK');
 } finally {
   await browser?.close();
   for (const file of [fixture, journal, release, comments, marker]) await fs.rm(file, { force: true });

@@ -1,7 +1,7 @@
 import type { CatalogLocale } from './catalog';
+import type { BookingServiceReference, BookingServiceSelection, BookingStaff } from './booking-services';
 
 interface BookingRecordBase {
-  serviceId: number;
   staffId: number;
   datetime: string;
   locale: CatalogLocale;
@@ -9,6 +9,7 @@ interface BookingRecordBase {
   age?: number;
   consent: true;
   idempotencyKey: string;
+  recoveryKey?: string;
 }
 
 export interface BookingRecord3DDetails {
@@ -17,7 +18,7 @@ export interface BookingRecord3DDetails {
   generalNote?: string;
 }
 
-export type BookingRecordRequest = BookingRecordBase & (
+type BookingRecordDetails = BookingRecordBase & (
   | { source?: never; condition?: string; body3d?: never }
   | { source: '3d'; body3d: BookingRecord3DDetails; condition?: never }
 | {
@@ -28,27 +29,53 @@ export type BookingRecordRequest = BookingRecordBase & (
   body3d?: never;
 });
 
+export type BookingRecordRequest = BookingRecordDetails & BookingServiceSelection;
+export type NormalizedBookingRecordRequest = BookingRecordDetails & { serviceIds: number[] };
+
 export interface BookingRecordPart {
   recordId: number;
   title: string;
   datetime: string;
   durationSeconds?: number;
-  staff?: { id: number; name: string };
+  staff?: BookingStaff;
 }
+
+export type ConfirmedBookingService = { id: number; title: string };
+
+export interface BookingRecordStatusRequest {
+  idempotencyKey: string;
+  recoveryKey: string;
+  locale: CatalogLocale;
+}
+
+export function isBookingAttemptKey(value: unknown): value is string {
+  return typeof value === 'string' && /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(value);
+}
+
+export type BookingRecordConfirmation = {
+  status: 'created';
+  recordId: number;
+  datetime: string;
+  staff?: BookingStaff;
+  parts?: BookingRecordPart[];
+};
+
+export type BookingRecordSetConfirmation = BookingRecordConfirmation & {
+  serviceIds: number[];
+  services: ConfirmedBookingService[];
+  serviceId?: never;
+  durationSeconds?: number;
+};
 
 export type BookingRecordData =
   | { status: 'processing' | 'unknown' }
-  | {
-    status: 'created';
-    recordId: number;
-    serviceId: number;
-    datetime: string;
-    staff?: { id: number; name: string };
-    parts?: BookingRecordPart[];
-  };
+  | BookingRecordSetConfirmation
+  | (BookingRecordConfirmation & Extract<BookingServiceReference, { serviceId: number }> & {
+    services?: never; durationSeconds?: never;
+  });
 
-export type BookingRecordField = 'serviceId' | 'staffId' | 'datetime' | 'locale' | 'contact'
-  | 'fullname' | 'phone' | 'email' | 'age' | 'condition' | 'consent' | 'idempotencyKey'
+export type BookingRecordField = 'serviceId' | 'serviceIds' | 'staffId' | 'datetime' | 'locale' | 'contact'
+  | 'fullname' | 'phone' | 'email' | 'age' | 'condition' | 'consent' | 'idempotencyKey' | 'recoveryKey'
   | 'source' | 'body3d' | 'model' | 'markers' | 'generalNote' | 'details';
 
 export type BookingRecordErrorCode =

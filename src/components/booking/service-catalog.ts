@@ -21,10 +21,13 @@ export function isLegacyStaffId(id: number) {
   return legacyStaffIds.has(id);
 }
 
-export async function getBookingCatalog(locale: CatalogLocale, signal: AbortSignal) {
-  const response = await fetch(`/api/catalog/services?locale=${locale}`, { signal, cache: 'no-store' });
+export async function getBookingCatalog(locale: CatalogLocale, signal: AbortSignal, staffId?: number) {
+  const query = new URLSearchParams({ locale });
+  if (staffId) query.set('staffId', String(staffId));
+  const response = await fetch(`/api/catalog/services?${query}`, { signal, cache: 'no-store' });
   if (!response.ok) throw new ApiError(response.status === 429 ? 'rateLimit' : 'server');
   const catalog = await response.json() as CatalogServicesResponse;
-  if (!Array.isArray(catalog?.data?.services) || !Array.isArray(catalog.data.categories)) throw new ApiError('server');
+  if (!Array.isArray(catalog?.data?.services) || !Array.isArray(catalog.data.categories) ||
+    (staffId !== undefined && catalog.meta?.staffId !== staffId)) throw new ApiError('server');
   return catalog.data;
 }

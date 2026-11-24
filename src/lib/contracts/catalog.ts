@@ -17,7 +17,7 @@ export interface CatalogService extends CatalogCategory {
 
 export interface CatalogServicesResponse {
   data: { services: CatalogService[]; categories: CatalogCategory[] };
-  meta: { source: 'altegio'; locale: CatalogLocale };
+  meta: { source: 'altegio'; locale: CatalogLocale; staffId?: number };
 }
 
 export interface CatalogServiceDetailResponse {

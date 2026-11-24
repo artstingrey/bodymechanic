@@ -9,5 +9,6 @@ export const QuickFormContext = createContext<{
   locked: boolean;
   errors: Record<string, ErrorCode>;
   clearError: (id: string) => void;
+  setAvailabilityBlocked: (blocked: boolean) => void;
   registerRefresh: (handler: (reason: AvailabilityConflict) => void) => () => void;
 } | null>(null);

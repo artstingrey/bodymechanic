@@ -111,7 +111,6 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
     const desktop = page.viewportSize().width >= 768;
     assert.deepEqual(grid, { twoColumns: desktop, oneColumn: !desktop, fits: true });
     await service.check();
-    const serviceTitle = await service.locator('xpath=..').locator('.bk-opt__body b').innerText();
     if (marks) {
       await form.getByRole('button', { name: copy.common.actions.back, exact: true }).click();
       await expect(form.locator('input[name="name"]')).toHaveValue(contact.fullname);
@@ -162,19 +161,22 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
     await submit.click();
     const submitted = await response;
     const body = submitted.request().postDataJSON();
-    assert.deepEqual([body.source, body.serviceId, body.staffId, body.datetime, body.contact, body.consent], ['lp', serviceId, 0, datetime, contact, true]);
+    assert.deepEqual([body.source, body.serviceIds, body.staffId, body.datetime, body.contact, body.consent], ['lp', [serviceId], 0, datetime, contact, true]);
     assert.deepEqual(body.details, marks ? details : undefined);
     assert.equal(body.condition, marks ? condition : undefined);
-    assert.deepEqual(lookups.slice(0, 2).map((url) => [url.pathname, url.searchParams.get('staffId'), url.searchParams.get('serviceId')]), [
-      ['/api/booking/dates', '0', String(serviceId)], ['/api/booking/times', '0', String(serviceId)],
-    ]);
+    assert.ok(lookups.some((url) => url.pathname === '/api/booking/staff' && url.searchParams.get('serviceIds') === String(serviceId)));
+    assert.deepEqual(lookups.filter((url) => !url.pathname.endsWith('/staff')).slice(0, 2)
+      .map((url) => [url.pathname, url.searchParams.get('staffId'), url.searchParams.get('serviceIds')]), [
+        ['/api/booking/dates', '0', String(serviceId)], ['/api/booking/times', '0', String(serviceId)],
+      ]);
     if (result === 'created') {
       assert.equal(submitted.status(), 201);
       await expect(form.getByRole('heading', { name: copy.lp.booking.confirmed })).toBeVisible();
       await expect(form.locator('.lp-thanks')).toBeFocused();
       await expect(form.locator('.lp-thanks__icon svg')).toBeVisible();
-      await expect(form.locator('.lp-thanks .sub')).toContainText('14:20');
-      await expect(form.locator('.lp-thanks .sub')).toContainText(serviceTitle);
+      const confirmation = (await submitted.json()).data;
+      await expect(form.locator('.lp-thanks .sub').first()).toContainText('14:20');
+      await expect(form.locator('.lp-thanks .sub').first()).toContainText(confirmation.services[0].title);
     } else if (result === 'invalid-phone') {
       assert.equal(submitted.status(), 422);
       await expect(phone).toBeFocused();
@@ -182,7 +184,7 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
       await expect(form.locator('.lp-thanks')).toHaveCount(0);
     } else {
       const feedback = result === 'conflict' ? 'slotTaken' : 'unknown';
-      await expect(form.getByRole('alert')).toHaveText(copy.home.form.feedback[feedback]);
+      await expect(form.locator('.server-err')).toHaveText(copy.home.form.feedback[feedback]);
       await expect(form.locator('.lp-thanks')).toHaveCount(0);
       if (result === 'conflict') {
         await expect(time).toHaveCount(0);
@@ -194,8 +196,12 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
       } else {
         await expect(submit).toBeDisabled();
         const chat = form.getByRole('link', { name: copy.lp.form.whatsapp });
-        assert.equal(new URL(await chat.getAttribute('href')).searchParams.get('text'),
-          `${copy.lp[variant].wa.message} ${config.versions[variant].waTag}`);
+        await expect(chat).toHaveAttribute('href', /^https:\/\/wa\.me\/\d+$/);
+        await page.evaluate(() => { window.open = (url) => { window.fixtureChat = url; return {}; }; });
+        await chat.click();
+        const chatText = new URL(await page.evaluate(() => window.fixtureChat)).searchParams.get('text');
+        assert.match(chatText, new RegExp(`\\[LP-${variant.toUpperCase()}\\]`));
+        assert.match(chatText, /14:20/);
         await expect(chat).toHaveAttribute('data-track', 'whatsapp');
       }
     }

@@ -1,4 +1,8 @@
+import { validConfirmation, validConfirmedServices } from '@/lib/booking/receipt';
+import type { BookingAttemptDetails } from '@/lib/booking/result';
 import type { BookingRecordData, BookingRecordErrorCode, BookingRecordRequest, BookingRecordResponse } from '@/lib/contracts/booking-record';
+import { equalBookingServices, normalizeBookingServices } from '@/lib/contracts/booking-services';
+import type { CatalogLocale } from '@/lib/contracts/catalog';
 
 export type CreatedBooking = Extract<BookingRecordData, { status: 'created' }>;
 type BookingError = Extract<BookingRecordResponse, { error: unknown }>['error'];
@@ -26,29 +30,23 @@ export function bookingRejectionNotice(code: BookingRecordErrorCode): RejectionN
   return notices[code] ?? 'unavailable';
 }
 
-function validStaff(staff: CreatedBooking['staff']) {
-  return staff === undefined || (staff && Number.isSafeInteger(staff.id) && staff.id > 0 &&
-    typeof staff.name === 'string' && staff.name.trim());
+type ExpectedReceipt = Pick<BookingAttemptDetails, 'serviceIds' | 'staffId' | 'datetime'>;
+
+function matchesReceipt(data: CreatedBooking, expected: ExpectedReceipt, legacy: boolean) {
+  if (!validConfirmation(data) || data.datetime !== expected.datetime ||
+    (data.staff && expected.staffId !== 0 && expected.staffId !== data.staff.id)) return false;
+  const ids = expected.serviceIds;
+  if (legacy) return data.serviceId === ids[0] && data.serviceIds === undefined;
+  return data.serviceId === undefined && equalBookingServices(ids, data.serviceIds) &&
+    validConfirmedServices(ids, data.services) &&
+    (ids.length === 1 || !!data.staff && (!data.parts || data.parts.every((part) => part.staff?.id === data.staff?.id)));
 }
 
-function validParts(data: CreatedBooking) {
-  if (data.parts === undefined) return true;
-  if (!Array.isArray(data.parts) || data.parts.length < 2 || data.parts[0]?.recordId !== data.recordId) return false;
-  const start = Date.parse(data.datetime);
-  return new Set(data.parts.map((part) => part?.recordId)).size === data.parts.length &&
-    Date.parse(data.parts[0].datetime) === start &&
-    data.parts.every((part) => part && Number.isSafeInteger(part.recordId) && part.recordId > 0 &&
-      typeof part.title === 'string' && part.title.trim() && typeof part.datetime === 'string' &&
-      Date.parse(part.datetime) >= start && validStaff(part.staff) &&
-      (part.durationSeconds === undefined || (Number.isSafeInteger(part.durationSeconds) &&
-        part.durationSeconds > 0 && Number.isFinite(new Date(Date.parse(part.datetime) + part.durationSeconds * 1000).getTime()))));
-}
-
-export async function sendBooking(input: BookingRecordRequest): Promise<Submission> {
+async function requestBooking(path: 'record' | 'record/status', input: object, expected: ExpectedReceipt, legacy = false): Promise<Submission> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 70_000);
+  const timeout = setTimeout(() => controller.abort(), path === 'record' ? 70_000 : 10_000);
   try {
-    const response = await fetch('/api/booking/record', {
+    const response = await fetch(`/api/booking/${path}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       mode: 'same-origin', cache: 'no-store', redirect: 'error',
       body: JSON.stringify(input), signal: controller.signal,
@@ -56,13 +54,9 @@ export async function sendBooking(input: BookingRecordRequest): Promise<Submissi
     const body = await response.json() as BookingRecordResponse;
     if ('data' in body) {
       const data = body.data;
-      if (response.status === 201 && data.status === 'created' &&
-        Number.isSafeInteger(data.recordId) && data.recordId > 0 &&
-        data.serviceId === input.serviceId && data.datetime === input.datetime &&
-        validStaff(data.staff) && (data.staff === undefined || input.staffId === 0 || input.staffId === data.staff.id) &&
-        validParts(data)) return { status: 'created', data };
+      if (response.status === 201 && data.status === 'created' && matchesReceipt(data, expected, legacy)) return { status: 'created', data };
       if (response.status === 202 && data.status === 'processing') return { status: 'processing' };
-    } else if ('error' in body) {
+    } else if ('error' in body && (path === 'record' || response.headers.get('X-Booking-Outcome') === 'stored')) {
       const { error } = body;
       if (definiteRejections[error.code] === response.status ||
         (error.code === 'INVALID_FIELDS' && [400, 422].includes(response.status))) return { status: 'rejected', error };
@@ -73,4 +67,16 @@ export async function sendBooking(input: BookingRecordRequest): Promise<Submissi
     clearTimeout(timeout);
   }
   return { status: 'unknown' };
+}
+
+export function sendBooking(input: BookingRecordRequest): Promise<Submission> {
+  const serviceIds = normalizeBookingServices(input.serviceId, input.serviceIds);
+  return serviceIds
+    ? requestBooking('record', input, { ...input, serviceIds }, input.serviceIds === undefined)
+    : Promise.resolve({ status: 'unknown' });
+}
+
+export function checkBooking(booking: BookingAttemptDetails, locale: CatalogLocale) {
+  const { idempotencyKey, recoveryKey } = booking;
+  return requestBooking('record/status', { idempotencyKey, recoveryKey, locale }, booking);
 }

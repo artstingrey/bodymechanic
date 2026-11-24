@@ -69,7 +69,7 @@ function normalizeCatalog(data: unknown, currency: string | null): CatalogServic
   return { services, categories };
 }
 
-const getCachedServices = cachePublicCatalog('book-services-v2', async (locationId: number, currency: string | null, locale: CatalogLocale, staffId?: number) => {
+async function loadServices(locationId: number, currency: string | null, locale: CatalogLocale, staffId?: number) {
   const data = await fetchBookServices(locationId, locale, staffId);
   try {
     return normalizeCatalog(data, currency);
@@ -77,7 +77,9 @@ const getCachedServices = cachePublicCatalog('book-services-v2', async (location
     console.warn('[altegio]', { operation: 'book_services', code: 'UPSTREAM_INVALID_RESPONSE' });
     throw error;
   }
-});
+}
+
+const getCachedServices = cachePublicCatalog('book-services-v2', loadServices);
 
 // Base duration is independent of locale. Cache only the service IDs and durations.
 const getCachedBusinessDurations = cachePublicCatalog('business-service-durations-v2', async (locationId: number) => {
@@ -96,11 +98,13 @@ const getCachedBusinessDurations = cachePublicCatalog('business-service-duration
   return durations;
 });
 
-export async function getCatalogServices(locale: CatalogLocale, { withBusinessDuration = true } = {}): Promise<CatalogServicesResponse> {
+export async function getCatalogServices(locale: CatalogLocale, { withBusinessDuration = true, fresh = false, staffId }: {
+  withBusinessDuration?: boolean; fresh?: boolean; staffId?: number;
+} = {}): Promise<CatalogServicesResponse> {
   const { locationId, currency, businessToken } = getAltegioConfig();
   const [catalog, durations] = await Promise.all([
-    getCachedServices(locationId, currency, locale),
-    businessToken && withBusinessDuration ? getCachedBusinessDurations(locationId).catch(() => null) : null,
+    (fresh ? loadServices : getCachedServices)(locationId, currency, locale, staffId),
+    staffId === undefined && businessToken && withBusinessDuration ? getCachedBusinessDurations(locationId).catch(() => null) : null,
   ]);
   const data = {
     categories: catalog.categories.map((category) => ({
@@ -110,7 +114,7 @@ export async function getCatalogServices(locale: CatalogLocale, { withBusinessDu
       ? catalog.services.map((service) => ({ ...service, durationMin: durations[service.id] ?? service.durationMin }))
       : catalog.services,
   };
-  return { data, meta: { source: 'altegio', locale } };
+  return { data, meta: { source: 'altegio', locale, ...(staffId === undefined ? {} : { staffId }) } };
 }
 
 export async function getCatalogStaffServices(locale: CatalogLocale, staffId: number) {

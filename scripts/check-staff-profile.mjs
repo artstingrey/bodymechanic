@@ -43,7 +43,7 @@ async function checkBookingFromProfile(page, origin, locale, name, copy) {
 
   await settings();
   await page.clock.setFixedTime(new Date(defaultNow));
-  // A direct visit with no draft follows the usual path with no service or individual specialist chosen.
+  // A direct visit starts with no services, then selects the only eligible specialist after the service is chosen.
   await page.goto(booking);
   await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
   await skip.click();
@@ -52,8 +52,7 @@ async function checkBookingFromProfile(page, origin, locale, name, copy) {
   await service(sports).check();
   await next.click();
   await expect(page).toHaveURL(`${booking}?step=3`);
-  await expect(staff(0)).toBeEnabled();
-  await expect(staff(0)).toBeChecked();
+  await expect(staff(preferred)).toBeChecked();
 
   const contact = { fullname: 'Fixture Visitor', phone: '+971501234567', email: 'fixture@example.test', consent: true };
   await page.evaluate(({ classic, contact }) => {
@@ -73,12 +72,14 @@ async function checkBookingFromProfile(page, origin, locale, name, copy) {
   assert.deepEqual((await saved()).contact, contact);
   await skip.click();
   await expect(service(classic)).toBeChecked();
+  await service(classic).uncheck();
   await service(other).check();
   await next.click();
   await expect(page.locator('.bk-main').getByRole('alert')).toHaveText(copy.home.form.feedback.staffUnavailable);
-  await expect(staff(91602)).toBeEnabled();
-  await expect(next).toBeDisabled();
+  await expect(staff(91602)).toBeChecked();
+  await expect(next).toBeEnabled();
   await back.click();
+  await service(other).uncheck();
   await service(sports).check();
   await next.click();
   await expect(page).toHaveURL(`${booking}?step=3`);
@@ -94,6 +95,7 @@ async function checkBookingFromProfile(page, origin, locale, name, copy) {
   await expect(page).toHaveURL(`${booking}?step=3`);
   await expect(page.locator('.bk-main').getByRole('alert')).toHaveText(copy.home.form.feedback.staffUnavailable);
   await back.click();
+  await service(other).uncheck();
   await service(sports).check();
   let release;
   const held = new Promise((resolve) => { release = resolve; });
@@ -104,7 +106,7 @@ async function checkBookingFromProfile(page, origin, locale, name, copy) {
     await next.click();
     await expect(page).toHaveURL(`${booking}?step=4`);
     const query = new URL((await requested).url()).searchParams;
-    assert.deepEqual(Object.fromEntries(query), { serviceId: String(sports), staffId: String(preferred), locale, date: '2026-11-15' });
+    assert.deepEqual(Object.fromEntries(query), { serviceIds: String(sports), staffId: String(preferred), locale, date: '2026-11-15' });
     await expect(next).toBeDisabled();
     assert.equal((await saved()).datetime, null);
   } finally {

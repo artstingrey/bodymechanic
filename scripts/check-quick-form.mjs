@@ -75,7 +75,7 @@ try {
       await page.goto(`${origin}/en/`, { waitUntil: 'commit' });
       await expect(page.locator('#hero-title')).toBeVisible();
       await expect(status).toHaveText(messages.en.home.form.availability.services.loading);
-      await expect(form.locator('select')).toHaveCount(4);
+      await expect(form.locator('select')).toHaveCount(3);
       await form.locator('#qf-name').fill('During catalog load');
       await fs.writeFile(release, '');
       await expect(form.locator('#qf-service:visible')).toBeEnabled();
@@ -92,7 +92,7 @@ try {
       await page.goto(`${origin}/en/`);
       const form = page.locator('.qform');
       await expect(form.locator('#qf-services-status:visible')).toHaveText(messages.en.home.form.availability.services.error);
-      await expect(form.locator('#qf-service:visible option')).toHaveCount(1);
+      await expect(form.locator('#qf-service-options input')).toHaveCount(0);
       await form.locator('#qf-email').fill('contact@example.test');
       await fs.writeFile(catalog, 'service-detail');
       await form.getByRole('button', { name: messages.en.home.form.retry }).click();
@@ -111,7 +111,7 @@ try {
       // Suspense can temporarily keep streamed content in a hidden container.
       await expect(page.locator('#qf-services-status:visible')).toHaveText(messages.ru.home.form.availability.services.empty);
       await expect(page.locator('#qf-service:visible')).toBeDisabled();
-      await expect(page.locator('#qf-service:visible option')).toHaveCount(1);
+      await expect(page.locator('#qf-service-options input')).toHaveCount(0);
     } finally {
       await page.close();
     }
@@ -132,6 +132,14 @@ try {
       });
       const form = page.locator('.qform');
       const service = form.locator('#qf-service:visible');
+      const options = form.locator('#qf-service-options');
+      const choice = (id) => options.locator(`input[value="${id}"]`);
+      const pickService = async (id) => {
+        await service.click();
+        for (const input of await options.locator('input:checked').all()) await input.uncheck();
+        await choice(id).check();
+        await service.press('Escape');
+      };
       const specialist = form.locator('#qf-staff:visible');
       const date = form.locator('#qf-date:visible');
       const time = form.locator('#qf-time:visible');
@@ -139,8 +147,8 @@ try {
       const retry = (resource) => form.locator(`button[aria-describedby="qf-${resource}-status"]`);
       try {
         await page.goto(`${origin}/${locale}/`);
-        await expect(service.locator('option[value="101"]')).toHaveCount(0);
-        await expect(service.locator('option[value="13982355"]')).toHaveText(
+        await expect(choice('101')).toHaveCount(0);
+        await expect(choice('13982355').locator('..')).toHaveText(
           locale === 'en' ? home.services.cards[13982355].title : 'Спортивный массаж из каталога',
         );
         await expect(specialist.locator('option[value="0"]')).toHaveText(copy.anyStaffOption);
@@ -156,7 +164,7 @@ try {
         await form.locator('textarea').fill('Fixture note');
         await form.locator('#qf-consent').check();
 
-        await service.selectOption('13982355');
+        await pickService('13982355');
         await expect(specialist.locator('option')).toHaveCount(3);
         await expect(date.locator('option')).toHaveCount(3);
         await date.selectOption(start);
@@ -188,26 +196,26 @@ try {
         await expect(time).toHaveValue(lateSlot);
         await expect(time.locator('option:checked')).toContainText('00:20');
 
-        const slowStaff = await deferResponse(page, 'staff', 'serviceId', '91201');
-        await service.selectOption('91201');
+        const slowStaff = await deferResponse(page, 'staff', 'serviceIds', '91201');
+        await pickService('91201');
         await slowStaff.wait();
         await expect(status('staff')).toHaveText(copy.availability.staff.loading);
         await expect(specialist).toHaveValue('0');
         await expect(date).toHaveValue('');
         await expect(time).toHaveValue('');
-        await service.selectOption('13982355');
+        await pickService('13982355');
         await expect(specialist.locator('option')).toHaveCount(3);
         await slowStaff.send();
         await expect(specialist.locator('option[value="91605"]')).toHaveCount(0);
-        await service.selectOption('91201');
-        await expect(specialist.locator('option[value="91605"]')).toHaveText('Taylor Example');
+        await pickService('91201');
+        await expect(specialist.locator('option:checked')).toHaveText('Taylor Example');
 
         await fs.writeFile(availability, 'empty');
-        await specialist.selectOption('91605');
+        await pickService('13982355');
         await expect(status('dates')).toHaveText(copy.availability.dates.empty);
         await expect(date).toBeDisabled();
         await fs.writeFile(availability, '503');
-        await specialist.selectOption('0');
+        await specialist.selectOption('91602');
         await expect(status('dates')).toHaveText(copy.availability.dates.error);
         await fs.writeFile(availability, 'success');
         await retry('dates').click();
@@ -226,7 +234,7 @@ try {
         await time.selectOption(lateSlot);
 
         await fs.writeFile(staff, '500');
-        await service.selectOption('91204');
+        await pickService('91204');
         await expect(status('staff')).toHaveText(copy.availability.staff.error);
         await fs.writeFile(staff, 'success');
         await retry('staff').click();

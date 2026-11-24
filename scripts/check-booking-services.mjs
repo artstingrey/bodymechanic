@@ -79,9 +79,9 @@ async function checkServiceEntry(page, origin, locale, messages) {
   await page.getByRole('button', { name: messages.body3d.panel.cta, exact: true }).click();
   await expect(page).toHaveURL(`${booking}?step=2`);
   await expect(checked).toHaveValue(String(sports));
-  const { serviceId, staffId, date, datetime, wantDate, wantTime, contact: restoredContact } = await draft();
-  assert.deepEqual({ serviceId, staffId, date, datetime, wantDate, wantTime, restoredContact }, {
-    serviceId: sports, staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null, restoredContact: contact,
+  const { serviceIds, staffId, date, datetime, wantDate, wantTime, contact: restoredContact } = await draft();
+  assert.deepEqual({ serviceIds, staffId, date, datetime, wantDate, wantTime, restoredContact }, {
+    serviceIds: [sports], staffId: 0, date: null, datetime: null, wantDate: null, wantTime: null, restoredContact: contact,
   });
 
   // The detail is still available, but the current booking catalog no longer contains the preset service.
@@ -97,7 +97,7 @@ async function checkServiceEntry(page, origin, locale, messages) {
   await expect(page.locator(`input[name="service"][value="${other}"]`)).toBeVisible();
   await expect(checked).toHaveCount(0);
   await expect(next).toBeDisabled();
-  await expect.poll(async () => (await draft()).serviceId).toBeNull();
+  await expect.poll(async () => (await draft()).serviceIds).toEqual([]);
   await page.locator(`input[name="service"][value="${other}"]`).check();
   await expect(next).toBeEnabled();
 }
@@ -109,7 +109,7 @@ async function checkStaff(page, booking, messages) {
   const service = (id) => page.locator(`input[name="service"][value="${id}"]`);
   const summary = page.locator('.bk-summary');
   const draft = () => page.evaluate(() => JSON.parse(sessionStorage.getItem('bm.bookingSteps')));
-  const staffUrl = (id) => (url) => url.pathname === '/api/booking/staff' && url.searchParams.get('serviceId') === String(id);
+  const staffUrl = (id) => (url) => url.pathname === '/api/booking/staff' && url.searchParams.get('serviceIds') === String(id);
   const slotPreset = '&date=2026-11-30&time=12:00';
 
   await page.goto(`${booking}?step=3&service=${sports}&staff=91602${slotPreset}&utm_source=fixture#st3`);
@@ -146,16 +146,16 @@ async function checkStaff(page, booking, messages) {
     await page.getByRole('button', { name: next }).click();
     await expect.poll(() => pending).toBe(true);
     await page.getByRole('button', { name: back }).click();
+    await service(sports).uncheck();
     await service(other).check();
     await page.getByRole('button', { name: next }).click();
     await expect(staff(91605)).toBeVisible();
-    await expect(any).toBeChecked();
+    await expect(staff(91605)).toBeChecked();
     const switched = await draft();
-    assert.equal(switched.staffId, 0);
+    assert.equal(switched.staffId, 91605);
     assert.equal(switched.date, null);
     assert.equal(switched.datetime, null);
     assert.equal(switched.wantTime, null);
-    await staff(91605).check();
     await expect(summary).toContainText('Taylor Example');
     release.resolve();
     await finished.promise;
@@ -172,10 +172,9 @@ async function checkStaff(page, booking, messages) {
   assert.equal((await draft()).staffId, 91602);
   await page.getByRole('button', { name: retry }).click();
   await expect(page.getByText(messages.booking.staff.empty, { exact: true })).toBeVisible();
-  await expect(any).toBeChecked();
-  await expect(summary).toContainText(messages.booking.staff.any);
+  await expect(any).toBeDisabled();
+  await expect(page.getByRole('button', { name: next })).toBeDisabled();
   assert.equal((await draft()).datetime, null);
-  assert.equal((await draft()).wantTime, null);
 
   await page.goto(`${booking}?step=3&service=91299&staff=91602&utm_source=fixture#st2`);
   await expect(page).toHaveURL(`${booking}?step=2&utm_source=fixture#st2`);
@@ -286,7 +285,7 @@ async function checkAvailability(page, booking, messages) {
   await expect(availableDays.last()).toHaveText('20');
 
   await page.goto(`${booking}?step=4&service=91204`);
-  await expect(page.getByText(time.noDates, { exact: true })).toBeVisible();
+  await expect(page.getByText(messages.booking.staff.empty, { exact: true })).toBeVisible();
 }
 
 async function checkContacts(page, booking, messages) {

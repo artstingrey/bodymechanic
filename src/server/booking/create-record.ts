@@ -2,14 +2,15 @@ import 'server-only';
 
 import { createTranslator } from 'next-intl';
 import { formatComment } from '@/lib/altegio/formatComment';
-import type { BookingRecordPart, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecordPart, ConfirmedBookingService, NormalizedBookingRecordRequest } from '@/lib/contracts/booking-record';
+import { validBookingId } from '@/lib/contracts/booking-services';
+import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { landingBookingChips } from '@/lib/lp/booking';
 import { altegioGet, altegioPost, bookingLanguages, isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
 import { fetchBookServices } from '../altegio/services';
-import { getCatalogServiceStaff } from '../catalog/staff';
+import { getCommonServiceStaff } from '../catalog/staff';
 import { dubaiBookingDate, getBookingTimes, parseBookingDatetime } from './availability';
-import { validId } from './record-request';
 import { unavailable, unknown, type RecordOutcome } from './record-result';
 
 const serviceMissing: RecordOutcome = { status: 404, code: 'SERVICE_NOT_FOUND' };
@@ -18,7 +19,7 @@ const slotTaken: RecordOutcome = { status: 409, code: 'SLOT_TAKEN' };
 const prepaymentRequired: RecordOutcome = { status: 422, code: 'PREPAYMENT_REQUIRED' };
 const correlationId = 1;
 
-async function appointmentComment(input: BookingRecordRequest) {
+async function appointmentComment(input: NormalizedBookingRecordRequest) {
   const { locale, age, condition } = input;
   if (input.source === '3d') {
     return formatComment({ source: '3d', age, gender: input.body3d.model, markers: input.body3d.markers, generalNote: input.body3d.generalNote });
@@ -74,6 +75,11 @@ function upstreamFailure(error: unknown, sending: boolean): RecordOutcome {
 
 type Receipt = { recordId: number; hash: string };
 type Appointment = { id: number; services: number[]; staff_id: number; datetime: string };
+type CheckedAppointment = { appointment: Appointment; durationSeconds?: number };
+
+function serviceTitle(value: unknown) {
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, 300) || undefined : undefined;
+}
 
 function parseReceipts(payload: unknown, composite: boolean): Receipt[] {
   if (!isRecord(payload) || payload.success !== true || !Array.isArray(payload.data) ||
@@ -82,7 +88,7 @@ function parseReceipts(payload: unknown, composite: boolean): Receipt[] {
   const result = new Map<number, Receipt>();
   for (const record of payload.data as unknown[]) {
     // Altegio assigns its own response IDs to the parts of a composite service.
-    if (!isRecord(record) || (composite ? !validId(record.id) : record.id !== correlationId) || !validId(record.record_id) ||
+    if (!isRecord(record) || (composite ? !validBookingId(record.id) : record.id !== correlationId) || !validBookingId(record.record_id) ||
       typeof record.record_hash !== 'string' || !/^[a-z\d_-]{1,128}$/i.test(record.record_hash) ||
       result.has(record.record_id)) return [];
     result.set(record.record_id, { recordId: record.record_id, hash: record.record_hash });
@@ -90,7 +96,7 @@ function parseReceipts(payload: unknown, composite: boolean): Receipt[] {
   return [...result.values()];
 }
 
-async function readCreatedRecord(locationId: number, locale: BookingRecordRequest['locale'], { recordId, hash }: Receipt) {
+async function readCreatedRecord(locationId: number, locale: CatalogLocale, { recordId, hash }: Receipt) {
   try {
     const record = await altegioGet('read_booking_record',
       `book_record/${locationId}/${recordId}/${encodeURIComponent(hash)}`, bookingLanguages[locale], { allowBareRecord: true });
@@ -101,47 +107,79 @@ async function readCreatedRecord(locationId: number, locale: BookingRecordReques
     const instant = parseBookingDatetime(datetime);
     if (!instant) return null;
     const member = record.staff;
-    const staff = isRecord(member) && validId(member.id) && typeof member.name === 'string' &&
+    const staff = isRecord(member) && validBookingId(member.id) && typeof member.name === 'string' &&
       member.name.trim() && member.name.length <= 200 ? { id: member.id, name: member.name.trim() } : undefined;
     return {
       recordId, datetime, instant: instant.getTime(), staff, services: record.services as unknown[],
-      durationSeconds: validId(record.length) && record.length <= 2_147_483_647 ? record.length : undefined,
+      durationSeconds: validBookingId(record.length) && record.length <= 2_147_483_647 ? record.length : undefined,
     };
   } catch {
     return null;
   }
 }
 
-async function confirmCreation(locationId: number, input: BookingRecordRequest, instant: Date, receipts: Receipt[], composite: boolean): Promise<RecordOutcome> {
-  const base = { status: 'created' as const, serviceId: input.serviceId, datetime: input.datetime };
+async function confirmCreation(
+  locationId: number, input: NormalizedBookingRecordRequest, instant: Date, receipts: Receipt[], composite: boolean,
+  titles: ReadonlyMap<number, string>, slotDuration?: number,
+): Promise<RecordOutcome> {
+  const { serviceIds, staffId } = input;
+  const base = { status: 'created' as const, serviceIds, datetime: input.datetime };
   const details = await Promise.all(receipts.map((receipt) => readCreatedRecord(locationId, input.locale, receipt)));
-  if (receipts.length === 1) {
-    const record = details[0];
-    const matchesSelection = record?.instant === instant.getTime() &&
-      record.services.some((service) => isRecord(service) && service.id === input.serviceId);
-    const staff = matchesSelection && (input.staffId === 0 || record.staff?.id === input.staffId) ? record.staff : undefined;
-    // A single component cannot confirm that a split package was booked.
-    if (composite && (!matchesSelection || (input.staffId !== 0 && !staff))) return unknown;
-    return { status: 201, data: { ...base, recordId: receipts[0].recordId, ...(staff ? { staff } : {}) } };
+  const records = details.filter((record) => record !== null).sort((a, b) => a.instant - b.instant);
+  const lines = records.flatMap(({ services }) => services.filter(isRecord));
+  const services: ConfirmedBookingService[] = [];
+  for (const id of serviceIds) {
+    const line = lines.find((item) => item.id === id);
+    const title = serviceTitle(line?.title) ?? titles.get(id);
+    if (!title) return unknown;
+    services.push({ id, title });
+  }
+  if (serviceIds.length === 1 && !composite) {
+    // The receipt identifies the only requested appointment even when detail lookup is unavailable.
+    const record = records[0];
+    if (record && (record.instant !== instant.getTime() || record.services.length !== 1 || lines[0]?.id !== serviceIds[0] ||
+      (lines[0].amount !== undefined && lines[0].amount !== 1) ||
+      (staffId !== 0 && record.staff && record.staff.id !== staffId))) return unknown;
+    return { status: 201, data: { ...base, services, recordId: receipts[0].recordId, staff: record?.staff,
+      durationSeconds: record?.durationSeconds ?? slotDuration } };
   }
 
-  const records = details.filter((record) => record !== null).sort((a, b) => a.instant - b.instant);
   if (records.length !== receipts.length || records[0].instant !== instant.getTime()) return unknown;
-  const staff = input.staffId === 0 ? records[0].staff : records.find((record) => record.staff?.id === input.staffId)?.staff;
-  if (input.staffId !== 0 && !staff) return unknown;
+  const staff = staffId === 0 ? records[0].staff : records.find((record) => record.staff?.id === staffId)?.staff;
+  if (staffId !== 0 && !staff) return unknown;
+
+  const confirmedIds = records.flatMap(({ services }) => services.map((service) => isRecord(service) ? service.id : undefined));
+  if (serviceIds.length > 1) {
+    // Online Booking does not describe how to associate an expanded component with its selected package ID.
+    const remaining = new Set<unknown>(serviceIds);
+    if (!staff || records.some((record) => record.staff?.id !== staff.id) ||
+      lines.some(({ amount }) => amount !== undefined && amount !== 1) ||
+      !confirmedIds.every((id) => remaining.delete(id)) || remaining.size) return unknown;
+  } else if (records.length === 1 && !confirmedIds.includes(serviceIds[0])) {
+    // A single component cannot confirm that a split package was booked.
+    return unknown;
+  }
+
+  const endTimes = records.flatMap(({ instant, durationSeconds }) =>
+    durationSeconds === undefined ? [] : [instant + durationSeconds * 1000]);
+  const durationSeconds = endTimes.length === records.length ? (Math.max(...endTimes) - instant.getTime()) / 1000 : slotDuration;
 
   const parts: BookingRecordPart[] = [];
-  for (const record of records) {
-    const titles = record.services.flatMap((service) => isRecord(service) && validId(service.id) &&
-      typeof service.title === 'string' && service.title.trim() && service.title.length <= 300 ? [service.title.trim()] : []);
-    if (!titles.length || titles.length !== record.services.length) return unknown;
-    const { recordId, datetime, durationSeconds, staff } = record;
-    parts.push({ recordId, datetime, title: titles.join(' + '), durationSeconds, staff });
+  if (records.length > 1) {
+    for (const record of records) {
+      const titles = record.services.flatMap((service) => isRecord(service) && validBookingId(service.id) &&
+        typeof service.title === 'string' && service.title.trim() && service.title.length <= 300 ? [service.title.trim()] : []);
+      if (!titles.length || titles.length !== record.services.length) return unknown;
+      const { recordId, datetime, durationSeconds, staff } = record;
+      parts.push({ recordId, datetime, title: titles.join(' + '), durationSeconds, staff });
+    }
   }
-  return { status: 201, data: { ...base, recordId: parts[0].recordId, parts, ...(staff ? { staff } : {}) } };
+  return { status: 201, data: { ...base, services, recordId: records[0].recordId, staff,
+    ...(parts.length ? { parts } : {}), ...(validBookingId(durationSeconds) ? { durationSeconds } : {}),
+  } };
 }
 
-async function checkAppointment(locationId: number, language: string, serviceId: number, appointment: Appointment) {
+async function checkAppointment(locationId: number, language: string, appointment: Appointment) {
   const check = await altegioPost('book_check', locationId, language, { appointments: [appointment] });
   const body = isRecord(check.payload) ? check.payload : null;
   const accepted = check.empty || (body?.success === true && (!('data' in body) || body.data === null));
@@ -149,7 +187,7 @@ async function checkAppointment(locationId: number, language: string, serviceId:
 
   const data = body?.data;
   console.warn('[booking] preflight rejected', {
-    stage: 'book_check', serviceId, anyStaff: appointment.staff_id === 0, httpStatus: check.status, empty: check.empty,
+    stage: 'book_check', serviceIds: appointment.services, anyStaff: appointment.staff_id === 0, httpStatus: check.status, empty: check.empty,
     success: typeof body?.success === 'boolean' ? body.success : undefined,
     dataType: Array.isArray(data) ? 'array' : data === null ? 'null' : typeof data,
     errorCodes: upstreamErrorCodes(check.payload).filter((code) => /^\d{3,5}$/.test(code)),
@@ -157,24 +195,25 @@ async function checkAppointment(locationId: number, language: string, serviceId:
   return { notFound: check.status === 404, outcome: check.status === 201 ? unavailable : rejected(check.status, check.payload, false) };
 }
 
-async function findAvailableAppointment(locationId: number, input: BookingRecordRequest, date: string, appointment: Appointment):
-  Promise<{ appointment: Appointment } | { outcome: RecordOutcome }> {
+async function findAvailableAppointment(
+  locationId: number, locale: CatalogLocale, date: string, appointment: Appointment, candidates: number[],
+):
+  Promise<CheckedAppointment | { outcome: RecordOutcome }> {
   // Leave time for creation and reading the receipts before the form's request timeout.
   const deadline = Date.now() + 15_000;
   const timeout: RecordOutcome = { status: 504, code: 'UPSTREAM_TIMEOUT' };
-  const { locale, serviceId, datetime } = input;
-  const staff = await getCatalogServiceStaff(locale, serviceId);
-  let outcome = staff.length ? slotTaken : staffMissing;
-  for (const { id } of staff) {
+  let outcome = candidates.length ? slotTaken : staffMissing;
+  for (const id of candidates) {
     if (Date.now() >= deadline) return { outcome: timeout };
-    const times = await getBookingTimes(locale, serviceId, id, date);
-    if (!times.some((slot) => slot.datetime === datetime)) continue;
+    const times = await getBookingTimes(locale, appointment.services, id, date);
+    const slot = times.find(({ datetime }) => datetime === appointment.datetime);
+    if (!slot) continue;
     if (Date.now() >= deadline) return { outcome: timeout };
 
     const candidate = { ...appointment, staff_id: id };
-    const failure = await checkAppointment(locationId, bookingLanguages[locale], serviceId, candidate);
+    const failure = await checkAppointment(locationId, bookingLanguages[locale], candidate);
     if (Date.now() >= deadline) return { outcome: timeout };
-    if (!failure) return { appointment: candidate };
+    if (!failure) return { appointment: candidate, durationSeconds: slot.durationSeconds };
     if (failure.notFound || failure.outcome === staffMissing) {
       outcome = staffMissing;
     } else if (failure.outcome !== slotTaken) {
@@ -184,47 +223,65 @@ async function findAvailableAppointment(locationId: number, input: BookingRecord
   return { outcome };
 }
 
-export async function createBookingRecord(locationId: number, input: BookingRecordRequest, instant: Date): Promise<RecordOutcome> {
-  const { locale, serviceId, staffId, datetime, contact } = input;
+export async function createBookingRecord(locationId: number, input: NormalizedBookingRecordRequest, instant: Date): Promise<RecordOutcome> {
+  const { locale, serviceIds, staffId, datetime, contact } = input;
   const language = bookingLanguages[locale];
-  let appointment = { id: correlationId, services: [serviceId], staff_id: staffId, datetime };
+  let checked: CheckedAppointment = { appointment: { id: correlationId, services: serviceIds, staff_id: staffId, datetime } };
   let sending = false;
   try {
     if (instant.getTime() <= Date.now()) return slotTaken;
     const catalog = await fetchBookServices(locationId, locale);
     if (!isRecord(catalog) || !Array.isArray(catalog.services)) {
-      console.warn('[booking] preflight rejected', { stage: 'book_services', serviceId, reason: 'invalid_catalog' });
+      console.warn('[booking] preflight rejected', { stage: 'book_services', reason: 'invalid_catalog' });
       return unavailable;
     }
-    const service = (catalog.services as unknown[]).find((item) => isRecord(item) && item.id === serviceId);
-    if (!isRecord(service)) return serviceMissing;
-    if (service.prepaid === 'required') return prepaymentRequired;
-    if (service.prepaid !== 'forbidden' && service.prepaid !== 'allowed') {
-      const prepaid = service.prepaid;
-      console.warn('[booking] preflight rejected', {
-        stage: 'book_services', serviceId, reason: 'unknown_prepayment',
-        prepaid: typeof prepaid === 'string' && /^[a-z_-]{0,32}$/i.test(prepaid) ? prepaid : undefined,
-        prepaidType: prepaid === null ? 'null' : typeof prepaid,
-      });
-      return unavailable;
+    const byId = new Map(catalog.services.filter(isRecord).map((item) => [item.id, item]));
+    const titles = new Map<number, string>();
+    let composite = false;
+    for (const serviceId of serviceIds) {
+      const service = byId.get(serviceId);
+      if (!service) return serviceMissing;
+      if (service.prepaid === 'required') return prepaymentRequired;
+      if (service.prepaid !== 'forbidden' && service.prepaid !== 'allowed') {
+        const prepaid = service.prepaid;
+        console.warn('[booking] preflight rejected', {
+          stage: 'book_services', serviceId, reason: 'unknown_prepayment',
+          prepaid: typeof prepaid === 'string' && /^[a-z_-]{0,32}$/i.test(prepaid) ? prepaid : undefined,
+          prepaidType: prepaid === null ? 'null' : typeof prepaid,
+        });
+        return unavailable;
+      }
+      const title = serviceTitle(service.title);
+      if (title) titles.set(serviceId, title);
+      composite ||= service.is_composite === true;
     }
 
-    if (staffId !== 0 && !(await getCatalogServiceStaff(locale, serviceId)).some(({ id }) => id === staffId)) return staffMissing;
     const date = dubaiBookingDate(instant);
-    const times = await getBookingTimes(locale, serviceId, staffId, date);
-    if (!times.some((slot) => slot.datetime === datetime)) return slotTaken;
-
     const comment = await appointmentComment(input);
-    const composite = service.is_composite === true;
-    const failure = await checkAppointment(locationId, language, serviceId, appointment);
-    if (failure) {
-      if (!composite || staffId !== 0 || !failure.notFound) return failure.outcome;
-      const fallback = await findAvailableAppointment(locationId, input, date, appointment);
-      if ('outcome' in fallback) return fallback.outcome;
-      appointment = fallback.appointment;
+    if (staffId === 0 && serviceIds.length > 1) {
+      const staff = await getCommonServiceStaff(locale, serviceIds);
+      const available = await findAvailableAppointment(locationId, locale, date, checked.appointment, staff.map(({ id }) => id));
+      if ('outcome' in available) return available.outcome;
+      checked = available;
+    } else {
+      if (staffId !== 0 && !(await getCommonServiceStaff(locale, serviceIds)).some(({ id }) => id === staffId)) return staffMissing;
+      const times = await getBookingTimes(locale, serviceIds, staffId, date);
+      const slot = times.find((candidate) => candidate.datetime === datetime);
+      if (!slot) return slotTaken;
+      checked.durationSeconds = slot.durationSeconds;
+
+      const failure = await checkAppointment(locationId, language, checked.appointment);
+      if (failure) {
+        if (!composite || staffId !== 0 || !failure.notFound) return failure.outcome;
+        const staff = await getCommonServiceStaff(locale, serviceIds);
+        const fallback = await findAvailableAppointment(locationId, locale, date, checked.appointment, staff.map(({ id }) => id));
+        if ('outcome' in fallback) return fallback.outcome;
+        checked = fallback;
+      }
     }
 
     sending = true;
+    const { appointment, durationSeconds } = checked;
     const result = await altegioPost('book_record', locationId, language, {
       ...contact, appointments: [appointment], ...(comment ? { comment } : {}),
     });
@@ -236,8 +293,7 @@ export async function createBookingRecord(locationId: number, input: BookingReco
       anyStaff: appointment.staff_id === 0,
       errorCodes: upstreamErrorCodes(result.payload).filter((code) => /^\d{3,5}$/.test(code)),
       empty: result.empty,
-      composite: service.is_composite === true,
-      compositeType: typeof service.is_composite,
+      composite,
       success: typeof response?.success === 'boolean' ? response.success : typeof response?.success,
       responseType: Array.isArray(result.payload) ? 'array' : result.payload === null ? 'null' : typeof result.payload,
       responseFields: response ? Object.keys(response) : [],
@@ -248,7 +304,7 @@ export async function createBookingRecord(locationId: number, input: BookingReco
           requestIdMatches: item.id === correlationId,
           idType: typeof item.id,
           recordIdType: typeof item.record_id,
-          recordIdValid: validId(item.record_id),
+          recordIdValid: validBookingId(item.record_id),
           recordHashValid: typeof item.record_hash === 'string' && /^[a-z\d_-]{1,128}$/i.test(item.record_hash),
         } : { type: typeof item }),
       } : { type: responseData === null ? 'null' : typeof responseData, fields: isRecord(responseData) ? Object.keys(responseData) : undefined },
@@ -256,7 +312,7 @@ export async function createBookingRecord(locationId: number, input: BookingReco
     if (result.status !== 201) return rejected(result.status, result.payload, sending);
     const receipts = parseReceipts(result.payload, composite);
     if (!receipts.length) return unknown;
-    return await confirmCreation(locationId, { ...input, staffId: appointment.staff_id }, instant, receipts, composite);
+    return await confirmCreation(locationId, { ...input, staffId: appointment.staff_id }, instant, receipts, composite, titles, durationSeconds);
   } catch (error) {
     return upstreamFailure(error, sending);
   }

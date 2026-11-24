@@ -13,7 +13,7 @@ import { zoneLabel } from '@/lib/body3d/zones';
 import { PrefilledLink } from '@/components/ui/PrefilledLink';
 import { BookingLink } from '@/components/booking/BookingLink';
 import { ErrorBox as BookingErrorBox, Loading } from '@/components/booking/ui';
-import { useAsync } from '@/components/booking/useBookingFlow';
+import { useAsync } from '@/components/booking/useAsync';
 import { track } from '@/lib/analytics/track';
 import { PhoneField, TextField } from '@/components/ui/Field';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';

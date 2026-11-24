@@ -1,16 +1,20 @@
 'use client';
 
-import { useContext, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/Field';
 import { dubaiToday } from '@/lib/api/dubai';
+import { catalogServiceDuration, formatCatalogServiceTotal } from '@/lib/catalog-service-price';
 import type { CatalogLocale, CatalogService } from '@/lib/contracts/catalog';
+import { updateBookingServices } from '@/lib/contracts/booking-services';
+import { QuickServicePicker } from './QuickServicePicker';
 import { QuickFormContext, type AvailabilityConflict } from './quick-form-context';
+import { getBookingCatalog } from './service-catalog';
+import { useAsync } from './useAsync';
 import { bookingUrl, useBookingOptions, type BookingOptionsStatus as Status } from './useBookingOptions';
 
-type Service = Pick<CatalogService, 'id' | 'title'>;
 function OptionStatus({ id, status, copy, retry, retryLabel, pending }: {
   id: string;
   status: Status;
@@ -23,7 +27,7 @@ function OptionStatus({ id, status, copy, retry, retryLabel, pending }: {
     ? copy[pending ? 'loading' : status] : undefined;
   return (
     <>
-      <p id={id} className="hint qform__option-status" role="status">{message}</p>
+      <p id={id} className="hint qform__option-status" tabIndex={-1} role="status">{message}</p>
       {status === 'error' ? (
         <Button variant="secondary" size="sm" aria-describedby={id} aria-disabled={pending || undefined} onClick={retry}>{retryLabel}</Button>
       ) : null}
@@ -33,7 +37,7 @@ function OptionStatus({ id, status, copy, retry, retryLabel, pending }: {
 
 export function QuickBookingFields({ locale, services, loading = false }: {
   locale: CatalogLocale;
-  services: Service[] | null;
+  services: CatalogService[] | null;
   loading?: boolean;
 }) {
   const t = useTranslations();
@@ -41,16 +45,56 @@ export function QuickBookingFields({ locale, services, loading = false }: {
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const restoreFocus = useRef(false);
-  const [service, setService] = useState('');
-  const [staffId, setStaffId] = useState('0');
+  const focusWindow = useRef(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [removed, setRemoved] = useState<number[]>([]);
+  const [pickedStaffId, setPickedStaffId] = useState(0);
   const [date, setDate] = useState('');
   const [datetime, setDatetime] = useState('');
-  const serviceId = services?.some(({ id }) => String(id) === service) ? service : '';
-  const staff = useBookingOptions('staff', serviceId ? bookingUrl('staff', { serviceId, locale }) : null);
-  const dates = useBookingOptions('dates', serviceId ? bookingUrl('dates', { serviceId, staffId, locale }) : null);
-  const times = useBookingOptions('times', serviceId && dates.items.includes(date)
-    ? bookingUrl('times', { serviceId, staffId, date, locale }) : null);
-  const serviceStatus: Status = loading ? 'loading' : services === null ? 'error' : services.length ? 'ready' : 'empty';
+  const catalog = services?.filter(({ id }) => !removed.includes(id)) ?? [];
+  const serviceStatus: Status = loading ? 'loading' : services === null ? 'error' : catalog.length ? 'ready' : 'empty';
+  const serviceIds = selected.filter((id) => catalog.some((item) => item.id === id));
+  const selection = { serviceIds, locale };
+  const validSet = serviceStatus === 'ready' && serviceIds.length > 0 && serviceIds.length === selected.length;
+  const staff = useBookingOptions('staff', validSet ? bookingUrl('staff', selection) : null);
+  const staffId = staff.status === 'ready' && staff.items.length === 1 ? staff.items[0].id : pickedStaffId;
+  const staffValid = staff.status === 'ready' && (staffId === 0 || staff.items.some(({ id }) => id === staffId));
+  const dates = useBookingOptions('dates', staffValid && staffId === pickedStaffId
+    ? bookingUrl('dates', { ...selection, staffId }) : null);
+  const times = useBookingOptions('times', dates.items.includes(date)
+    ? bookingUrl('times', { ...selection, staffId, date }) : null);
+  const staffCatalog = useAsync(staffValid && staffId > 0, (signal) => getBookingCatalog(locale, signal, staffId).catch(() => null),
+    ['quick-staff-catalog', locale, staffId], true);
+  const staffDetails = staffCatalog.status === 'ready' ? new Map(staffCatalog.data?.services.map((item) => [item.id, item])) : new Map<number, CatalogService>();
+  const selectedServices = catalog.filter(({ id }) => serviceIds.includes(id)).map((item) => staffDetails.get(item.id) ?? item);
+  const selectedSlot = times.items.find((slot) => slot.datetime === datetime);
+  const price = formatCatalogServiceTotal(selectedServices, locale, {
+    unknown: () => t('home.services.priceUnknown'),
+    from: (price) => t('home.services.priceFrom', { price }),
+  });
+  const estimated = staffId > 0 && serviceIds.some((id) => !staffDetails.has(id)) && price !== t('home.services.priceUnknown');
+  const duration = catalogServiceDuration(selectedServices, selectedSlot?.durationSeconds);
+  const resetDate = useCallback(() => { setDate(''); setDatetime(''); }, []);
+  const changeStaff = useCallback((id: number) => { setPickedStaffId(id); resetDate(); }, [resetDate]);
+  const removeServices = useCallback((ids: number[]) => {
+    setRemoved((current) => [...new Set([...current, ...ids])]);
+    setSelected((current) => current.filter((id) => !ids.includes(id)));
+    changeStaff(0);
+  }, [changeStaff]);
+  const absentFromCatalog = serviceStatus === 'ready' || serviceStatus === 'empty'
+    ? selected.filter((id) => !serviceIds.includes(id)) : [];
+  const missing = [...absentFromCatalog, ...(staff.missing ?? []), ...(dates.missing ?? []), ...(times.missing ?? [])]
+    .filter((id) => selected.includes(id));
+  if (missing.length) removeServices(missing);
+  else if (staff.status === 'ready') {
+    if (staffId !== pickedStaffId) changeStaff(staffId);
+    else if (!staffValid) changeStaff(0);
+  }
+  const setAvailabilityBlocked = form?.setAvailabilityBlocked;
+  const availabilityBlocked = selected.length > 0 && !selectedSlot;
+  useEffect(() => {
+    setAvailabilityBlocked?.(availabilityBlocked);
+  }, [availabilityBlocked, setAvailabilityBlocked]);
   const registerRefresh = form?.registerRefresh;
   const { retry: retryStaff } = staff;
   const { retry: retryDates } = dates;
@@ -61,20 +105,27 @@ export function QuickBookingFields({ locale, services, loading = false }: {
     return registerRefresh((reason: AvailabilityConflict) => {
       setDatetime('');
       if (reason === 'SLOT_TAKEN') {
+        focusWindow.current = true;
+        retryDates();
         retryTimes();
         return;
       }
-      setDate('');
-      setStaffId('0');
+      changeStaff(0);
+      retryStaff();
       if (reason === 'SERVICE_NOT_FOUND') {
-        setService('');
         router.refresh();
       } else {
-        retryStaff();
         retryDates();
       }
     });
-  }, [registerRefresh, retryDates, retryStaff, retryTimes, router]);
+  }, [changeStaff, registerRefresh, retryDates, retryStaff, retryTimes, router]);
+
+  useEffect(() => {
+    if (!focusWindow.current || dates.status === 'loading' || times.status === 'loading' || dates.status === 'idle') return;
+    focusWindow.current = false;
+    const id = times.status === 'ready' ? 'qf-time' : dates.status === 'ready' ? 'qf-date' : 'qf-dates-status';
+    document.getElementById(id)?.focus();
+  }, [dates.status, times.status]);
 
   useEffect(() => {
     if (serviceStatus === 'ready' && restoreFocus.current) {
@@ -91,7 +142,6 @@ export function QuickBookingFields({ locale, services, loading = false }: {
       error: t(`home.form.availability.${resource}.error`),
     }} />
   );
-  const resetDate = () => { setDate(''); setDatetime(''); };
   const error = (id: string) => {
     const code = form?.errors[id];
     return code ? t(`forms.error.${code}`) : undefined;
@@ -107,12 +157,22 @@ export function QuickBookingFields({ locale, services, loading = false }: {
     <>
       <div className="row2">
         <div className="qform__choice">
-          <SelectField label={t('forms.field.service')} required name="service" id="qf-service" value={serviceId}
-            disabled={form?.locked || serviceStatus !== 'ready'} error={error('qf-service')} aria-describedby={description('qf-service', 'services')}
-            onChange={(event) => { setService(event.target.value); setStaffId('0'); resetDate(); form?.clearError('qf-service'); clearTime(); }}>
-            <option value="">{t('forms.field.servicePlaceholder')}</option>
-            {services?.map(({ id, title }) => <option key={id} value={id}>{title}</option>)}
-          </SelectField>
+          <QuickServicePicker label={t('forms.field.service')} placeholder={t('booking.service.heading')}
+            selected={serviceIds} services={catalog} disabled={!!form?.locked || serviceStatus !== 'ready'}
+            error={error('qf-service')} description={description('qf-service', 'services')}
+            onChange={(id, checked) => {
+              setSelected((current) => updateBookingServices(current, id, checked));
+              changeStaff(0);
+              form?.clearError('qf-service');
+              clearTime();
+            }} />
+          {removed.length > 0 && <p className="hint" role="alert">{t('booking.service.removed')}</p>}
+          {serviceIds.length > 0 && <p className="hint">{[
+            estimated ? t('booking.service.estimate', { price }) : price,
+            duration === null ? null : t(serviceIds.length > 1 && selectedSlot?.durationSeconds === undefined
+              ? 'booking.service.durationEstimate' : 'home.services.duration', { minutes: duration }),
+          ].filter(Boolean).join(' · ')}</p>}
+          <input type="hidden" name="servicePrice" value={price === t('home.services.priceUnknown') ? '' : price} />
           <OptionStatus id="qf-services-status" status={serviceStatus} retryLabel={retryLabel} pending={refreshing}
             copy={{ loading: t('home.form.availability.services.loading'), empty: t('home.form.availability.services.empty'),
               error: t('home.form.availability.services.error') }}
@@ -124,9 +184,9 @@ export function QuickBookingFields({ locale, services, loading = false }: {
         </div>
         <div className="qform__choice">
           <SelectField label={t('forms.field.staff')} id="qf-staff" name="staff" value={staffId}
-            disabled={form?.locked || staff.status !== 'ready'} aria-describedby="qf-staff-status"
-            onChange={(event) => { setStaffId(event.target.value); resetDate(); clearTime(); }}>
-            <option value="0">{t('home.form.anyStaffOption')}</option>
+            disabled={form?.locked || !staffValid} aria-describedby="qf-staff-status"
+            onChange={(event) => { changeStaff(Number(event.target.value)); clearTime(); }}>
+            {staff.items.length !== 1 && <option value="0">{t('home.form.anyStaffOption')}</option>}
             {staff.items.map(({ id, name }) => <option key={id} value={id}>{name}</option>)}
           </SelectField>
           {status('staff', staff)}

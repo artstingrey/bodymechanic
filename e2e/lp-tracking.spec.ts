@@ -35,14 +35,18 @@ async function stubBooking(page: Page, rejectFirst = false) {
     { id: serviceId, title: 'Fixture massage', description: null, categoryId: null, priceMin: null,
       priceMax: null, currency: null, durationMin: null, imageUrl: null },
   ] } } }));
-  await page.route('**/api/booking/dates?*', (r) => r.fulfill({ json: { data: { dates: [date] } } }));
-  await page.route('**/api/booking/times?*', (r) => r.fulfill({ json: { data: { times: [{ datetime, time: '14:20' }] } } }));
+  const serviceIds = [serviceId];
+  await page.route('**/api/booking/staff?*', (r) => r.fulfill({ json: { data: { serviceIds, staff: [{ id: 1, name: 'Fixture specialist' }] } } }));
+  await page.route('**/api/booking/dates?*', (r) => r.fulfill({ json: { data: { serviceIds, staffId: 0, dates: [date] } } }));
+  await page.route('**/api/booking/times?*', (r) => r.fulfill({ json: { data: { serviceIds, staffId: 0, date, times: [{ datetime, time: '14:20' }] } } }));
   await page.route('**/api/booking/record', (r) => {
     requests.push(r.request().postDataJSON() as BookingRecordRequest);
     if (rejectFirst && requests.length === 1) {
       return r.fulfill({ status: 503, json: { error: { code: 'BOOKING_UNAVAILABLE', message: 'Fixture unavailable' } } });
     }
-    return r.fulfill({ status: 201, json: { data: { status: 'created', recordId: 12345, serviceId, datetime } } });
+    return r.fulfill({ status: 201, json: { data: {
+      status: 'created', recordId: 12345, serviceIds, services: [{ id: serviceId, title: 'Fixture massage' }], datetime,
+    } } });
   });
   return requests;
 }
@@ -242,6 +246,9 @@ test.describe('LP tracking (lp-brief §5)', () => {
     const leads = await lpEvents(page, 'lp_lead');
     expect(leads).toHaveLength(1);
     expect(leads[0]).toMatchObject({ lp_version: 'b', lang: 'ru', placement: 'hero', event_id: requests[0].idempotencyKey });
+    expect(requests[0].recoveryKey).toMatch(/^[a-f0-9-]{36}$/i);
+    expect(requests[0].recoveryKey).not.toBe(requests[0].idempotencyKey);
+    expect(JSON.stringify(leads)).not.toContain(requests[0].recoveryKey);
   });
 
   test('a rejected booking keeps the details and emits no lp_lead until a successful retry', async ({ page }) => {

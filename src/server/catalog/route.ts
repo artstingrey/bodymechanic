@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { NextRequest } from 'next/server';
 import type { CatalogErrorCode, CatalogErrorResponse, CatalogLocale } from '@/lib/contracts/catalog';
+import { validBookingId } from '@/lib/contracts/booking-services';
 import { AltegioError } from '@/server/altegio/errors';
 
 const CACHE_CONTROL = { 'Cache-Control': 'no-store' };
@@ -15,17 +16,22 @@ function errorResponse(status: number, code: CatalogErrorCode, message: string, 
 
 export async function respondWithCatalog(
   request: NextRequest,
-  load: (locale: CatalogLocale) => Promise<unknown>,
+  load: (locale: CatalogLocale, staffId?: number) => Promise<unknown>,
   resource: 'service' | 'staff',
+  { allowStaffFilter = false } = {},
 ) {
   const params = request.nextUrl.searchParams;
   const locale = params.get('locale') ?? 'en';
-  if ((locale !== 'en' && locale !== 'ru') || params.size > (params.has('locale') ? 1 : 0)) {
+  const rawStaff = allowStaffFilter ? params.get('staffId') : null;
+  const staffId = rawStaff === null ? undefined : /^\d+$/.test(rawStaff) ? Number(rawStaff) : NaN;
+  const allowedCount = Number(params.has('locale')) + Number(rawStaff !== null);
+  if ((locale !== 'en' && locale !== 'ru') || params.size !== allowedCount ||
+    (staffId !== undefined && !validBookingId(staffId))) {
     return errorResponse(400, 'INVALID_QUERY', 'Use at most one locale parameter with the value ru or en.');
   }
 
   try {
-    const catalog = await load(locale);
+    const catalog = await load(locale, staffId);
     if (catalog === null) return errorResponse(404, 'SERVICE_NOT_FOUND', 'The public service was not found.');
     return Response.json(catalog, { headers: CACHE_CONTROL });
   } catch (error) {

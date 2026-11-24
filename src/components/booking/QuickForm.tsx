@@ -8,34 +8,38 @@ import { Checkbox } from '@/components/ui/Choice';
 import { PhoneField, TextAreaField, TextField } from '@/components/ui/Field';
 import { ErrorSummary } from '@/components/forms/ErrorSummary';
 import { track } from '@/lib/analytics/track';
+import { bookingDateFormat, bookingPartTime, receiptDuration, receiptTitle } from '@/lib/booking/receipt';
 import type { BookingRecordErrorCode, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import { normalizeBookingServices } from '@/lib/contracts/booking-services';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';
 import { collect, messageArgs, normalizePhone, requiredEmail, rules, type ErrorCode } from '@/lib/forms/validate';
 import { QuickFormContext, type AvailabilityConflict } from './quick-form-context';
-import { bookingRejectionNotice, sendBooking, type CreatedBooking } from './booking-submit';
+import { bookingRejectionNotice } from './booking-submit';
+import { useBookingAttempt, type BookingAttemptOutcome } from './useBookingAttempt';
 
 const subscribeToHydration = () => () => {};
 
-type Notice = ReturnType<typeof bookingRejectionNotice> | 'unknown' | 'processing';
+type Notice = ReturnType<typeof bookingRejectionNotice>;
 const conflict = (code: BookingRecordErrorCode): code is AvailabilityConflict =>
   code === 'SLOT_TAKEN' || code === 'STAFF_NOT_FOUND' || code === 'SERVICE_NOT_FOUND';
 
 export function QuickForm({ children, enabled, locale }: { children: ReactNode; enabled: boolean; locale: CatalogLocale }) {
   const t = useTranslations();
   const { errors, field, submit, attempt } = useFieldErrors();
-  const [busy, setBusy] = useState(false);
+  const { stored, busy, book, check, clear } = useBookingAttempt('form', locale);
+  const [availabilityBlocked, setAvailabilityBlocked] = useState(false);
   const [notice, setNotice] = useState<Notice>();
-  const [created, setCreated] = useState<{ data: CreatedBooking; serviceTitle: string }>();
-  const activeAttempt = useRef(false);
   const refresh = useRef<((reason: AvailabilityConflict) => void) | null>(null);
   const registerRefresh = useCallback((handler: (reason: AvailabilityConflict) => void) => {
     refresh.current = handler;
     return () => { if (refresh.current === handler) refresh.current = null; };
   }, []);
   const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
-  const uncertain = notice === 'unknown' || notice === 'processing';
-  const locked = busy || uncertain;
+  const pending = stored && stored.status !== 'created' ? stored : null;
+  const uncertain = pending && !busy ? pending.status : null;
+  const feedback = uncertain ?? notice;
+  const locked = busy || !!pending;
   const fieldText = (id: string) => errors[id] ? t(`forms.error.${errors[id]}`, messageArgs(errors[id])) : undefined;
   const bind = (id: string, rule: (el: HTMLInputElement) => ErrorCode | null) => ({
     id, disabled: locked, error: fieldText(id),
@@ -50,11 +54,11 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!enabled || !hydrated || activeAttempt.current || created) return;
+    if (!enabled || !hydrated || busy || stored) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const str = (name: string) => String(data.get(name) ?? '');
-    const serviceId = Number(str('service'));
+    const serviceIds = normalizeBookingServices(undefined, data.getAll('service').map(Number));
     const datetime = str('datetime');
     const date = str('date');
     const age = form.elements.namedItem('age') as HTMLInputElement;
@@ -64,10 +68,10 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
       ['qf-phone', rules.phone(str('phone'))],
       ['qf-email', requiredEmail(str('email'))],
       ['qf-age', rules.age(age.value, age.validity.badInput)],
-      ['qf-service', serviceId ? null : 'serviceRequired'],
-      [date ? 'qf-time' : 'qf-date', serviceId && !datetime ? 'datetimeRequired' : null],
+      ['qf-service', serviceIds ? null : 'serviceRequired'],
+      [date ? 'qf-time' : 'qf-date', serviceIds && !datetime ? 'datetimeRequired' : null],
       ['qf-consent', rules.filled(data.get('consent') === 'on', 'consentRequired')],
-    ]))) return;
+    ])) || !serviceIds || !datetime || availabilityBlocked) return;
 
     const idempotencyKey = globalThis.crypto?.randomUUID?.();
     if (!idempotencyKey) {
@@ -78,40 +82,32 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
     const email = str('email').trim();
     const condition = str('condition').trim();
     const input: BookingRecordRequest = {
-      serviceId, staffId, datetime, locale, consent: true, idempotencyKey,
+      serviceIds, staffId, datetime, locale, consent: true, idempotencyKey,
       contact: { fullname: str('name').trim(), phone: normalizePhone(str('phone')), email },
       ...(age.value ? { age: Number(age.value) } : {}),
       ...(condition ? { condition } : {}),
     };
-    const service = form.elements.namedItem('service') as HTMLSelectElement;
-    const serviceTitle = service.selectedOptions[0]?.label ?? '';
-    activeAttempt.current = true;
-    setBusy(true);
+    finishBooking(await book(input, { title: str('serviceTitle'), price: str('servicePrice') || undefined }));
+  }
 
-    const result = await sendBooking(input);
-    setBusy(false);
-    if (result.status === 'processing' || result.status === 'unknown') {
-      setNotice(result.status);
-      return;
-    }
+  function finishBooking(result: BookingAttemptOutcome) {
+    if (!result) return;
     if (result.status === 'created') {
-      setCreated({ data: result.data, serviceTitle });
-      track('booking_success', { service_id: result.data.serviceId, staff_id: result.data.staff?.id ?? staffId, currency: 'AED', source: 'form' });
+      track('booking_success', { service_id: result.data.services.length === 1 ? result.data.services[0].id : undefined,
+        staff_id: result.data.staff?.id ?? result.attempt.staffId, currency: 'AED', source: 'form' });
       return;
     }
     if (result.status === 'rejected') {
-      activeAttempt.current = false;
       const { code } = result.error;
       if (conflict(code)) refresh.current?.(code);
       setNotice(bookingRejectionNotice(code));
     }
   }
 
-  if (created) {
-    const { data, serviceTitle } = created;
-    const format = new Intl.DateTimeFormat(locale, {
-      timeZone: 'Asia/Dubai', dateStyle: 'long', timeStyle: 'short', hourCycle: 'h23',
-    });
+  if (stored?.status === 'created') {
+    const data = stored;
+    const format = bookingDateFormat(locale, 'long');
+    const minutes = receiptDuration(data);
     const dateTime = format.format(new Date(data.datetime));
     return (
       <div className="qform" role="status">
@@ -119,25 +115,24 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
         <dl className="qform__receipt">
           <dt>{data.parts ? t('booking.done.references') : t('booking.done.reference')}</dt>
           <dd>{data.parts ? data.parts.map(({ recordId }) => recordId).join(', ') : data.recordId}</dd>
-          <dt>{labels['qf-service']}</dt><dd>{serviceTitle}</dd>
+          <dt>{labels['qf-service']}</dt><dd>{receiptTitle(data)}</dd>
           <dt>{t('booking.done.date')}</dt><dd>{t('common.timeWithZone', { time: dateTime })}</dd>
           {data.staff && !data.parts ? <><dt>{t('booking.done.specialist')}</dt><dd>{data.staff.name}</dd></> : null}
+          {minutes !== undefined && <><dt>{t('booking.done.duration')}</dt><dd>{t('home.services.duration', { minutes })}</dd></>}
+          {data.price && <><dt>{t('booking.review.total')}</dt><dd>{t('booking.service.estimate', { price: data.price })}</dd></>}
           {data.parts?.map((part) => {
-            const start = new Date(part.datetime);
-            const time = part.durationSeconds
-              ? format.formatRange(start, new Date(start.getTime() + part.durationSeconds * 1000))
-              : format.format(start);
             return (
               <Fragment key={part.recordId}>
                 <dt>{part.title}</dt>
                 <dd>
-                  {t('common.timeWithZone', { time })}
+                  {t('common.timeWithZone', { time: bookingPartTime(part, format) })}
                   {part.staff ? <div>{part.staff.name}</div> : null}
                 </dd>
               </Fragment>
             );
           })}
         </dl>
+        <Button variant="text" type="button" onClick={clear}>{t('booking.draft.startOver')}</Button>
       </div>
     );
   }
@@ -154,7 +149,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
           {...bind('qf-email', (el) => requiredEmail(el.value))} />
         <TextField label={t('forms.field.age')} name="age" type="number" inputMode="numeric" min={1} max={120} {...bind('qf-age', (el) => rules.age(el.value, el.validity.badInput))} />
       </div>
-      <QuickFormContext.Provider value={{ locked, errors, clearError: (id) => field(id, null), registerRefresh }}>
+      <QuickFormContext.Provider value={{ locked, errors, clearError: (id) => field(id, null), registerRefresh, setAvailabilityBlocked }}>
         {children}
       </QuickFormContext.Provider>
       <TextAreaField label={t('forms.field.condition')} name="condition" disabled={locked} maxLength={1000} placeholder={t('forms.field.conditionPlaceholder')}
@@ -163,13 +158,16 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
         onChange={(event) => { if (event.target.checked) field('qf-consent', null); }}>{t.rich('forms.consent.privacy', { privacy: (c) => <Link href="/privacy">{c}</Link> })}</Checkbox>
       <p className="captcha cap" data-testid="captcha" role="status" hidden>{t('booking.review.captcha')}</p>
       <div className="acts">
-        <Button type="submit" disabled={!enabled || !hydrated || locked} loading={busy}
-          loadingLabel={t('home.form.submitting')} aria-describedby={!enabled || notice ? 'qf-submit-notice' : undefined}>{t('home.form.submit')}</Button>
+        <Button type="submit" disabled={!enabled || !hydrated || locked || availabilityBlocked} loading={busy}
+          loadingLabel={t('home.form.submitting')} aria-describedby={!enabled || feedback ? 'qf-submit-notice' : undefined}>{t('home.form.submit')}</Button>
         <ButtonLink href="/booking" variant="text">{t('home.form.showOn3d')}</ButtonLink>
       </div>
-      {notice ? (
+      {feedback ? (
         <div id="qf-submit-notice" role={uncertain ? 'status' : 'alert'}>
-          <p>{t(`home.form.feedback.${notice}`)}</p>
+          <p>{t(`home.form.feedback.${feedback}`)}</p>
+          {uncertain && pending?.attempt && (
+            <Button variant="text" type="button" disabled={busy} onClick={async () => finishBooking(await check())}>{t('booking.done.checkStatus')}</Button>
+          )}
           {notice === 'sms' || notice === 'prepayment' ?
             <ButtonLink href="/contacts" variant="text">{t('home.form.contactStudio')}</ButtonLink> : null}
         </div>

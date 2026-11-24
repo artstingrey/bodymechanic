@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createHmac, randomBytes } from 'node:crypto';
-import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { NormalizedBookingRecordRequest } from '@/lib/contracts/booking-record';
 import { processing, unavailable, unknown, type RecordOutcome } from './record-result';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -11,7 +11,9 @@ const MAX_ATTEMPTS = 10_000;
 const MAX_PROCESSING_TIME = 90_000;
 
 type Attempt = {
+  locationId: number;
   fingerprint: string;
+  recoveryHash?: string;
   phoneHash: string;
   ipHash: string;
   consentedAt: number;
@@ -19,14 +21,28 @@ type Attempt = {
 };
 
 // Process-local until the Redis store is implemented. Claiming an attempt does not yield to other requests.
-const attempts = new Map<string, Attempt>();
-const secret = randomBytes(32);
+const processState = globalThis as typeof globalThis & {
+  bodyMechanicBookingStore?: { attempts: Map<string, Attempt>; secret: Buffer };
+};
+const { attempts, secret } = processState.bodyMechanicBookingStore ??= { attempts: new Map(), secret: randomBytes(32) };
 
 function digest(scope: string, value: string) {
   return createHmac('sha256', secret).update(scope).update('\0').update(value).digest('hex');
 }
 
-export function claimRecord(locationId: number, ip: string, input: BookingRecordRequest):
+function resultOf(attempt: Attempt, now: number) {
+  return attempt.result ?? (now - attempt.consentedAt >= MAX_PROCESSING_TIME ? unknown : processing);
+}
+
+export function getRecordOutcome(locationId: number, idempotencyKey: string, recoveryKey: string): RecordOutcome {
+  const attempt = attempts.get(digest('key', idempotencyKey));
+  const now = Date.now();
+  if (!attempt || attempt.locationId !== locationId || now - attempt.consentedAt >= DAY ||
+    attempt.recoveryHash !== digest('recovery', recoveryKey)) return unknown;
+  return resultOf(attempt, now);
+}
+
+export function claimRecord(locationId: number, ip: string, input: NormalizedBookingRecordRequest):
   { outcome: RecordOutcome } | { finish: (result: RecordOutcome) => void } {
   const now = Date.now();
   const key = digest('key', input.idempotencyKey);
@@ -34,7 +50,7 @@ export function claimRecord(locationId: number, ip: string, input: BookingRecord
   const previous = attempts.get(key);
   if (previous && now - previous.consentedAt < DAY) {
     if (previous.fingerprint !== fingerprint) return { outcome: { status: 409, code: 'IDEMPOTENCY_CONFLICT' } };
-    return { outcome: previous.result ?? (now - previous.consentedAt >= MAX_PROCESSING_TIME ? unknown : processing) };
+    return { outcome: resultOf(previous, now) };
   }
 
   const ipHash = digest('ip', ip);
@@ -64,7 +80,8 @@ export function claimRecord(locationId: number, ip: string, input: BookingRecord
   }
   if (attempts.size >= MAX_ATTEMPTS) return { outcome: unavailable };
 
-  const attempt: Attempt = { fingerprint, ipHash, phoneHash, consentedAt: now };
+  const recoveryHash = input.recoveryKey ? digest('recovery', input.recoveryKey) : undefined;
+  const attempt: Attempt = { locationId, fingerprint, recoveryHash, ipHash, phoneHash, consentedAt: now };
   attempts.set(key, attempt);
   return { finish(result) { attempt.result = result; } };
 }

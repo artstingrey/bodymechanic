@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { isIP } from 'node:net';
-import type { BookingRecord3DDetails, BookingRecordField, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import { isBookingAttemptKey, type BookingRecord3DDetails, type BookingRecordField, type BookingRecordStatusRequest, type NormalizedBookingRecordRequest } from '@/lib/contracts/booking-record';
+import { normalizeBookingServices, validBookingId } from '@/lib/contracts/booking-services';
 import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, isMarkerIntensity, MARKER_NOTE_LIMIT, MAX_MARKERS } from '@/lib/body3d/booking-details';
 import { ZONE_KEYS } from '@/lib/body3d/zones';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
@@ -10,14 +11,22 @@ import { LANDING_BOOKING_STAFF, landingBookingChips } from '@/lib/lp/booking';
 import { landingPhoneError } from '@/lib/lp/phone';
 import { isRecord } from '../altegio/client';
 import { parseBookingDatetime } from './availability';
-import type { RecordOutcome } from './record-result';
+import { localBookingOrigin } from './local-origin';
+import { unavailable, type RecordOutcome } from './record-result';
 
 const MAX_FORM_BODY_BYTES = 8 * 1024;
 const MAX_3D_BODY_BYTES = 16 * 1024;
 const loopback = new Set(['localhost', '127.0.0.1', '[::1]']);
-const uuidV4 = /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i;
 
-export function requestSource(request: Request, expectedOrigin: string, localDevelopment: boolean) {
+export function authorizeRecordRequest(request: Request): { ip: string } | { error: RecordOutcome } {
+  const localOrigin = localBookingOrigin(request.headers.get('host'), new URL(request.url).protocol);
+  const origin = localOrigin ?? process.env.BOOKING_ORIGIN;
+  if (!origin) return { error: unavailable };
+  const ip = requestSource(request, origin, Boolean(localOrigin));
+  return ip ? { ip } : { error: { status: 403, code: 'INVALID_ORIGIN' } };
+}
+
+function requestSource(request: Request, expectedOrigin: string, localDevelopment: boolean) {
   const fetchSite = request.headers.get('sec-fetch-site');
   if (request.headers.get('origin') !== expectedOrigin ||
     (localDevelopment && fetchSite !== 'same-origin') ||
@@ -48,7 +57,11 @@ export function requestSource(request: Request, expectedOrigin: string, localDev
   return [high >> 8, high & 255, low >> 8, low & 255].join('.');
 }
 
-export type ParsedRequest = { data: BookingRecordRequest; instant: Date } | { error: RecordOutcome; locale?: CatalogLocale };
+export type ParsedRequest = {
+  data: NormalizedBookingRecordRequest;
+  instant: Date;
+  legacySelection: boolean;
+} | { error: RecordOutcome; locale?: CatalogLocale };
 
 async function readJson(request: Request): Promise<{ value: unknown } | { error: RecordOutcome }> {
   if (request.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') {
@@ -82,8 +95,14 @@ async function readJson(request: Request): Promise<{ value: unknown } | { error:
   }
 }
 
-export function validId(value: unknown, minimum = 1): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= minimum;
+export async function parseRecordStatusRequest(request: Request): Promise<{ data: BookingRecordStatusRequest } | { error: RecordOutcome }> {
+  const read = await readJson(request);
+  if ('error' in read) return read;
+  if (!isRecord(read.value)) return { error: { status: 400, code: 'INVALID_BODY' } };
+  const { idempotencyKey, recoveryKey, locale } = read.value;
+  if (!isBookingAttemptKey(idempotencyKey) || !isBookingAttemptKey(recoveryKey) || (locale !== 'ru' && locale !== 'en') ||
+    Object.keys(read.value).length !== 3) return { error: { status: 400, code: 'INVALID_FIELDS' } };
+  return { data: { idempotencyKey: idempotencyKey.toLowerCase(), recoveryKey: recoveryKey.toLowerCase(), locale } };
 }
 
 function boundedText(value: unknown, max: number, multiline = false) {
@@ -125,19 +144,24 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
   if ('error' in read) return read;
   if (!isRecord(read.value)) return { error: { status: 400, code: 'INVALID_BODY' } };
 
-  const { serviceId, staffId, datetime, locale, contact, consent, idempotencyKey, age, source } = read.value;
+  const { serviceId, serviceIds: rawServiceIds, staffId, datetime, locale, contact, consent, idempotencyKey, recoveryKey, age, source } = read.value;
+  const legacySelection = rawServiceIds === undefined;
+  const serviceIds = normalizeBookingServices(serviceId, rawServiceIds);
   const fields: BookingRecordField[] = [];
   const invalid = (): ParsedRequest => ({
     error: { status: 400, code: 'INVALID_FIELDS', fields }, locale: locale === 'ru' ? 'ru' : 'en',
   });
   const landing = source === 'lp';
-  if (!validId(serviceId)) fields.push('serviceId');
-  if (!validId(staffId, 0) || (landing && staffId !== LANDING_BOOKING_STAFF)) fields.push('staffId');
+  if (!serviceIds) fields.push(legacySelection ? 'serviceId' : 'serviceIds');
+  if (!validBookingId(staffId, 0) || (landing && staffId !== LANDING_BOOKING_STAFF)) fields.push('staffId');
   const instant = typeof datetime === 'string' && datetime.length <= 48 ? parseBookingDatetime(datetime) : null;
   if (!instant) fields.push('datetime');
   if (locale !== 'ru' && locale !== 'en') fields.push('locale');
   if (consent !== true) fields.push('consent');
-  if (typeof idempotencyKey !== 'string' || !uuidV4.test(idempotencyKey)) fields.push('idempotencyKey');
+  const key = isBookingAttemptKey(idempotencyKey) ? idempotencyKey.toLowerCase() : undefined;
+  const recovery = isBookingAttemptKey(recoveryKey) ? recoveryKey.toLowerCase() : undefined;
+  if (!key) fields.push('idempotencyKey');
+  if (recoveryKey !== undefined && (!recovery || recovery === key)) fields.push('recoveryKey');
   if (!isRecord(contact)) {
     fields.push('contact');
     return invalid();
@@ -162,17 +186,18 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
       fields.push('details');
     } else details = [...new Set<string>(raw)];
   }
-  if (fields.length || !instant) return invalid();
+  if (fields.length || !instant || !serviceIds || !key) return invalid();
 
   const base = {
-    serviceId: serviceId as number,
+    serviceIds,
     staffId: staffId as number,
     datetime: datetime as string,
     locale: locale as CatalogLocale,
     contact: { fullname, phone: normalizePhone(phone), email },
     ...(typeof age === 'number' ? { age } : {}),
     consent: true as const,
-    idempotencyKey: (idempotencyKey as string).toLowerCase(),
+    idempotencyKey: key,
+    ...(recovery ? { recoveryKey: recovery } : {}),
   };
   if (landing) {
     const rawUtm = read.value.utm;
@@ -180,10 +205,10 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
       const value = boundedText(rawUtm[key], 100);
       return value?.isWellFormed() ? [[key, value]] : [];
     })) : {};
-    return { instant, data: { ...base, source: 'lp', ...(details?.length ? { details } : {}), ...(condition ? { condition } : {}),
+    return { instant, legacySelection, data: { ...base, source: 'lp', ...(details?.length ? { details } : {}), ...(condition ? { condition } : {}),
       ...(Object.keys(utm).length ? { utm } : {}) } };
   }
-  return { instant, data: body3d
+  return { instant, legacySelection, data: body3d
     ? { ...base, source: '3d', body3d }
     : { ...base, ...(condition ? { condition } : {}) } };
 }
