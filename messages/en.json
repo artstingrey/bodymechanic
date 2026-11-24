@@ -395,6 +395,9 @@
       "nearest": "Next available: {slot}",
       "cta": "Book with this specialist",
       "viewProfile": "View profile",
+      "cards": {
+        "3069594": { "name": "Maksim" }
+      },
       "people": "TODO(content): specialists: names, titles, photos, ratings"
     },
     "reviews": {

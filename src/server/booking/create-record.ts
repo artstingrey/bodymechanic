@@ -9,7 +9,7 @@ import { landingBookingChips } from '@/lib/lp/booking';
 import { altegioGet, altegioPost, bookingLanguages, isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
 import { fetchBookServices } from '../altegio/services';
-import { getCommonServiceStaff } from '../catalog/staff';
+import { getCommonServiceStaff, localizeCatalogStaff } from '../catalog/staff';
 import { dubaiBookingDate, getBookingTimes, parseBookingDatetime } from './availability';
 import { unavailable, unknown, type RecordOutcome } from './record-result';
 
@@ -108,7 +108,8 @@ async function readCreatedRecord(locationId: number, locale: CatalogLocale, { re
     if (!instant) return null;
     const member = record.staff;
     const staff = isRecord(member) && validBookingId(member.id) && typeof member.name === 'string' &&
-      member.name.trim() && member.name.length <= 200 ? { id: member.id, name: member.name.trim() } : undefined;
+      member.name.trim() && member.name.length <= 200
+      ? localizeCatalogStaff(locale, { id: member.id, name: member.name.trim() }) : undefined;
     return {
       recordId, datetime, instant: instant.getTime(), staff, services: record.services as unknown[],
       durationSeconds: validBookingId(record.length) && record.length <= 2_147_483_647 ? record.length : undefined,

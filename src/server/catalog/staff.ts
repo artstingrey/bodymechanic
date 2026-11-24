@@ -1,6 +1,10 @@
 import 'server-only';
 
+import { withLocalizedStaffName } from '@/content/home-team';
+import type { BookingStaff } from '@/lib/contracts/booking-services';
 import type { CatalogLocale, CatalogStaffMember, CatalogStaffResponse } from '@/lib/contracts/catalog';
+import en from '../../../messages/en.json';
+import ru from '../../../messages/ru.json';
 import { isRecord } from '../altegio/client';
 import { AltegioError } from '../altegio/errors';
 import { fetchBookStaff } from '../altegio/staff';
@@ -61,18 +65,23 @@ async function loadStaff(locationId: number, locale: CatalogLocale, serviceId?: 
 }
 
 const getCachedStaff = cachePublicCatalog('book-staff-v1', loadStaff);
+const staffNames = { en: en.home.team.cards, ru: ru.home.team.cards };
+
+export function localizeCatalogStaff<T extends BookingStaff>(locale: CatalogLocale, staff: T): T {
+  return withLocalizedStaffName(staff, staffNames[locale]);
+}
 
 export async function getCatalogStaff(locale: CatalogLocale): Promise<CatalogStaffResponse> {
   const { locationId } = getAltegioConfig();
-  const data = await getCachedStaff(locationId, locale);
-  return { data, meta: { source: 'altegio', locale } };
+  const { staff } = await getCachedStaff(locationId, locale);
+  return { data: { staff: staff.map((member) => localizeCatalogStaff(locale, member)) }, meta: { source: 'altegio', locale } };
 }
 
 /** The caller resolves the service against the public catalog before asking for its staff. */
 export async function getCatalogServiceStaff(locale: CatalogLocale, serviceId: number): Promise<CatalogStaffMember[]> {
   const { locationId } = getAltegioConfig();
   const { staff } = await getCachedStaff(locationId, locale, serviceId);
-  return staff;
+  return staff.map((member) => localizeCatalogStaff(locale, member));
 }
 
 /** Online Booking does not document whether its staff filter matches every selected service. */
@@ -87,5 +96,5 @@ export async function getCommonServiceStaff(locale: CatalogLocale, serviceIds: r
     const ids = new Set(staff.map(({ id }) => id));
     common = common.filter(({ id }) => ids.has(id));
   }
-  return common;
+  return common.map((member) => localizeCatalogStaff(locale, member));
 }

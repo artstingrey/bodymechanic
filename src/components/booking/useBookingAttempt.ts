@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
+import { withLocalizedStaffName, type StaffNameTranslations } from '@/content/home-team';
 import type { BookingResult } from '@/lib/booking/receipt';
 import {
   decodeStoredBooking, readStoredBooking, writeStoredBooking, type BookingAttemptDetails, type BookingResultScope,
@@ -20,7 +22,13 @@ export function useBookingAttempt(scope: BookingResultScope, locale: CatalogLoca
   const [change, setChange] = useState<{ scope: BookingResultScope; stored: StoredBooking | null }>();
   const [busy, setBusy] = useState(false);
   const requestActive = useRef(false);
-  const stored = change?.scope === scope ? change.stored : restored;
+  const saved = change?.scope === scope ? change.stored : restored;
+  const staffNames = useTranslations('home.team').raw('cards') as StaffNameTranslations;
+  const stored = useMemo(() => saved?.status === 'created' ? {
+    ...saved,
+    staff: saved.staff && withLocalizedStaffName(saved.staff, staffNames),
+    parts: saved.parts?.map((part) => part.staff ? { ...part, staff: withLocalizedStaffName(part.staff, staffNames) } : part),
+  } : saved, [saved, staffNames]);
 
   useEffect(() => {
     if (snapshot && !restored && readStoredBooking(scope) === snapshot) writeStoredBooking(scope, null);

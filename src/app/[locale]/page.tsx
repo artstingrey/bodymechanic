@@ -36,7 +36,7 @@ export default async function HomePage() {
     <ScopeMessages messages={await pickMessages([
       'body3d', 'home.hero', 'home.form', 'forms', 'booking.captcha', 'booking.review', 'booking.done',
       'booking.service.heading', 'booking.service.removed', 'booking.service.estimate', 'booking.service.durationEstimate', 'booking.draft.startOver',
-      'home.services.priceUnknown', 'home.services.priceFrom', 'home.services.duration',
+      'home.services.priceUnknown', 'home.services.priceFrom', 'home.services.duration', 'home.team.cards',
     ])}>
     <>
       <PageLd kind="home" />
