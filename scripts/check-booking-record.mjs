@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { withProductionServer } from './check-server.mjs';
+import { captchaPrivateValues, turnstileEnv, validCaptchaToken } from '../e2e/fixtures/turnstile.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-record-'));
 const scenarioFile = path.join(dir, 'scenario');
@@ -13,6 +14,7 @@ const marker = `${scenarioFile}.created`;
 const release = `${scenarioFile}.release`;
 const comments = `${scenarioFile}.comments`;
 const selectionFile = `${scenarioFile}.selection`;
+const turnstileJournal = `${scenarioFile}.turnstile`;
 const preload = new URL('../e2e/fixtures/altegio-record.mjs', import.meta.url).href;
 const day = 86_400_000;
 const date = new Date(Date.now() + 7 * day).toISOString().slice(0, 10);
@@ -21,6 +23,7 @@ const bookingOrigin = 'https://booking.fixture.test';
 const ipHeader = 'x-fixture-ip';
 const secrets = /fixture-partner-token|fixture-record-hash-secret|fixture-private-|visitor\d*@example\.test|\+97150\d{7}|\+442079460958/;
 const env = {
+  ...turnstileEnv,
   ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
   ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
   ALTEGIO_CURRENCY: 'AED',
@@ -36,7 +39,7 @@ let nextAddress = 1;
 function request(overrides = {}) {
   const number = nextPhone++;
   return {
-    idempotencyKey: randomUUID(), serviceId: 13982355, staffId: 0, datetime, locale: 'en', consent: true,
+    idempotencyKey: randomUUID(), serviceId: 13982355, staffId: 0, datetime, locale: 'en', consent: true, captchaToken: validCaptchaToken(),
     contact: { fullname: 'fixture-private-fullname', phone: `+97150${String(number).padStart(7, '0')}`, email: `visitor${number}@example.test` },
     ...overrides,
   };
@@ -66,6 +69,7 @@ function run(check, override = {}) {
       await check(origin, logs);
     } finally {
       assert.doesNotMatch(logs(), secrets);
+      assert.doesNotMatch(logs(), captchaPrivateValues);
     }
   }, { preload, env: { ...env, ...override } });
 }
@@ -82,6 +86,7 @@ async function post(origin, body, { status, code, ip, headers, retryAfter, raw }
   });
   const text = await response.text();
   assert.doesNotMatch(text, secrets);
+  assert.doesNotMatch(text, captchaPrivateValues);
   assert.equal(response.headers.get('cache-control'), 'no-store');
   if (retryAfter !== undefined) assert.equal(response.headers.get('retry-after'), retryAfter);
   if (status !== undefined) assert.equal(response.status, status, text);
@@ -100,15 +105,61 @@ async function lookup(origin, { idempotencyKey, recoveryKey }, status, overrides
   });
   assert.equal(response.status, status);
   assert.equal(response.headers.get('cache-control'), 'no-store');
-  assert.equal(response.headers.get('x-booking-outcome'), [201, 202, 409].includes(status) ? 'stored' : null);
+  assert.equal(response.headers.get('x-booking-outcome'), [201, 202, 409, 422].includes(status) ? 'stored' : null);
   const text = await response.text();
   assert.doesNotMatch(text, secrets);
-  return JSON.parse(text).data;
+  assert.doesNotMatch(text, captchaPrivateValues);
+  const body = JSON.parse(text);
+  return body.data ?? body.error;
 }
 
 const createCall = 'POST book_record';
 const checkCall = 'POST book_check';
 const confirmed = { status: 'created', recordId: 12345, serviceId: 13982355, datetime, staff: { id: 91601, name: 'Example specialist' } };
+
+async function checkCaptcha(origin) {
+  const checks = async () => (await fs.readFile(turnstileJournal, 'utf8')).trim().split('\n').filter(Boolean);
+  for (const captchaToken of [undefined, null, 17, '', 'x'.repeat(2049), 'token with spaces', 'token\x00']) {
+    await post(origin, request({ captchaToken }), { status: 422, code: 'CAPTCHA_INVALID' });
+  }
+  assert.deepEqual(await checks(), []);
+  for (const kind of ['invalid', 'expired', 'hostname', 'action']) {
+    await post(origin, request({ captchaToken: `synthetic-captcha-${kind}` }), { status: 422, code: 'CAPTCHA_INVALID' });
+  }
+  for (const kind of ['dummy', 'http', 'bad-json', 'shape', 'timeout']) {
+    await post(origin, request({ captchaToken: `synthetic-captcha-${kind}` }), { status: 503, code: 'CAPTCHA_UNAVAILABLE' });
+  }
+  assert.deepEqual(await history(), []);
+
+  const input = request({ recoveryKey: randomUUID(), captchaToken: 'synthetic-captcha-hold-invalid' });
+  const before = (await checks()).length;
+  const [one, two] = await Promise.all([
+    post(origin, input, { status: 422, code: 'CAPTCHA_INVALID' }),
+    post(origin, input, { status: 422, code: 'CAPTCHA_INVALID' }),
+  ]);
+  assert.deepEqual(one, two);
+  assert.equal((await checks()).length, before + 1);
+  assert.equal((await lookup(origin, input, 422)).code, 'CAPTCHA_INVALID');
+  assert.deepEqual(await history(), []);
+
+  // Retrying a Siteverify transport error keeps its own UUID. Solving again gets a new UUID.
+  const approved = { ...input, captchaToken: 'synthetic-captcha-retry' };
+  assert.deepEqual((await post(origin, approved, { status: 201 })).data, confirmed);
+  const [rejectedKey, firstCheck, retryCheck] = (await checks()).slice(-3);
+  assert.notEqual(firstCheck, rejectedKey);
+  assert.equal(firstCheck, retryCheck);
+  assert.deepEqual((await post(origin, { ...input, captchaToken: validCaptchaToken() }, { status: 201 })).data, confirmed);
+  assert.deepEqual((await post(origin, { ...input, captchaToken: undefined }, { status: 201 })).data, confirmed);
+  await post(origin, { ...input, captchaToken: undefined, staffId: 91601 }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
+  assert.equal((await lookup(origin, input, 201)).recordId, confirmed.recordId);
+  assert.equal((await checks()).length, before + 3);
+  assert.equal((await history()).filter((op) => op === createCall).length, 1);
+
+  const singleUse = validCaptchaToken();
+  await post(origin, request({ captchaToken: singleUse }), { status: 201 });
+  await post(origin, request({ captchaToken: singleUse }), { status: 422, code: 'CAPTCHA_INVALID' });
+  assert.equal((await history()).filter((op) => op === createCall).length, 2);
+}
 
 async function checkServiceSets(origin) {
   const serviceIds = [91201, 13982355];
@@ -184,7 +235,8 @@ async function checkServiceSets(origin) {
   await lookup(origin, home, 403, { Origin: 'https://foreign.fixture.test' });
   await post(origin, { ...home, serviceIds: triple }, { status: 409, code: 'IDEMPOTENCY_CONFLICT' });
   assert.equal((await history()).filter((call) => call === createCall).length, 1);
-  assert.deepEqual((await post(origin, { ...home, serviceIds: triple, idempotencyKey: randomUUID() }, { status: 201 })).data, created(triple));
+  const expanded = { ...home, serviceIds: triple, idempotencyKey: randomUUID(), captchaToken: validCaptchaToken() };
+  assert.deepEqual((await post(origin, expanded, { status: 201 })).data, created(triple));
   const calls = await history();
   for (const ids of [serviceIds, triple]) {
     assert.equal(calls.filter((call) => call === `APPOINTMENT book_check 91601 ${ids.join(',')}`).length, 1);
@@ -336,6 +388,13 @@ async function check3DRecord(origin) {
 
 try {
   await scenario('empty-201');
+  await fs.writeFile(turnstileJournal, '');
+  await run(checkCaptcha, { RECORD_FIXTURE_TURNSTILE_JOURNAL: turnstileJournal });
+  await scenario('empty-201');
+  await run(async (origin) => {
+    await post(origin, request(), { status: 503, code: 'CAPTCHA_UNAVAILABLE' });
+    assert.deepEqual(await history(), []);
+  }, { TURNSTILE_SECRET_KEY: '' });
   await run(async (origin) => {
     await post(origin, request(), { status: 503, code: 'BOOKING_UNAVAILABLE' });
     assert.deepEqual(await history(), []);
@@ -543,8 +602,8 @@ try {
     assert.equal((await history()).length, 10);
   });
 
-  console.log('Booking record: single services, service sets, composite confirmations, conflicts, limits and same-instance retries OK');
+  console.log('Booking record: Turnstile validation, single services, service sets, composite confirmations, conflicts, limits and retries OK');
 } finally {
-  for (const file of [journal, marker, release, comments, selectionFile, scenarioFile]) await fs.rm(file, { force: true });
+  for (const file of [journal, marker, release, comments, selectionFile, turnstileJournal, scenarioFile]) await fs.rm(file, { force: true });
   await fs.rmdir(dir);
 }

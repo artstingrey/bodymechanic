@@ -8,6 +8,7 @@ import config from '../src/lib/lp/config.json' with { type: 'json' };
 import en from '../messages/en.json' with { type: 'json' };
 import ru from '../messages/ru.json' with { type: 'json' };
 import { withProductionServer } from './check-server.mjs';
+import { captchaPrivateValues, stubTurnstile, turnstileEnv, validCaptchaToken } from '../e2e/fixtures/turnstile.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-lp-booking-'));
 const scenarioFile = path.join(dir, 'scenario');
@@ -34,18 +35,21 @@ async function run(scenario, check) {
       throw error;
     }
     assert.doesNotMatch(logs(), /fixture-partner-token|fixture-private-fullname|501234567|fixture-record-hash-secret|visitor@example\.test/);
+    assert.doesNotMatch(logs(), captchaPrivateValues);
   }, { preload, env: (origin) => ({
+    ...turnstileEnv,
     BOOKING_ORIGIN: origin, BOOKING_CLIENT_IP_HEADER: '',
     ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)), ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
     RECORD_FIXTURE_DATE: date, RECORD_FIXTURE_DATETIME: datetime, RECORD_FIXTURE_SCENARIO: scenarioFile,
   }) });
 }
 
-async function openForm(browser, origin, variant, locale, id) {
+async function openForm(browser, origin, variant, locale, id, automatic = true) {
   const mobile = id !== 'lp-f2';
   const page = await browser.newPage({ viewport: { width: mobile ? 320 : 1280, height: 850 }, isMobile: mobile, hasTouch: mobile,
     timezoneId: 'America/Los_Angeles', reducedMotion: 'reduce' });
   await page.route((url) => url.origin !== origin, (route) => route.fulfill({ body: '' }));
+  const scriptRequests = await stubTurnstile(page, { automatic });
   await page.addInitScript(() => localStorage.setItem('bm.consent', JSON.stringify({
     necessary: true, analytics: true, marketing: false, at: 'test',
   })));
@@ -64,11 +68,11 @@ async function openForm(browser, origin, variant, locale, id) {
   assert.equal(new URL(await wa.getAttribute('href')).searchParams.get('text'), `${copy.lp[variant].wa.message} ${config.versions[variant].waTag}`);
   await form.locator('input[name="name"]').fill(contact.fullname);
   await form.locator('input[type="tel"]').fill(contact.phone);
-  return { page, form, copy, lookups };
+  return { page, form, copy, lookups, scriptRequests };
 }
 
 async function choose(browser, origin, variant, locale, id, { serviceId = 13982355, marks = false, result = 'created' } = {}) {
-  const { page, form, copy, lookups } = await openForm(browser, origin, variant, locale, id);
+  const { page, form, copy, lookups, scriptRequests } = await openForm(browser, origin, variant, locale, id);
   try {
     const before = await calls('POST book_record');
     const open = form.getByRole('button', { name: copy.lp.booking.selectService });
@@ -134,6 +138,26 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
     assert.equal(await calls('POST book_record'), before);
     await next.click();
     await expect(form.getByRole('heading', { name: copy.lp.booking.detailsHeading })).toBeFocused();
+    const captcha = form.getByTestId('captcha');
+    const widget = captcha.getByTitle('Synthetic Turnstile');
+    await expect(widget).toBeVisible();
+    assert.equal(await widget.evaluate((frame) => {
+      const bounds = frame.getBoundingClientRect();
+      const container = frame.closest('.captcha').getBoundingClientRect();
+      return bounds.width >= 150 && bounds.height >= 65 && bounds.left >= container.left && bounds.right <= container.right;
+    }), true);
+    assert.ok(await captcha.evaluate((element, language) => [...window.fixtureTurnstile.widgets.values()].some(
+      ({ container, options }) => element.contains(container) && options.language === language &&
+        options.action === 'booking' && options.appearance === 'always' && options['response-field'] === false,
+    ), locale));
+    if (id === 'lp-fs') {
+      await page.getByRole('button', { name: copy.common.actions.close }).click();
+      await expect(captcha).toHaveCount(0);
+      await expect.poll(() => page.evaluate(() => window.fixtureTurnstile.widgets.size)).toBe(0);
+      await page.locator('.lp-hero-cta button').click();
+      await expect(widget).toBeVisible();
+      assert.equal(scriptRequests(), 1);
+    }
     await expect(form.locator('input[name="detailsConsent"], input[name="email"]')).toHaveCount(0);
     const consent = form.locator('input[name="consent"]');
     await expect(form.locator('a[href*="/privacy"]')).toHaveAttribute('href', new RegExp(`/${locale}/privacy/?$`));
@@ -161,6 +185,8 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
     await submit.click();
     const submitted = await response;
     const body = submitted.request().postDataJSON();
+    assert.match(body.captchaToken, captchaPrivateValues);
+    assert.equal(scriptRequests(), 1);
     assert.deepEqual([body.source, body.serviceIds, body.staffId, body.datetime, body.contact, body.consent], ['lp', [serviceId], 0, datetime, contact, true]);
     assert.deepEqual(body.details, marks ? details : undefined);
     assert.equal(body.condition, marks ? condition : undefined);
@@ -212,6 +238,41 @@ async function choose(browser, origin, variant, locale, id, { serviceId = 139823
         [variant, locale, id === 'lp-f2' ? 'final' : 'hero', body.idempotencyKey]);
     }
     assert.doesNotMatch(JSON.stringify(events), /fixture-private-fullname|501234567|visitor@example|neckShoulders/);
+    assert.doesNotMatch(JSON.stringify(events), captchaPrivateValues);
+  } finally {
+    await page.close();
+  }
+}
+
+async function checkIndependentWidgets(browser, origin, variant) {
+  const { page, scriptRequests } = await openForm(browser, origin, variant, 'en', 'lp-f2', false);
+  try {
+    const forms = ['lp-f1', 'lp-f2'].map((id) => page.locator(`#${id}`));
+    for (const form of forms) {
+      await form.locator('input[name="name"]').fill(contact.fullname);
+      await form.locator('input[type="tel"]').fill(contact.phone);
+      await form.locator('input[name="email"]').fill(contact.email);
+      await form.getByRole('button', { name: en.lp.booking.selectService }).click();
+      await form.locator('.bk-opt input[value="13982355"]').check();
+      await form.getByRole('button', { name: en.lp.form.submit }).click();
+      await form.locator('.cal button[data-available]').click();
+      await form.getByRole('button', { name: '14:20', exact: true }).click();
+      await form.getByRole('button', { name: en.lp.booking.continue }).click();
+      await expect(form.getByTitle('Synthetic Turnstile')).toBeVisible();
+    }
+    const buttons = forms.map((form) => form.getByRole('button', { name: en.lp.booking.book }));
+    await expect(buttons[0]).toBeDisabled();
+    await expect(buttons[1]).toBeDisabled();
+    for (const [index, form] of forms.entries()) {
+      await form.getByTestId('captcha').evaluate((element) => {
+        const { widgets, respond } = window.fixtureTurnstile;
+        respond([...widgets.values()].find(({ container }) => element.contains(container)), 'success');
+      });
+      await expect(buttons[index]).toBeEnabled();
+      if (index === 0) await expect(buttons[1]).toBeDisabled();
+    }
+    assert.equal(scriptRequests(), 1);
+    assert.equal(await calls('POST book_record'), 0);
   } finally {
     await page.close();
   }
@@ -226,12 +287,12 @@ async function checkBooking(browser, variant) {
       [{ contact: { ...contact, email: 'bad-email' } }, 'email']]) {
       const response = await fetch(`${origin}/api/booking/record`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Origin: origin },
-        body: JSON.stringify({ ...valid, ...changes, idempotencyKey: randomUUID() }),
+        body: JSON.stringify({ ...valid, ...changes, idempotencyKey: randomUUID(), captchaToken: validCaptchaToken() }),
       });
       assert.equal(response.status, 400);
       assert.ok((await response.json()).error.fields.includes(field));
     }
-
+    await checkIndependentWidgets(browser, origin, variant);
   });
   // Give each locale a fresh server so the same synthetic contact stays below the live rate limit.
   const placements = ['lp-f1', 'lp-f2', 'lp-fs'];

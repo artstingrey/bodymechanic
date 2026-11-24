@@ -152,8 +152,7 @@ try {
           locale === 'en' ? home.services.cards[13982355].title : 'Спортивный массаж из каталога',
         );
         await expect(specialist.locator('option[value="0"]')).toHaveText(copy.anyStaffOption);
-        await expect(form.getByTestId('captcha')).toHaveAttribute('hidden', '');
-        await expect(form.getByTestId('captcha')).toBeHidden();
+        await expect(form.getByTestId('captcha')).toHaveCount(0);
         await expect(form.getByRole('button', { name: copy.submit, exact: true })).toBeDisabled();
         await expect(form.getByText(copy.submitUnavailable)).toBeVisible();
         await expect(form.locator('#qf-email')).toHaveAttribute('required', '');

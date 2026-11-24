@@ -39,7 +39,7 @@ export default async function LandingLayout({ children }: LayoutProps<'/[locale]
   const locale = await rootLocale();
   if (!isLocale(locale)) notFound();
   const messages = await pickMessages([
-    'lp', 'forms.field', 'forms.error', 'forms.consent', 'common.actions', 'booking.service', 'booking.time',
+    'lp', 'forms.field', 'forms.error', 'forms.consent', 'common.actions', 'booking.service', 'booking.time', 'booking.captcha',
     'home.form.availability', 'home.form.feedback', 'home.services.cards', 'home.services.priceUnknown',
     'home.services.priceFrom', 'home.services.duration', 'body3d.panel.noteCounter',
     'common.timeWithZone', 'booking.done.checkStatus', 'booking.draft.startOver',

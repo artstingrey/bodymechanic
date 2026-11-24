@@ -59,6 +59,7 @@ function requestSource(request: Request, expectedOrigin: string, localDevelopmen
 
 export type ParsedRequest = {
   data: NormalizedBookingRecordRequest;
+  captchaToken: string | null;
   instant: Date;
   legacySelection: boolean;
 } | { error: RecordOutcome; locale?: CatalogLocale };
@@ -188,6 +189,9 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
   }
   if (fields.length || !instant || !serviceIds || !key) return invalid();
 
+  const token = read.value.captchaToken;
+  const captchaToken = typeof token === 'string' && token.length > 0 && token.length <= 2048 &&
+    token.isWellFormed() && !/[\s\p{Cc}]/u.test(token) ? token : null;
   const base = {
     serviceIds,
     staffId: staffId as number,
@@ -205,10 +209,10 @@ export async function parseRecordRequest(request: Request): Promise<ParsedReques
       const value = boundedText(rawUtm[key], 100);
       return value?.isWellFormed() ? [[key, value]] : [];
     })) : {};
-    return { instant, legacySelection, data: { ...base, source: 'lp', ...(details?.length ? { details } : {}), ...(condition ? { condition } : {}),
+    return { instant, legacySelection, captchaToken, data: { ...base, source: 'lp', ...(details?.length ? { details } : {}), ...(condition ? { condition } : {}),
       ...(Object.keys(utm).length ? { utm } : {}) } };
   }
-  return { instant, legacySelection, data: body3d
+  return { instant, legacySelection, captchaToken, data: body3d
     ? { ...base, source: '3d', body3d }
     : { ...base, ...(condition ? { condition } : {}) } };
 }

@@ -1,6 +1,8 @@
 import type { CatalogLocale } from './catalog';
 import type { BookingServiceReference, BookingServiceSelection, BookingStaff } from './booking-services';
 
+export const BOOKING_CAPTCHA_ACTION = 'booking';
+
 interface BookingRecordBase {
   staffId: number;
   datetime: string;
@@ -29,7 +31,8 @@ type BookingRecordDetails = BookingRecordBase & (
   body3d?: never;
 });
 
-export type BookingRecordRequest = BookingRecordDetails & BookingServiceSelection;
+export type BookingRecordInput = BookingRecordDetails & BookingServiceSelection;
+export type BookingRecordRequest = BookingRecordInput & { captchaToken: string };
 export type NormalizedBookingRecordRequest = BookingRecordDetails & { serviceIds: number[] };
 
 export interface BookingRecordPart {
@@ -81,6 +84,7 @@ export type BookingRecordField = 'serviceId' | 'serviceIds' | 'staffId' | 'datet
 export type BookingRecordErrorCode =
   | 'INVALID_BODY' | 'PAYLOAD_TOO_LARGE' | 'UNSUPPORTED_MEDIA_TYPE' | 'INVALID_ORIGIN'
   | 'BOOKING_UNAVAILABLE' | 'INVALID_FIELDS' | 'IDEMPOTENCY_CONFLICT'
+  | 'CAPTCHA_INVALID' | 'CAPTCHA_UNAVAILABLE'
   | 'SERVICE_NOT_FOUND' | 'STAFF_NOT_FOUND' | 'SLOT_TAKEN' | 'PREPAYMENT_REQUIRED'
   | 'SMS_REQUIRED' | 'BOOKING_REJECTED' | 'RATE_LIMITED' | 'UPSTREAM_RATE_LIMITED' | 'UPSTREAM_TIMEOUT';
 

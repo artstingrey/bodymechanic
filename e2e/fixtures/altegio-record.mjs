@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
+import { captchaPrivateValues } from './turnstile.mjs';
+import { siteverifyFixture } from './turnstile-siteverify.mjs';
 
 const fetchOriginal = globalThis.fetch;
 const datetime = process.env.RECORD_FIXTURE_DATETIME;
@@ -24,7 +26,9 @@ const reject = (code) => Response.json({
 
 globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
+  if (url.hostname === 'challenges.cloudflare.com') return siteverifyFixture(url, init);
   if (url.hostname !== 'api.alteg.io') return fetchOriginal(input, init);
+  assert.doesNotMatch(String(init?.body ?? ''), captchaPrivateValues);
 
   const [, api, version, resource, location, ...rest] = url.pathname.split('/');
   assert.equal(url.origin, 'https://api.alteg.io');

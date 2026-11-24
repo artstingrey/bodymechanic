@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { withProductionServer } from './check-server.mjs';
+import { captchaPrivateValues, stubTurnstile, turnstileEnv } from '../e2e/fixtures/turnstile.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bm-booking-review-'));
 const fixture = path.join(dir, 'scenario');
@@ -37,8 +38,10 @@ function run(check) {
       await check(origin);
     } finally {
       assert.doesNotMatch(logs(), secrets);
+      assert.doesNotMatch(logs(), captchaPrivateValues);
     }
   }, { preload, env: (origin) => ({
+    ...turnstileEnv,
     BOOKING_ORIGIN: origin, BOOKING_CLIENT_IP_HEADER: '',
     ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)),
     ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token', ALTEGIO_CURRENCY: 'AED',
@@ -57,6 +60,7 @@ async function openReview(origin, locale, staffId, contactIndex, serviceId = 139
   const messages = JSON.parse(await fs.readFile(new URL(`../messages/${locale}.json`, import.meta.url), 'utf8'));
   const booking = `${origin}/${locale}/booking/`;
   await page.route((url) => url.origin !== origin, (route) => route.abort());
+  await stubTurnstile(page);
   await page.addInitScript(({ staffId, contactIndex, date, datetime, serviceId }) => {
     if (sessionStorage.getItem('booking-fixture-seeded')) return;
     sessionStorage.setItem('booking-fixture-seeded', '1');
@@ -76,8 +80,7 @@ async function openReview(origin, locale, staffId, contactIndex, serviceId = 139
   await page.goto(`${booking}?step=6`);
   const confirm = page.getByRole('button', { name: messages.booking.review.confirm, exact: true });
   await expect(confirm).toBeEnabled();
-  await expect(page.getByTestId('captcha')).toHaveAttribute('hidden', '');
-  await expect(page.getByTestId('captcha')).toBeHidden();
+  await expect(page.locator('.captcha').getByTitle('Synthetic Turnstile')).toBeVisible();
   return { page, messages, booking, posts, confirm };
 }
 
@@ -177,12 +180,14 @@ try {
       assert.equal(submitted.consent, true);
       assert.equal('healthConsent' in submitted.body3d, false);
       assert.deepEqual(submitted.body3d.markers, [{ zoneId: 'knee_l', intensity: 5, note: 'fixture-private-marker' }]);
-      assert.equal('captchaToken' in submitted, false);
+      assert.match(submitted.captchaToken, captchaPrivateValues);
+      assert.equal(new Set(posts.map(({ captchaToken }) => captchaToken)).size, 3);
+      assert.doesNotMatch(await page.evaluate(() => JSON.stringify({ ...sessionStorage })), captchaPrivateValues);
       const replay = await page.evaluate(async (input) => {
         const response = await fetch('/api/booking/record', { method: 'POST',
           headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
         return { status: response.status, body: await response.json() };
-      }, submitted);
+      }, { ...submitted, captchaToken: undefined });
       assert.deepEqual(replay, { status: 202, body: { data: { status: 'processing' } } });
       assert.equal(await creates(), 1);
       await fs.writeFile(release, '');

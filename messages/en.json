@@ -481,6 +481,8 @@
         "sms": "This location requires SMS confirmation. Contact the studio to arrange your booking.",
         "rateLimited": "Too many booking attempts. Please wait before trying again.",
         "invalidFields": "Check the contact details and booking options, then try again.",
+        "captchaInvalid": "The security check was rejected. Complete the new check and submit again.",
+        "captchaUnavailable": "The security check is temporarily unavailable. Try again.",
         "unavailable": "We couldn’t accept your booking. Try again later.",
         "unknown": "We couldn’t confirm whether your booking was created.",
         "processing": "Your booking is still being processed."
@@ -773,6 +775,14 @@
       "saveDraft": "Save contact details",
       "draftSaved": "Your contact details are saved in this tab.",
       "nextUnavailable": "To complete your booking, use the <form>form on the home page</form>."
+    },
+    "captcha": {
+      "loading": "Loading the security check…",
+      "waiting": "Complete the security check to submit your booking.",
+      "expired": "The security check expired. Restart the check to continue.",
+      "error": "We couldn’t complete the security check.",
+      "unavailable": "The security check is unavailable.",
+      "retry": "Restart security check"
     },
     "review": {
       "heading": "Check your booking",

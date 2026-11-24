@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { checkPhoneField } from '../e2e/fixtures/phone-field.mjs';
+import { stubTurnstile } from '../e2e/fixtures/turnstile.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bm-booking-services-'));
@@ -339,8 +340,7 @@ async function checkContacts(page, booking, messages) {
   await save.click();
   await expect(page).toHaveURL(`${booking}?step=6`);
   await expect(page.getByRole('button', { name: messages.booking.review.confirm })).toBeEnabled();
-  await expect(page.getByTestId('captcha')).toHaveAttribute('hidden', '');
-  await expect(page.getByTestId('captcha')).toBeHidden();
+  await expect(page.getByTestId('captcha').getByTitle('Synthetic Turnstile')).toBeVisible();
   await expect(page.locator('#st7')).toHaveCount(0);
   await page.getByRole('button', { name: messages.common.actions.back, exact: true }).click();
   await expect(page).toHaveURL(`${booking}?step=5`);
@@ -368,6 +368,7 @@ try {
           await entryPage.close();
         }
         const page = await browser.newPage({ viewport: { width, height: 850 }, timezoneId: 'America/Los_Angeles' });
+        await stubTurnstile(page);
         const booking = `${origin}/${locale}/booking/`;
         const copy = messages.booking.service;
         const rows = page.locator('input[name="service"]');

@@ -46,7 +46,7 @@ export function SheetHero({ variant, chips, waMessage, privacyHref }: {
           <h2 id="lp-sheet-title">{t('form.title')}</h2>
           <button type="button" className="lp-sheet__x" aria-label={tc('close')} onClick={() => dlg.current?.close()}><Icon name="x" /></button>
         </div>
-        <LeadForm id="lp-fs" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} cta={false} />
+        <LeadForm id="lp-fs" variant={variant} chips={chips} waMessage={waMessage} privacyHref={privacyHref} cta={false} visible={open} />
       </dialog>
     </>
   );

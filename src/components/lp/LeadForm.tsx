@@ -8,7 +8,7 @@ import { useBookingAttempt } from '@/components/booking/useBookingAttempt';
 import { bookingRejectionNotice } from '@/components/booking/booking-submit';
 import { bookingDateFormat, bookingPartTime, receiptDuration, receiptTitle } from '@/lib/booking/receipt';
 import { WHATSAPP_URL, whatsappUrl } from '@/lib/config';
-import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecordInput } from '@/lib/contracts/booking-record';
 import { normalizePhone, requiredEmail, rules } from '@/lib/forms/validate';
 import { afterPress } from '@/lib/forms/useFieldErrors';
 import { landingPhoneError } from '@/lib/lp/phone';
@@ -21,9 +21,10 @@ import { LandingPendingActions } from './LandingPendingActions';
 const errorOrder = ['name', 'phone', 'email'] as const;
 type Err = Partial<Record<typeof errorOrder[number], string>>;
 
-export function LeadForm({ id, variant, chips, waMessage, privacyHref, cta = true }: {
+export function LeadForm({ id, variant, chips, waMessage, privacyHref, cta = true, visible = true }: {
   id: string; variant: 'a' | 'b'; chips: LandingChip[];
   waMessage: string; privacyHref: string; /** marks the submit button for the sticky-CTA observer */ cta?: boolean;
+  visible?: boolean;
 }) {
   const t = useTranslations('lp');
   const tf = useTranslations('forms');
@@ -36,7 +37,7 @@ export function LeadForm({ id, variant, chips, waMessage, privacyHref, cta = tru
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Err>({});
   const [attempt, setAttempt] = useState(0);
-  const [bookingContact, setBookingContact] = useState<BookingRecordRequest['contact'] | null>(null);
+  const [bookingContact, setBookingContact] = useState<BookingRecordInput['contact'] | null>(null);
   const [bookingActive, setBookingActive] = useState(false);
   const [recoveryNotice, setRecoveryNotice] = useState<ReturnType<typeof bookingRejectionNotice>>();
   const confirmation = booking.stored?.status === 'created' ? booking.stored : null;
@@ -200,7 +201,7 @@ export function LeadForm({ id, variant, chips, waMessage, privacyHref, cta = tru
     <>
       {contactForm}
       {bookingContact && isLocale(locale) && (
-        <LandingBookingFlow id={id} active={bookingActive} locale={locale} contact={bookingContact} chips={chips}
+        <LandingBookingFlow id={id} active={bookingActive} visible={visible} locale={locale} contact={bookingContact} chips={chips}
           waMessage={waMessage} privacyHref={privacyHref} attempt={booking}
           onBack={() => {
             setBookingActive(false);

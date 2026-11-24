@@ -5,6 +5,7 @@ import type { Attribution } from '../src/lib/lp/attr';
 import ru from '../messages/ru.json';
 import en from '../messages/en.json';
 import { guard, expectClean, fillPhone, stubStudioMap, testHook } from './helpers';
+import { stubTurnstile } from './fixtures/turnstile.mjs';
 
 const GTM = 'GTM-LPTEST1';
 const TRACKERS = /facebook\.com|facebook\.net|googletagmanager\.com|google-analytics\.com|doubleclick\.net|googleadservices\.com|google\.com\/(pagead|ccm)/;
@@ -27,6 +28,7 @@ const lpEvents = async (page: Page, name?: string) => (await dataLayer(page)).fi
 const attribution = (page: Page) => page.evaluate(() => JSON.parse(sessionStorage.getItem('bm_attr')!) as Attribution);
 
 async function stubBooking(page: Page, rejectFirst = false) {
+  await stubTurnstile(page);
   const serviceId = 13982356;
   const date = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
   const datetime = date + 'T14:20:00+04:00';

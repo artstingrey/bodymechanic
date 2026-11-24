@@ -12,6 +12,8 @@ export type RecordOutcome =
 export const processing: RecordOutcome = { status: 202, data: { status: 'processing' }, retryAfter: '2' };
 export const unknown: RecordOutcome = { status: 202, data: { status: 'unknown' } };
 export const unavailable: RecordOutcome = { status: 503, code: 'BOOKING_UNAVAILABLE' };
+export const captchaInvalid = { status: 422, code: 'CAPTCHA_INVALID' } as const;
+export const captchaUnavailable = { status: 503, code: 'CAPTCHA_UNAVAILABLE' } as const;
 
 const messages = {
   PREPAYMENT_REQUIRED: ['This service requires prepayment.', 'Для этой услуги нужна предоплата.'],
@@ -20,6 +22,8 @@ const messages = {
   SERVICE_NOT_FOUND: ['This service is unavailable.', 'Эта услуга недоступна.'],
   STAFF_NOT_FOUND: ['No applicable specialist is available.', 'Подходящий специалист недоступен.'],
   INVALID_FIELDS: ['Check the indicated fields.', 'Проверьте указанные поля.'],
+  CAPTCHA_INVALID: ['The security check was rejected. Complete a new check.', 'Проверка не пройдена. Пройдите её ещё раз.'],
+  CAPTCHA_UNAVAILABLE: ['The security check is temporarily unavailable. Try again.', 'Проверка временно недоступна. Повторите попытку.'],
   IDEMPOTENCY_CONFLICT: ['This key already belongs to another booking attempt.', 'Этот ключ уже относится к другой попытке записи.'],
   RATE_LIMITED: ['Too many booking attempts. Try again later.', 'Слишком много попыток записи. Повторите позже.'],
   UPSTREAM_RATE_LIMITED: ['Too many booking attempts. Try again later.', 'Слишком много попыток записи. Повторите позже.'],

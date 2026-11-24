@@ -6,6 +6,7 @@ import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import { checkPhoneField } from '../e2e/fixtures/phone-field.mjs';
 import { withProductionServer } from './check-server.mjs';
+import { captchaPrivateValues, stubTurnstile, turnstileEnv } from '../e2e/fixtures/turnstile.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-quick-form-submit-'));
 const scenarioFile = path.join(dir, 'scenario');
@@ -41,12 +42,18 @@ function successEvents(page) {
   return page.evaluate(() => (window.dataLayer ?? []).filter((item) => item.event === 'booking_success'));
 }
 
-async function openForm(browser, origin, locale, analytics, staffId, suffix, selectedService = serviceId) {
+async function openForm(browser, origin, locale, analytics, staffId, suffix, selectedService = serviceId, exerciseCaptcha = false) {
   const page = await browser.newPage({ viewport: { width: locale === 'ru' ? 390 : 1280, height: 850 }, timezoneId: 'America/Los_Angeles' });
+  if (exerciseCaptcha) await page.clock.install();
   await page.addInitScript((allowed) => localStorage.setItem('bm.consent', JSON.stringify({
     necessary: true, marketing: false, analytics: allowed, at: 'fixture',
   })), analytics);
   await page.route((url) => url.origin !== origin, (route) => route.abort());
+  const scriptRequests = await stubTurnstile(page);
+  if (exerciseCaptcha) {
+    await page.route('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
+      (route) => route.abort(), { times: 1 });
+  }
   const requests = [];
   const lookups = [];
   page.on('request', (request) => {
@@ -59,8 +66,13 @@ async function openForm(browser, origin, locale, analytics, staffId, suffix, sel
   const copy = messages[locale];
   const form = page.locator('form.qform');
   const button = form.getByRole('button', { name: copy.home.form.submit, exact: true });
+  if (exerciseCaptcha) {
+    await expect(form.locator('.captcha.cap')).toContainText(copy.booking.captcha.error, { timeout: 18_000 });
+    await expect(button).toBeDisabled();
+    await form.getByRole('button', { name: copy.booking.captcha.retry }).click();
+  }
   await expect(button).toBeEnabled();
-  await expect(form.getByTestId('captcha')).toBeHidden();
+  await expect(form.locator('.captcha.cap').getByTitle('Synthetic Turnstile')).toBeVisible();
   const service = form.locator('#qf-service');
   await service.click();
   await form.locator(`#qf-service-options input[value="${selectedService}"]`).check();
@@ -81,7 +93,60 @@ async function openForm(browser, origin, locale, analytics, staffId, suffix, sel
   await form.locator('#qf-age').fill('38');
   await form.locator('textarea').fill('fixture-private-note');
   await form.locator('#qf-consent').check();
-  return { page, copy, form, button, time, requests, lookups, phone, email };
+  return { page, copy, form, button, time, requests, lookups, phone, email, scriptRequests };
+}
+
+async function checkCaptchaLifecycle(origin) {
+  const { page, copy, form, button, requests, email, scriptRequests } = await openForm(browser, origin, 'ru', true, 0, 17, serviceId, true);
+  const retry = form.getByRole('button', { name: copy.booking.captcha.retry });
+  const widget = form.locator('.captcha.cap');
+  const respond = (type, token) => page.evaluate(({ type, token }) => {
+    const { widgets, respond } = window.fixtureTurnstile;
+    respond([...widgets.values()][0], type, token);
+  }, { type, token });
+  try {
+    await form.locator('#qf-email').fill(email);
+    await page.clock.fastForward(300_000);
+    await expect(widget).toContainText(copy.booking.captcha.expired);
+    await expect(button).toBeDisabled();
+    await form.evaluate((element) => element.requestSubmit());
+    assert.deepEqual(requests, []);
+    await retry.click();
+    await expect(button).toBeEnabled();
+    await respond('expired');
+    await expect(widget).toContainText(copy.booking.captcha.expired);
+    await retry.click();
+    await expect(button).toBeEnabled();
+    await respond('timeout');
+    await expect(widget).toContainText(copy.booking.captcha.error);
+    await expect(button).toBeDisabled();
+    await retry.click();
+    await expect(button).toBeEnabled();
+
+    for (const [token, status, feedback] of [
+      ['synthetic-captcha-expired', 422, copy.home.form.feedback.captchaInvalid],
+      ['synthetic-captcha-http', 503, copy.home.form.feedback.captchaUnavailable],
+    ]) {
+      await respond('success', token);
+      const response = page.waitForResponse((r) => r.url().endsWith('/api/booking/record'));
+      await button.click();
+      assert.equal((await response).status(), status);
+      await expect(form.getByRole('alert').filter({ hasText: feedback })).toBeVisible();
+      await expect(form.locator('#qf-email')).toHaveValue(email);
+      await expect(form.locator('textarea')).toHaveValue('fixture-private-note');
+      await expect(form.locator('#qf-consent')).toBeChecked();
+      await expect(button).toBeEnabled();
+      assert.equal(await calls('POST book_record'), 0);
+    }
+    await button.click();
+    await assertConfirmed(page, copy);
+    assert.equal(await calls('POST book_record'), 1);
+    assert.equal(scriptRequests(), 1);
+    const clientData = await page.evaluate(() => JSON.stringify([location.href, { ...sessionStorage }, { ...localStorage }, window.dataLayer]));
+    assert.doesNotMatch(clientData, captchaPrivateValues);
+  } finally {
+    await page.close();
+  }
 }
 
 async function assertConfirmed(page, copy) {
@@ -138,8 +203,10 @@ function run(check) {
       await check(origin);
     } finally {
       assert.doesNotMatch(logs(), privateValues);
+      assert.doesNotMatch(logs(), captchaPrivateValues);
     }
   }, { preload, env: (origin) => ({
+    ...turnstileEnv,
     BOOKING_QUICK_FORM_ENABLED: 'true',
     BOOKING_ORIGIN: origin,
     BOOKING_CLIENT_IP_HEADER: '',
@@ -156,6 +223,8 @@ let browser;
 try {
   await scenario('empty-201');
   browser = await chromium.launch({ channel: 'chrome', args: ['--enable-unsafe-swiftshader'] });
+  await run(checkCaptchaLifecycle);
+  await scenario('empty-201');
   await run(async (origin) => {
     for (const locale of ['en', 'ru']) {
       await checkAccountAndLandings(origin, locale);
@@ -193,9 +262,12 @@ try {
     assert.deepEqual(second, {
       serviceIds: [Number(serviceId)], staffId: Number(specialist), datetime, locale: 'en', consent: true,
       idempotencyKey: second.idempotencyKey, recoveryKey: second.recoveryKey,
+      captchaToken: second.captchaToken,
       contact: { fullname: 'fixture-private-fullname', phone: en.phone, email: en.email },
       age: 38, condition: 'fixture-private-note',
     });
+    assert.match(second.captchaToken, captchaPrivateValues);
+    assert.notEqual(first.captchaToken, second.captchaToken);
     await fs.writeFile(release, '');
     await assertConfirmed(en.page, en.copy);
     assert.deepEqual(await successEvents(en.page), [{ event: 'booking_success', service_id: Number(serviceId), staff_id: Number(specialist), currency: 'AED', source: 'form' }]);

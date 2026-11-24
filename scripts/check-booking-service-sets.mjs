@@ -7,6 +7,7 @@ import { chromium, expect, webkit } from '@playwright/test';
 import en from '../messages/en.json' with { type: 'json' };
 import ru from '../messages/ru.json' with { type: 'json' };
 import { withProductionServer } from './check-server.mjs';
+import { captchaPrivateValues, stubTurnstile, turnstileEnv } from '../e2e/fixtures/turnstile.mjs';
 
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'bodymechanic-service-sets-'));
 const fixture = path.join(dir, 'scenario');
@@ -31,6 +32,7 @@ async function newPage(browser, origin, width) {
     necessary: true, analytics: false, marketing: false, at: new Date().toISOString(),
   })));
   await page.route((url) => url.origin !== origin, (route) => route.fulfill({ body: '' }));
+  await stubTurnstile(page);
   return page;
 }
 
@@ -82,6 +84,7 @@ async function verifySubmission(page, root, button, copy, source, staffId, reope
     await expect.poll(creates).toBe(before + 1);
     assert.equal(requests.length, 1, 'only one create request on a double click');
     const [body] = requests;
+    assert.match(body.captchaToken, captchaPrivateValues);
     assert.deepEqual([body.source, body.serviceIds, body.staffId, body.datetime], [source, services, staffId, datetime]);
     const replay = await page.evaluate(async (input) => {
       const response = await fetch('/api/booking/record', { method: 'POST',
@@ -393,8 +396,11 @@ function run(check) {
     } catch (error) {
       console.error(logs().split('\n').slice(-20).join('\n'));
       throw error;
+    } finally {
+      assert.doesNotMatch(logs(), captchaPrivateValues);
     }
   }, { preload, env: (origin) => ({
+    ...turnstileEnv,
     ALTEGIO_LOCATION_ID: String(randomInt(1_000_000, 1_000_000_000)), ALTEGIO_PARTNER_TOKEN: 'fixture-partner-token',
     ALTEGIO_CURRENCY: 'AED', BOOKING_ORIGIN: origin, BOOKING_CLIENT_IP_HEADER: '', BOOKING_QUICK_FORM_ENABLED: 'true',
     RECORD_FIXTURE_DATE: day, RECORD_FIXTURE_DATETIME: datetime, RECORD_FIXTURE_SCENARIO: fixture,

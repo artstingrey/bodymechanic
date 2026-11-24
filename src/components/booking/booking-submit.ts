@@ -14,6 +14,7 @@ export type Submission =
 const definiteRejections: Readonly<Record<string, number>> = {
   INVALID_BODY: 400, PAYLOAD_TOO_LARGE: 413, UNSUPPORTED_MEDIA_TYPE: 415, INVALID_ORIGIN: 403,
   BOOKING_UNAVAILABLE: 503, SERVICE_NOT_FOUND: 404, STAFF_NOT_FOUND: 404, SLOT_TAKEN: 409,
+  CAPTCHA_INVALID: 422, CAPTCHA_UNAVAILABLE: 503,
   PREPAYMENT_REQUIRED: 422, SMS_REQUIRED: 422, BOOKING_REJECTED: 422,
   RATE_LIMITED: 429, UPSTREAM_RATE_LIMITED: 429, UPSTREAM_TIMEOUT: 504,
 };
@@ -22,6 +23,7 @@ const rejectionNotices = {
   SLOT_TAKEN: 'slotTaken', STAFF_NOT_FOUND: 'staffUnavailable', SERVICE_NOT_FOUND: 'serviceUnavailable',
   PREPAYMENT_REQUIRED: 'prepayment', SMS_REQUIRED: 'sms', RATE_LIMITED: 'rateLimited', UPSTREAM_RATE_LIMITED: 'rateLimited',
   INVALID_FIELDS: 'invalidFields',
+  CAPTCHA_INVALID: 'captchaInvalid', CAPTCHA_UNAVAILABLE: 'captchaUnavailable',
 } as const satisfies Partial<Record<BookingRecordErrorCode, string>>;
 type RejectionNotice = typeof rejectionNotices[keyof typeof rejectionNotices] | 'unavailable';
 

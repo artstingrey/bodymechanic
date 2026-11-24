@@ -295,7 +295,6 @@
 .qform .row2 { display: grid; gap: 18px; }
 @media (min-width: 768px) { .qform .row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .qform .field--nolabel { padding-top: 27px; } }
 .qform .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
-.qform .captcha[hidden] { display: none; }
 .qform__choice { min-width: 0; }
 .qform__choice select { width: 100%; min-width: 0; }
 .qform__services { position: relative; }

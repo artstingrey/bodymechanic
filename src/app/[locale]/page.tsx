@@ -35,7 +35,7 @@ export default async function HomePage() {
   const [titleA, titleB] = splitTitle(title);
   return (
     <ScopeMessages messages={await pickMessages([
-      'body3d', 'home.hero', 'home.form', 'forms', 'booking.review', 'booking.done',
+      'body3d', 'home.hero', 'home.form', 'forms', 'booking.captcha', 'booking.review', 'booking.done',
       'booking.service.heading', 'booking.service.removed', 'booking.service.estimate', 'booking.service.durationEstimate', 'booking.draft.startOver',
       'home.services.priceUnknown', 'home.services.priceFrom', 'home.services.duration',
     ])}>

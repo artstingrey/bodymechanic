@@ -10,6 +10,7 @@
 @import "./carousel.css";
 @import "./booking-calendar.css";
 @import "./booking-service-options.css";
+@import "./booking-captcha.css";
 
 @font-face { font-family: ManropeLP; src: url("/fonts/v1/Manrope-400.woff2") format("woff2"); font-weight: 400; font-display: optional; }
 @font-face { font-family: ManropeLP; src: url("/fonts/v1/Manrope-600.woff2") format("woff2"); font-weight: 600; font-display: optional; }

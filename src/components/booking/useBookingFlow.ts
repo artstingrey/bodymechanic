@@ -28,7 +28,7 @@ import { useFieldErrors } from '@/lib/forms/useFieldErrors';
 import { collect, messageArgs, normalizePhone, requiredEmail, rules, type ErrorCode } from '@/lib/forms/validate';
 import { PRESET_PARAMS, absorbPresetFromUrl, entryBroughtService, takePreset, type HandOver } from '@/lib/booking/preset';
 import type { Locale } from '@/i18n/routing';
-import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecordInput } from '@/lib/contracts/booking-record';
 import { updateBookingServices } from '@/lib/contracts/booking-services';
 import { bookingUrl, getBookingOptions } from './useBookingOptions';
 import { useAsync } from './useAsync';
@@ -283,12 +283,12 @@ export function useBookingFlow() {
 
   const [error, setError] = useState<BookingError | null>(null);
   const canConfirm = step === 6 && serviceSelected && availabilityEnabled && !!selectedDatetime && contactOk && !stored;
-  async function confirm() {
+  async function confirm(captchaToken: string) {
     if (!canConfirm || !selectedDatetime) return;
     const idempotencyKey = globalThis.crypto?.randomUUID?.();
     if (!idempotencyKey) { setReviewNotice('unavailable'); return; }
     const { fullname, phone, email, age } = sel.contact;
-    const input: BookingRecordRequest = {
+    const input: BookingRecordInput = {
       source: '3d', serviceIds: selectedIds, staffId, datetime: selectedDatetime, locale,
       contact: { fullname: fullname.trim(), phone: normalizePhone(phone), email: email!.trim() }, age,
       consent: true, idempotencyKey,
@@ -299,7 +299,7 @@ export function useBookingFlow() {
     };
     setReviewNotice(undefined);
     setError(null);
-    finishBooking(await book(input, { title: serviceTitle, price: price === t('home.services.priceUnknown') ? undefined : price }));
+    finishBooking(await book(input, { title: serviceTitle, price: price === t('home.services.priceUnknown') ? undefined : price }, captchaToken));
   }
 
   function finishBooking(response: BookingAttemptOutcome) {

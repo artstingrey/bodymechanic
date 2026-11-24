@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { BookingServiceOptions } from '@/components/booking/BookingServiceOptions';
+import { BookingCaptcha, useBookingCaptcha } from '@/components/booking/BookingCaptcha';
 import { bookingCalendarDays } from '@/components/booking/booking-availability';
 import { bookingRejectionNotice } from '@/components/booking/booking-submit';
 import type { BookingAttempt, BookingAttemptOutcome } from '@/components/booking/useBookingAttempt';
@@ -14,7 +15,7 @@ import { TextAreaField } from '@/components/ui/Field';
 import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
 import { dubaiToday } from '@/lib/api/dubai';
 import { catalogServiceDuration, formatCatalogServiceDiscount, formatCatalogServiceTotal } from '@/lib/catalog-service-price';
-import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecordInput } from '@/lib/contracts/booking-record';
 import { updateBookingServices } from '@/lib/contracts/booking-services';
 import type { CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/catalog';
 import { readAttribution } from '@/lib/lp/attr';
@@ -23,13 +24,13 @@ import { newKey } from '@/lib/lp/lead';
 import { LandingDetails, type LandingChip } from './LandingDetails';
 import { LandingPendingActions } from './LandingPendingActions';
 
-type LandingRequest = Extract<BookingRecordRequest, { source: 'lp' }>;
+type LandingRequest = Extract<BookingRecordInput, { source: 'lp' }>;
 type Notice = ReturnType<typeof bookingRejectionNotice>;
 type Step = 'service' | 'time' | 'details';
 type Catalog = CatalogServicesResponse['data'];
 
-export function LandingBookingFlow({ id, active, locale, contact, chips, privacyHref, waMessage, attempt, onBack, onContactRejected, onCreated }: {
-  id: string; active: boolean; locale: CatalogLocale; contact: LandingRequest['contact']; chips: LandingChip[];
+export function LandingBookingFlow({ id, active, visible, locale, contact, chips, privacyHref, waMessage, attempt, onBack, onContactRejected, onCreated }: {
+  id: string; active: boolean; visible: boolean; locale: CatalogLocale; contact: LandingRequest['contact']; chips: LandingChip[];
   privacyHref: string; waMessage: string; attempt: BookingAttempt;
   onBack: () => void; onContactRejected: (field: 'phone' | 'fullname' | 'email') => void;
   onCreated: (eventId: string) => void;
@@ -48,6 +49,7 @@ export function LandingBookingFlow({ id, active, locale, contact, chips, privacy
   const [consentError, setConsentError] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const { busy: sending, stored, book, check } = attempt;
+  const captcha = useBookingCaptcha();
   const heading = useRef<HTMLHeadingElement>(null);
   const alert = useRef<HTMLParagraphElement>(null);
   const data = catalog?.attempt === catalogAttempt && catalog.locale === locale ? catalog.data : undefined;
@@ -102,12 +104,14 @@ export function LandingBookingFlow({ id, active, locale, contact, chips, privacy
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (stored || sending || !validSet || !selectedSlot || staff.status !== 'ready') return;
+    if (!visible || !captcha.ready || stored || sending || !validSet || !selectedSlot || staff.status !== 'ready') return;
     if (!consent) {
       setConsentError(true);
       document.getElementById(`${id}-consent`)?.focus();
       return;
     }
+    const captchaToken = captcha.takeToken();
+    if (!captchaToken) return;
     setNotice(null);
     const idempotencyKey = newKey();
     const tags = readAttribution()?.utm;
@@ -118,7 +122,7 @@ export function LandingBookingFlow({ id, active, locale, contact, chips, privacy
       source: 'lp', contact, serviceIds, staffId: LANDING_BOOKING_STAFF, datetime: selectedSlot.datetime, locale,
       consent: true, idempotencyKey, ...(condition.trim() ? { condition: condition.trim() } : {}),
       ...(picked.length ? { details: picked } : {}), ...(Object.keys(utm).length ? { utm } : {}),
-    }, { title, price: total === priceLabels.unknown() ? undefined : total }));
+    }, { title, price: total === priceLabels.unknown() ? undefined : total }, captchaToken));
   }
 
   function finishBooking(result: BookingAttemptOutcome) {
@@ -230,9 +234,11 @@ export function LandingBookingFlow({ id, active, locale, contact, chips, privacy
               </Checkbox>
               <LandingDetails id={id} chips={chips} picked={picked}
                 onToggle={(mark) => setPicked((current) => current.includes(mark) ? current.filter((x) => x !== mark) : [...current, mark])} />
+              {visible && !pending && <BookingCaptcha captcha={captcha} locale={locale} />}
               <div className="lp-booking-actions">
                 {back(() => changeStep('time'))}
-                <button className="btn btn--p" type="submit" disabled={!windowSelected}>{t('lp.booking.book')}</button>
+                <button className="btn btn--p" type="submit" disabled={!windowSelected || !captcha.ready}
+                  aria-describedby={visible && !pending ? captcha.id : undefined}>{t('lp.booking.book')}</button>
               </div>
             </fieldset>
             {sending && <p role="status">{t('lp.booking.sending')}</p>}

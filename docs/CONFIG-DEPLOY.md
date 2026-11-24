@@ -17,7 +17,7 @@
 | `NEXT_PUBLIC_STUDIO_PHONE` | Телефон студии в JSON-LD, формат `+971…`. | пусто: поле не попадает | там же |
 | `NEXT_PUBLIC_STUDIO_HOURS` | Часы работы в JSON-LD в формате schema.org, несколько значений через `;`. Пример: `Mo-Sa 09:00-21:00`. | пусто: поле не попадает | там же |
 | `NEXT_PUBLIC_BOOKING_SMS_REQUIRED` | Значение `true` включает на шаге 6 записи ввод кода из SMS. Сам код сейчас не отправляется: сервера нет. | выключено | `src/lib/config.ts`, `src/components/booking/useBookingFlow.ts`, `src/components/booking/steps/StepReview.tsx` |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Задумана под ключ капчи Cloudflare Turnstile. **Сейчас ни на что не влияет:** значение читается в константу `TURNSTILE_SITE_KEY`, которую код не использует. | пусто | `src/lib/config.ts` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Публичный Site Key Cloudflare Turnstile для всех форм записи. Задаётся при сборке. | пусто | `src/components/booking/BookingCaptcha.tsx` |
 | `RENDER` | Признак сборки на Render. Если он есть, а `NEXT_PUBLIC_SITE_URL` не задан, сборка останавливается с ошибкой. | — | `next.config.ts` |
 | `NODE_VERSION` | Версия Node.js для сборки на Render. | — | настройка Render, в коде не читается |
 
@@ -41,7 +41,7 @@
 | `NEXT_PUBLIC_STUDIO_WHATSAPP` | не задана | ссылки ведут на `wa.me/` без номера |
 | `NEXT_PUBLIC_STUDIO_ADDRESS`, `_PHONE`, `_HOURS` | не заданы | в разметке JSON-LD живого сайта этих полей нет |
 | `NEXT_PUBLIC_BOOKING_SMS_REQUIRED` | не задана | набор файлов скриптов страницы записи совпадает с локальной сборкой без переменной |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | не задана | ни на что не влияет |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | задаётся при сборке серверной версии | включает виджет в формах записи |
 
 ### Серверные переменные Altegio
 
@@ -62,7 +62,13 @@
 
 При production-запуске отправка QuickForm включается в окружении сервера через `BOOKING_QUICK_FORM_ENABLED=true`. Без этого значения форма показывает доступность, кнопка записи отключена. Для POST нужны `BOOKING_ORIGIN` и проверенный источник IP по [настройкам части 5.3](ALTEGIO-IMPLEMENTATION-PLAN.md#часть-53-серверное-создание-записи). Публичное включение формы согласуется отдельно.
 
-Лендинг A использует тот же `POST /api/booking/record`. Для публичной записи с лендинга нужны настройки Altegio, `BOOKING_ORIGIN` и доверенный заголовок `BOOKING_CLIENT_IP_HEADER`.
+Оба лендинга используют тот же `POST /api/booking/record`. Для публичной записи с лендинга нужны настройки Altegio, `BOOKING_ORIGIN`, доверенный заголовок `BOOKING_CLIENT_IP_HEADER` и настройки Turnstile.
+
+### Cloudflare Turnstile
+
+Виджет **Bodymechanic Booking Form** настроен для `thebodymechanic.io` в режиме Managed с выключенным Pre-clearance. Публичный `NEXT_PUBLIC_TURNSTILE_SITE_KEY` нужен во время сборки, а `TURNSTILE_SECRET_KEY` задаётся в окружении сервера. При изменении публичного ключа нужна новая сборка. Без публичного ключа формы показывают недоступность проверки, а без серверного секрета API отклоняет новые попытки. Сборка, просмотр страниц и публичные запросы доступности работают без этих переменных.
+
+Siteverify принимает токен только при успешном ответе для `hostname: thebodymechanic.io` и `action: booking`. Политика в конфигурации проекта разрешает загрузку скрипта и iframe. Для политики с ограничением источников добавьте `https://challenges.cloudflare.com` в `script-src` и `frame-src`. Порядок изолированной проверки описан в [TESTING.md](TESTING.md#проверка-turnstile).
 
 ### Запись на production в Vercel
 
@@ -74,6 +80,7 @@
 |---|---|
 | `BOOKING_ORIGIN` | `https://thebodymechanic.io` без завершающего слеша |
 | `BOOKING_CLIENT_IP_HEADER` | `x-vercel-forwarded-for` |
+| `TURNSTILE_SECRET_KEY` | Серверный секрет виджета Turnstile |
 
 После сохранения выполните **Redeploy** для production-деплоя. Переменные применяются к новым деплоям. [Переменные Vercel](https://vercel.com/docs/environment-variables) · [Заголовки запросов Vercel](https://vercel.com/docs/headers/request-headers#x-vercel-forwarded-for)
 

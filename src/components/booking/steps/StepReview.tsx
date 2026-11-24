@@ -4,14 +4,15 @@ import { zoneLabel } from '@/lib/body3d/zones';
 import { WHATSAPP_URL, whatsappUrl } from '@/lib/config';
 import { Button } from '@/components/ui/Button';
 import { PrefilledLink } from '@/components/ui/PrefilledLink';
-import { Icon } from '@/components/ui/Icon';
 import { Todo } from '@/components/ui/Todo';
+import { BookingCaptcha, useBookingCaptcha } from '../BookingCaptcha';
 import { Loading } from '../ui';
 import type { Flow } from '../useBookingFlow';
 
 export function StepReview({ flow }: { flow: Flow }) {
   const { t, sel, go, markers, serviceTitle, servicePrice, serviceDuration, staffId, staffName, when, busy, confirm, canConfirm,
-    reviewNotice, stored, selectedDatetime, checkStatus } = flow;
+    reviewNotice, stored, selectedDatetime, checkStatus, locale } = flow;
+  const captcha = useBookingCaptcha();
   const pending = stored && stored.status !== 'created' ? stored.attempt : undefined;
   const datetime = pending?.datetime ?? selectedDatetime ?? sel.datetime;
   const title = pending?.title ?? serviceTitle;
@@ -54,15 +55,16 @@ export function StepReview({ flow }: { flow: Flow }) {
             <Button variant="secondary" disabled={!!stored} onClick={() => go(5)}>{t('common.actions.back')}</Button>
             {pending && stored && !busy
               ? <Button aria-describedby="booking-review-notice" onClick={checkStatus}>{t('booking.done.checkStatus')}</Button>
-              : <Button disabled={busy || !canConfirm} loading={busy} aria-describedby={notice ? 'booking-review-notice' : undefined}
-                loadingLabel={t('booking.review.confirming')} onClick={confirm}>{t('booking.review.confirm')}</Button>}
+              : <Button disabled={busy || !canConfirm || !captcha.ready} loading={busy}
+                aria-describedby={notice ? 'booking-review-notice' : canConfirm ? captcha.id : undefined}
+                loadingLabel={t('booking.review.confirming')} onClick={() => {
+                  const token = captcha.takeToken();
+                  if (token) void confirm(token);
+                }}>{t('booking.review.confirm')}</Button>}
           </div>
         </>
       ) : <Loading label={t('common.state.loading')} />}
-      <div className="captcha" data-testid="captcha" role="status" hidden>
-        <span className="captcha__box" aria-hidden="true"><Icon name="loader" className="spin" /></span>
-        {t('booking.review.captcha')}
-      </div>
+      {canConfirm && <BookingCaptcha captcha={captcha} locale={locale} />}
     </section>
   );
 }

@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @import "../styles/tokens.css";
 @import "../styles/ui.css";
+@import "../styles/booking-captcha.css";
 @import "../styles/layout.css";
 @import "../styles/sections.css";
 /* booking.css → app/[locale]/booking/page.tsx, pages.css → PageHead + 404s: route CSS, not on every page (R-CODE-02 F-04) */

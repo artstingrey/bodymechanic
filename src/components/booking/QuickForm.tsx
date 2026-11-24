@@ -9,13 +9,14 @@ import { PhoneField, TextAreaField, TextField } from '@/components/ui/Field';
 import { ErrorSummary } from '@/components/forms/ErrorSummary';
 import { track } from '@/lib/analytics/track';
 import { bookingDateFormat, bookingPartTime, receiptDuration, receiptTitle } from '@/lib/booking/receipt';
-import type { BookingRecordErrorCode, BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecordErrorCode, BookingRecordInput } from '@/lib/contracts/booking-record';
 import { normalizeBookingServices } from '@/lib/contracts/booking-services';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { useFieldErrors } from '@/lib/forms/useFieldErrors';
 import { collect, messageArgs, normalizePhone, requiredEmail, rules, type ErrorCode } from '@/lib/forms/validate';
 import { QuickFormContext, type AvailabilityConflict } from './quick-form-context';
 import { bookingRejectionNotice } from './booking-submit';
+import { BookingCaptcha, useBookingCaptcha } from './BookingCaptcha';
 import { useBookingAttempt, type BookingAttemptOutcome } from './useBookingAttempt';
 
 const subscribeToHydration = () => () => {};
@@ -28,6 +29,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
   const t = useTranslations();
   const { errors, field, submit, attempt } = useFieldErrors();
   const { stored, busy, book, check, clear } = useBookingAttempt('form', locale);
+  const captcha = useBookingCaptcha();
   const [availabilityBlocked, setAvailabilityBlocked] = useState(false);
   const [notice, setNotice] = useState<Notice>();
   const refresh = useRef<((reason: AvailabilityConflict) => void) | null>(null);
@@ -54,7 +56,7 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!enabled || !hydrated || busy || stored) return;
+    if (!enabled || !hydrated || busy || stored || !captcha.ready) return;
     const form = event.currentTarget;
     const data = new FormData(form);
     const str = (name: string) => String(data.get(name) ?? '');
@@ -81,13 +83,15 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
     const staffId = Number(str('staff'));
     const email = str('email').trim();
     const condition = str('condition').trim();
-    const input: BookingRecordRequest = {
+    const captchaToken = captcha.takeToken();
+    if (!captchaToken) return;
+    const input: BookingRecordInput = {
       serviceIds, staffId, datetime, locale, consent: true, idempotencyKey,
       contact: { fullname: str('name').trim(), phone: normalizePhone(str('phone')), email },
       ...(age.value ? { age: Number(age.value) } : {}),
       ...(condition ? { condition } : {}),
     };
-    finishBooking(await book(input, { title: str('serviceTitle'), price: str('servicePrice') || undefined }));
+    finishBooking(await book(input, { title: str('serviceTitle'), price: str('servicePrice') || undefined }, captchaToken));
   }
 
   function finishBooking(result: BookingAttemptOutcome) {
@@ -156,10 +160,10 @@ export function QuickForm({ children, enabled, locale }: { children: ReactNode; 
         counterText={(count, max) => t('body3d.panel.noteCounter', { count, max })} />
       <Checkbox required name="consent" id="qf-consent" disabled={locked} error={fieldText('qf-consent')}
         onChange={(event) => { if (event.target.checked) field('qf-consent', null); }}>{t.rich('forms.consent.privacy', { privacy: (c) => <Link href="/privacy">{c}</Link> })}</Checkbox>
-      <p className="captcha cap" data-testid="captcha" role="status" hidden>{t('booking.review.captcha')}</p>
+      {enabled && !pending && <BookingCaptcha captcha={captcha} locale={locale} className="captcha cap" />}
       <div className="acts">
-        <Button type="submit" disabled={!enabled || !hydrated || locked || availabilityBlocked} loading={busy}
-          loadingLabel={t('home.form.submitting')} aria-describedby={!enabled || feedback ? 'qf-submit-notice' : undefined}>{t('home.form.submit')}</Button>
+        <Button type="submit" disabled={!enabled || !hydrated || locked || availabilityBlocked || !captcha.ready} loading={busy}
+          loadingLabel={t('home.form.submitting')} aria-describedby={!enabled || feedback ? 'qf-submit-notice' : !pending ? captcha.id : undefined}>{t('home.form.submit')}</Button>
         <ButtonLink href="/booking" variant="text">{t('home.form.showOn3d')}</ButtonLink>
       </div>
       {feedback ? (

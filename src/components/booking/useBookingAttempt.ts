@@ -6,7 +6,7 @@ import {
   decodeStoredBooking, readStoredBooking, writeStoredBooking, type BookingAttemptDetails, type BookingResultScope,
   type PendingBooking, type StoredBooking,
 } from '@/lib/booking/result';
-import type { BookingRecordRequest } from '@/lib/contracts/booking-record';
+import type { BookingRecordInput } from '@/lib/contracts/booking-record';
 import { normalizeBookingServices } from '@/lib/contracts/booking-services';
 import type { CatalogLocale } from '@/lib/contracts/catalog';
 import { checkBooking, sendBooking, type Submission } from './booking-submit';
@@ -50,8 +50,8 @@ export function useBookingAttempt(scope: BookingResultScope, locale: CatalogLoca
     return { status } as const;
   }
 
-  async function book(input: BookingRecordRequest, display: Pick<BookingAttemptDetails, 'title' | 'price'>) {
-    if (requestActive.current || stored || decodeStoredBooking(readStoredBooking(scope))) return;
+  async function book(input: BookingRecordInput, display: Pick<BookingAttemptDetails, 'title' | 'price'>, captchaToken: string) {
+    if (!captchaToken || requestActive.current || stored || decodeStoredBooking(readStoredBooking(scope))) return;
     const serviceIds = normalizeBookingServices(input.serviceId, input.serviceIds);
     if (!serviceIds) return;
     const recoveryKey = globalThis.crypto.randomUUID();
@@ -61,7 +61,7 @@ export function useBookingAttempt(scope: BookingResultScope, locale: CatalogLoca
     const pending = { status: 'unknown' as const, at: new Date().toISOString(), attempt };
     save(pending);
     setBusy(true);
-    return finish(await sendBooking({ ...input, recoveryKey }), pending);
+    return finish(await sendBooking({ ...input, recoveryKey, captchaToken }), pending);
   }
 
   async function check() {
