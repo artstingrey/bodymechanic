@@ -449,7 +449,7 @@
       },
       "specialist": {
         "q": "Can I choose my specialist?",
-        "a": "Yes. At the “Specialist” step you can pick a particular person (each card shows a photo, name, rating and next available slot) or leave it on “Any specialist”. You’ll find more about each of them in the “Team” section."
+        "a": "Yes. At the “Specialist” step you can pick a particular person (each card shows a photo, name and next available slot) or leave it on “Any specialist”. You’ll find more about each of them in the “Team” section."
       },
       "reschedule": {
         "q": "How do I reschedule a booking?",

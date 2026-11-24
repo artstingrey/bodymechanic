@@ -9,6 +9,7 @@
  *  sections (services, prices, team, journal, privacy, terms) → BreadcrumbList
  */
 import { getTranslations } from 'next-intl/server';
+import { visibleHomeFaq } from '@/content/home-faq';
 import { pageLocale } from '@/lib/locale';
 import { getArticles } from '@/lib/api';
 import type { Service } from '@/lib/api/types';
@@ -38,11 +39,7 @@ export async function PageLd(props: PageLdProps) {
 
   switch (props.kind) {
     case 'home': {
-      // FAQ = every home.faq.<key> with a question and an answer, in deck order (the TODO(content) notes are not answers)
-      const faq = Object.values(t.raw('home.faq') as Record<string, unknown>)
-        .filter((v): v is { q: string; a: string } => !!v && typeof v === 'object' && typeof (v as { q?: unknown }).q === 'string' && typeof (v as { a?: unknown }).a === 'string')
-        .map(({ q, a }) => ({ q, a }));
-      return <JsonLd data={[business(), faqJsonLd(faq)]} />;
+      return <JsonLd data={[business(), faqJsonLd(visibleHomeFaq(t))]} />;
     }
     case 'contacts':
       return <JsonLd data={[business(), crumbs(section('contacts'))]} />;

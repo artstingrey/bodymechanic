@@ -59,7 +59,9 @@ const MEDICAL_TYPE = /medical|clinic|physiotherap|hospital|physician|diagnos/i;
 const FORBIDDEN = /лечени|физиотерап|диагност|diagnos|treatment|physiotherap/i; // README «Жёсткие правила»
 const stripTodo = (x: string) => { const r = x.replace(/^TODO\(content\):\s*/, ''); return r === x ? x : r.charAt(0).toLocaleUpperCase() + r.slice(1); };
 const PLACEHOLDER_DESCRIPTIONS = new Set([en.journal.todo.articles, ru.journal.todo.articles].flatMap((x) => [x, stripTodo(x)]));
-const faqOf = (locale: 'en' | 'ru') => Object.values(DECK[locale].home.faq as Record<string, unknown>)
+const faqOf = (locale: 'en' | 'ru') => Object.entries(DECK[locale].home.faq)
+  .filter(([key]) => key !== 'specialist' && key !== 'reschedule')
+  .map(([, value]) => value as unknown)
   .filter((v): v is { q: string; a: string } => !!v && typeof v === 'object' && 'q' in v && 'a' in v);
 
 test('JSON-LD on every page: valid JSON, expected @types, no medical types, no forbidden words (ТЗ §14)', async ({ request }) => {

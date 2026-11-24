@@ -12,6 +12,7 @@ import { AccordionItem } from '@/components/ui/Misc';
 import { Todo } from '@/components/ui/Todo';
 import { ScopeMessages } from '@/components/i18n/ScopeMessages';
 import { pickMessages } from '@/lib/i18n/pickMessages';
+import { visibleHomeFaq } from '@/content/home-faq';
 
 export async function generateMetadata() {
   return pageMetadata(await pageLocale(), 'home', '/');
@@ -24,13 +25,11 @@ function splitTitle(s: string): [string, string] {
   return i > 0 ? [s.slice(0, i), s.slice(i + 1)] : [s, ''];
 }
 
-const FAQ = ['choose', 'duration', 'prepare', 'specialist', 'reschedule', 'contraindications'] as const;
-
 /** Home (ТЗ §05): block order 1–10. Skeleton: structure + strings + mock data; visuals come from the style frame. */
 export default async function HomePage() {
   const locale = await pageLocale();
   const t = await getTranslations();
-  const faq = FAQ.filter((k) => t.has(`home.faq.${k}.q`));
+  const faq = visibleHomeFaq(t);
   const title = t('home.hero.title');
   const [titleA, titleB] = splitTitle(title);
   return (
@@ -116,10 +115,10 @@ export default async function HomePage() {
             <p className="lead">{t('home.faq.more')}</p>
           </div>
           <div className="faq__list">
-            {faq.map((k, i) => (
-              <AccordionItem key={k} q={t(`home.faq.${k}.q`)} open={i === 0}>
-                <p>{t(`home.faq.${k}.a`)}</p>
-                {t.has(`home.faq.${k}.todo`) ? <Todo as="p">{t(`home.faq.${k}.todo`)}</Todo> : null}
+            {faq.map(({ key, q, a }, i) => (
+              <AccordionItem key={key} q={q} open={i === 0}>
+                <p>{a}</p>
+                {t.has(`home.faq.${key}.todo`) ? <Todo as="p">{t(`home.faq.${key}.todo`)}</Todo> : null}
               </AccordionItem>
             ))}
           </div>
