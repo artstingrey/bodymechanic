@@ -359,6 +359,7 @@
 [aria-labelledby="services-title"] .svc .data:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
 [aria-labelledby="services-title"] .svc:active { transform: none; }
 .svc .photo .home-service-image { height: 100%; }
+.home-service-image[data-square] > img { object-fit: var(--service-photo-fit, contain); }
 .home-catalog-state { display: grid; min-height: 9rem; align-content: center; justify-items: start; gap: 12px; }
 
 /* specialists: the frame's proportion and gaps; the placeholder inside is the site's own */

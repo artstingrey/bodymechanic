@@ -17,9 +17,9 @@ export function HomeServicePhoto({ src, alt, unavailable, detail = false, square
   }
 
   return (
-    <div className="home-service-image" ref={checkImage} style={square ? { height: '100%' } : undefined}>
+    <div className="home-service-image" ref={checkImage} data-square={square || undefined} style={square ? { height: '100%' } : undefined}>
       {/* eslint-disable-next-line @next/next/no-img-element -- serve the supplied images directly */}
-      <img src={src} alt={alt} width={1600} height={square ? 1600 : 2000} style={square ? { objectFit: 'var(--service-photo-fit, contain)' } : undefined}
+      <img src={src} alt={alt} width={1600} height={square ? 1600 : 2000}
         loading={detail ? 'eager' : 'lazy'}
         fetchPriority={detail ? 'high' : undefined} decoding="async" onError={() => setFailed(true)} />
     </div>
