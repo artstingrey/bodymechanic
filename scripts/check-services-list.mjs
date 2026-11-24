@@ -170,12 +170,13 @@ try {
 
   await fs.writeFile(scenario, 'catalog-category-titles');
   await run(async (origin) => {
-    for (const [locale, title] of [['ru', 'Услуги'], ['en', 'Services']]) {
+    for (const [locale, title, onlineTitle] of [['ru', 'Услуги', 'Онлайн запись'], ['en', 'Services', 'Online booking']]) {
       const listPath = `/${locale}/services/`;
       const filtered = `${listPath}?category=13989204`;
       await page.goto(origin + listPath);
       const menu = page.locator('.site-nav').getByRole('link', { name: title, exact: true });
       await expect(menu).toHaveAttribute('href', filtered);
+      await expect(categories.filter({ hasText: onlineTitle })).toHaveAttribute('href', `${listPath}?category=13989203`);
       await expect(categories.filter({ hasText: /^Услуги вне салона$/ })).toHaveAttribute('href', `${listPath}?category=20`);
       await page.locator('main .list-bar').getByRole('link', { name: title, exact: true }).click();
       await expect(page).toHaveURL(origin + filtered);

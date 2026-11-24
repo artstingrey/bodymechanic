@@ -250,6 +250,7 @@ globalThis.fetch = async (input, init) => {
   if (scenario === 'catalog-category-titles') {
     return Response.json({ success: true, data: {
       category: [
+        { id: 13989203, title: 'Онлайн запись' },
         { id: 13989204, title: 'Услуги вне салона' },
         { id: 20, title: 'Услуги вне салона' },
       ],

@@ -10,5 +10,6 @@ export const catalogCategoryIds = {
 } as const;
 
 export const catalogCategoryTitles: ReadonlyMap<number, Record<CatalogLocale, string>> = new Map([
+  [catalogCategoryIds.onlineBooking, { ru: ru.nav.main.onlineBooking, en: en.nav.main.onlineBooking }],
   [catalogCategoryIds.offsiteServices, { ru: ru.nav.main.offsiteServices, en: en.nav.main.offsiteServices }],
 ]);
