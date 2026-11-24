@@ -157,8 +157,12 @@
 .b3d-general { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
 
 /* zone list (accessible alternative), 2D fallback */
-.b2d-list { margin: 8px 0 0; padding: 20px; border: 0; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
-.b2d-list legend { float: left; width: 100%; padding: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; }
+.b2d-list { --zone-list-padding: 20px; margin: 8px 0 0; padding: var(--zone-list-padding); border: 0; border-radius: var(--r-card); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 16px; }
+.b2d-list__title { grid-column: 1 / -1; padding: 0 0 8px; font-size: var(--fs-h3); font-weight: 700; }
+/* WebKit drew the legend above the block padding. Preserve that offset without moving the controls. */
+@supports (-webkit-nbsp-mode: space) {
+  .b2d-list__title { position: relative; inset-block-start: calc(-1 * var(--zone-list-padding)); }
+}
 .b2d-list > p { grid-column: 1 / -1; margin: 0 0 8px; font-size: 14px; color: var(--muted); }
 .b2d-list label { display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 15px; cursor: pointer; }
 .b2d-list input { width: 20px; height: 20px; accent-color: var(--text); flex-shrink: 0; }

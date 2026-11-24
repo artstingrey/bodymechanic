@@ -22,8 +22,8 @@ export function ZoneChecklist() {
   const markers = useBody((s) => s.markers);
   const checked = new Set(markers.map((m) => m.zoneId));
   return (
-    <fieldset className="b2d-list" id="zone-list">
-      <legend>{t('body3d.list.title')}</legend>
+    <fieldset className="b2d-list" id="zone-list" aria-labelledby="zone-list-title">
+      <div className="b2d-list__title" id="zone-list-title">{t('body3d.list.title')}</div>
       <p className="todo">{t('body3d.list.text')}</p>
       <p role="status">{t('body3d.list.selected', { count: checked.size })}</p>
       {ALL_KEYS.map((k) => (
