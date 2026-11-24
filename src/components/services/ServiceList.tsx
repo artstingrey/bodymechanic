@@ -5,6 +5,7 @@ import { CatalogServiceCard } from '@/components/services/CatalogServiceCard';
 import { StateCard } from '@/components/ui/Misc';
 
 type Props = CatalogServicesResponse['data'] & { locale: CatalogLocale; category?: string | string[] };
+const PHOTO_SIZES = '(min-width: 1440px) 450px, (min-width: 1024px) 31vw, (min-width: 600px) 46vw, 92vw';
 
 export async function ServiceList({ services, categories, locale, category }: Props) {
   const t = await getTranslations({ locale });
@@ -28,7 +29,7 @@ export async function ServiceList({ services, categories, locale, category }: Pr
           {list.map((service, i) => (
             <li key={service.id}>
               <CatalogServiceCard service={service} locale={locale} t={t} index={i + 1}
-                linkLabel={t('common.actions.details')} titleAs="h2" />
+                linkLabel={t('common.actions.details')} titleAs="h2" photoSizes={PHOTO_SIZES} />
             </li>
           ))}
         </ul>

@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import en from '../messages/en.json' with { type: 'json' };
+import { optimizerSource } from '../e2e/fixtures/optimized-image.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -230,7 +231,7 @@ try {
       const photo = sports.locator('img');
       await photo.scrollIntoViewIfNeeded();
       await expect(photo).toHaveAttribute('alt', labels.sports);
-      await expect(photo).toHaveAttribute('src', '/website-services/test/sports-massage.png');
+      await expect.poll(async () => optimizerSource(await photo.getAttribute('src'))).toBe('/website-services/sports-massage.png');
       await expect(photo).toHaveCSS('object-fit', 'cover');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 

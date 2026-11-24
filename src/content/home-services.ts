@@ -11,25 +11,25 @@ export function homeServiceDescription(locale: CatalogLocale, service: CatalogSe
   return locale === 'en' ? editorial ?? service.description : service.description ?? editorial;
 }
 
-const testPhoto = (name: string) => `/website-services/test/${encodeURIComponent(name)}.png`;
+const servicePhoto = (name: string) => `/website-services/${encodeURIComponent(name)}.png`;
 
 const servicePhotos = new Map([
-  [13688504, testPhoto('Home-service')],
-  [13706788, '/website-services/classic-massage.webp'],
-  [13982351, testPhoto('ice-bath')],
-  [13982353, testPhoto('Individual-Ice-Bath-session +infrared-capsule')],
-  [13982355, testPhoto('sports-massage')],
-  [13982356, testPhoto('classic-massage')],
-  [13982358, testPhoto('thai-massage')],
-  [13982363, testPhoto('infrared')],
-  [13982369, testPhoto('infrared-2')],
-  [13982379, testPhoto('sports-massage+capsule')],
-  [13982380, testPhoto('classic-massage+capsule')],
-  [13982382, testPhoto('thai-massage+capsule')],
-  [13983057, testPhoto('Functional-Training-&-Mobility')],
-  [13983060, testPhoto('Deep-Bodywork+infrared-capsule')],
-  [13983065, testPhoto('Sports-Conditioning-&-Mobility')],
-  [13983067, testPhoto('Muscle-&-Fascia-Work+Stretching')],
+  [13688504, servicePhoto('Home-service')],
+  [13706788, servicePhoto('classic-massage')],
+  [13982351, servicePhoto('ice-bath')],
+  [13982353, servicePhoto('Individual-Ice-Bath-session +infrared-capsule')],
+  [13982355, servicePhoto('sports-massage')],
+  [13982356, servicePhoto('classic-massage')],
+  [13982358, servicePhoto('thai-massage')],
+  [13982363, servicePhoto('infrared')],
+  [13982369, servicePhoto('infrared-2')],
+  [13982379, servicePhoto('sports-massage+capsule')],
+  [13982380, servicePhoto('classic-massage+capsule')],
+  [13982382, servicePhoto('thai-massage+capsule')],
+  [13983057, servicePhoto('Functional-Training-&-Mobility')],
+  [13983060, servicePhoto('Deep-Bodywork+infrared-capsule')],
+  [13983065, servicePhoto('Sports-Conditioning-&-Mobility')],
+  [13983067, servicePhoto('Muscle-&-Fascia-Work+Stretching')],
 ]);
 
 export function catalogServicePhoto(serviceId: number) {

@@ -1,10 +1,14 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import Image from 'next/image';
 import { PhotoPlaceholder } from '@/components/ui/Cards';
 
-export function HomeServicePhoto({ src, alt, unavailable, detail = false }: {
-  src?: string; alt: string; unavailable: string; detail?: boolean;
+const CAROUSEL_SIZES = '(min-width: 1440px) 420px, (min-width: 1024px) 30vw, (min-width: 768px) 336px, min(76vw - 24px, 296px)';
+const DETAIL_SIZES = '(min-width: 1024px) min(36vw, 612px), (min-width: 600px) min(94vw, 48svh), 90vw';
+
+export function HomeServicePhoto({ src, alt, unavailable, detail = false, sizes }: {
+  src?: string; alt: string; unavailable: string; detail?: boolean; sizes?: string;
 }) {
   const [failed, setFailed] = useState(false);
   const checkImage = useCallback((frame: HTMLDivElement | null) => {
@@ -18,8 +22,7 @@ export function HomeServicePhoto({ src, alt, unavailable, detail = false }: {
 
   return (
     <div className="home-service-image" ref={checkImage}>
-      {/* eslint-disable-next-line @next/next/no-img-element -- serve the supplied images directly */}
-      <img src={src} alt={alt} width={1600} height={2000}
+      <Image src={src} alt={alt} width={1600} height={2000} sizes={sizes ?? (detail ? DETAIL_SIZES : CAROUSEL_SIZES)}
         loading={detail ? 'eager' : 'lazy'}
         fetchPriority={detail ? 'high' : undefined} decoding="async" onError={() => setFailed(true)} />
     </div>

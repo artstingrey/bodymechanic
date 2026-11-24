@@ -8,7 +8,7 @@ import { CatalogServicePhoto } from './CatalogServicePhoto';
 
 const TONES = ['lav', 'sand', 'sky'] as const;
 
-export function CatalogServiceCard({ service, locale, t, index, titleAs, linkLabel, discountPercent }: {
+export function CatalogServiceCard({ service, locale, t, index, titleAs, linkLabel, discountPercent, photoSizes }: {
   service: CatalogService;
   locale: CatalogLocale;
   t: Awaited<ReturnType<typeof getTranslations>>;
@@ -16,6 +16,7 @@ export function CatalogServiceCard({ service, locale, t, index, titleAs, linkLab
   titleAs?: 'h2' | 'h3';
   linkLabel?: string;
   discountPercent?: number;
+  photoSizes?: string;
 }) {
   const translations = t.raw('home.services.cards') as HomeServiceTranslations;
   const title = homeServiceTitle(locale, service, translations);
@@ -33,7 +34,7 @@ export function CatalogServiceCard({ service, locale, t, index, titleAs, linkLab
   return (
     <ServiceCard {...link} serviceId={service.id} index={index} title={title} titleAs={titleAs}
       description={description ?? undefined} tone={TONES[(index - 1) % TONES.length]}
-      photo={<CatalogServicePhoto serviceId={service.id} title={title} t={t} />}
+      photo={<CatalogServicePhoto serviceId={service.id} title={title} t={t} sizes={photoSizes} />}
       priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
       price={price}
       duration={service.durationMin === null ? undefined : t('home.services.duration', { minutes: service.durationMin })} />

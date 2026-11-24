@@ -6,6 +6,7 @@ import path from 'node:path';
 import { chromium, expect, webkit } from '@playwright/test';
 import en from '../messages/en.json' with { type: 'json' };
 import ru from '../messages/ru.json' with { type: 'json' };
+import { optimizerSource } from '../e2e/fixtures/optimized-image.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -103,9 +104,9 @@ async function checkCatalog(browser, variant, isChrome) {
       await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', messages.lp[variant].seo.description);
       assert.equal(new URL(await page.locator('meta[property="og:image"]').getAttribute('content')).pathname, `/og/og-lp-${variant}-${locale}.png`);
       await expect(photo).toHaveAttribute('fetchpriority', 'high');
-      await expect(page.locator(`link[rel="preload"][as="image"][fetchpriority="high"][imagesrcset*="/lp/${variant}-"]`)).toHaveCount(3);
-      const format = isChrome ? 'avif' : '(?:avif|webp)';
-      await expect.poll(() => photo.evaluate((img) => img.naturalWidth > 1 && img.currentSrc)).toMatch(new RegExp(`/lp/${variant}-${crop}-.*\\.${format}$`));
+      await expect(page.locator(`link[rel="preload"][as="image"][fetchpriority="high"][imagesrcset*="%2Flp%2F${variant}-"]`)).toHaveCount(3);
+      await expect.poll(async () => optimizerSource(await photo.evaluate((img) => img.naturalWidth > 1 && img.currentSrc)))
+        .toMatch(new RegExp(`^/lp/${variant}-${crop}-\\d+\\.webp$`));
       if (isChrome) {
         await page.evaluate(() => document.fonts.ready);
         const before = await snapshot();
@@ -141,7 +142,8 @@ async function checkCatalog(browser, variant, isChrome) {
       await expect.poll(() => loadedPhoto.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
       const photoNames = ['sports-massage', 'classic-massage', 'Individual-Ice-Bath-session +infrared-capsule', 'infrared', 'Functional-Training-&-Mobility'];
       for (const [index, name] of photoNames.entries()) {
-        await expect(cards.nth(index).locator('img')).toHaveAttribute('src', `/website-services/test/${encodeURIComponent(name)}.png`);
+        const cardPhoto = cards.nth(index).locator('img');
+        await expect.poll(async () => optimizerSource(await cardPhoto.getAttribute('src'))).toBe(`/website-services/${encodeURIComponent(name)}.png`);
       }
 
       for (const width of [320, 390, 768, 1280]) {

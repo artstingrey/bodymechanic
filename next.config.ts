@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { ALTEGIO_PORTRAIT_BASE } from './src/lib/staff-photo';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
@@ -19,8 +20,17 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // The widget site key is public and is inlined into the client build.
   env: { TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY?.trim() ?? '' },
-  // Images are pre-generated (AVIF/WebP) at build time.
-  images: { unoptimized: true },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [430, 576, 640, 750, 828, 860, 1080, 1152, 1200, 1600, 1920, 2048, 3840],
+    localPatterns: [
+      { pathname: '/website-services/**', search: '' },
+      { pathname: '/interier/**', search: '' },
+      { pathname: '/photos/**', search: '' },
+      { pathname: '/lp/**', search: '' },
+    ],
+    remotePatterns: [new URL(ALTEGIO_PORTRAIT_BASE + '**')],
+  },
   // A global 404 handles unmatched paths across the separate root layouts.
   experimental: { globalNotFound: true },
   cacheComponents: false,
