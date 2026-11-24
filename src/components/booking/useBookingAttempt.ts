@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
-import { withLocalizedStaffName, type StaffNameTranslations } from '@/content/home-team';
+import { withLocalizedStaffName, type StaffTranslations } from '@/content/home-team';
 import type { BookingResult } from '@/lib/booking/receipt';
 import {
   decodeStoredBooking, readStoredBooking, writeStoredBooking, type BookingAttemptDetails, type BookingResultScope,
@@ -23,7 +23,7 @@ export function useBookingAttempt(scope: BookingResultScope, locale: CatalogLoca
   const [busy, setBusy] = useState(false);
   const requestActive = useRef(false);
   const saved = change?.scope === scope ? change.stored : restored;
-  const staffNames = useTranslations('home.team').raw('cards') as StaffNameTranslations;
+  const staffNames = useTranslations('home.team').raw('cards') as StaffTranslations;
   const stored = useMemo(() => saved?.status === 'created' ? {
     ...saved,
     staff: saved.staff && withLocalizedStaffName(saved.staff, staffNames),

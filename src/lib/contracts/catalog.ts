@@ -28,6 +28,7 @@ export interface CatalogServiceDetailResponse {
 export interface CatalogStaffMember {
   id: number;
   name: string;
+  description?: string;
   specialization: string | null;
   position: string | null;
   imageUrl: string | null;

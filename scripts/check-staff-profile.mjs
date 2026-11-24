@@ -188,6 +188,10 @@ try {
           await expect(page.locator('.profile__slots [role="status"]')).toHaveText(copy.a11y.loading);
           await expect(page.locator('.profile .eyebrow')).toHaveText(position);
           await expect(page.locator('.profile .hero-lead')).toHaveCount(0);
+          const description = page.locator('.profile__description');
+          await expect(description).toBeVisible();
+          assert.equal(await description.textContent(), 'Experience & training\n\nProfile details');
+          await expect(description.locator('a, script')).toHaveCount(0);
           await expect(page.locator('.profile .crumbs [aria-current="page"]')).toHaveText(name);
           await expect(page.locator(`.profile .crumbs a[href="/${locale}/team/"]`)).toBeVisible();
           await expect(page).toHaveTitle(`${name}, ${position} · The Body Mechanic`);
@@ -221,6 +225,7 @@ try {
         await expect(page.getByRole('heading', { name: 'No Portrait', exact: true })).toBeVisible();
         await expect(page.locator('.profile__photo .ph')).toBeVisible();
         await expect(page.locator('.profile .eyebrow, .profile .hero-lead')).toHaveCount(0);
+        await expect(page.locator('.profile__description')).toHaveCount(0);
         await page.goto(origin + profile(locale, 'staff-91603'));
         await expect(page.locator('.profile__photo .ph')).toBeVisible();
         await expect(page.locator('.profile__photo img')).toHaveCount(0);

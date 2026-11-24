@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { withLocalizedStaffName } from '@/content/home-team';
+import { compile } from 'html-to-text';
+import { withLocalizedStaffName, type StaffTranslations } from '@/content/home-team';
 import type { BookingStaff } from '@/lib/contracts/booking-services';
 import type { CatalogLocale, CatalogStaffMember, CatalogStaffResponse } from '@/lib/contracts/catalog';
 import en from '../../../messages/en.json';
@@ -10,6 +11,15 @@ import { AltegioError } from '../altegio/errors';
 import { fetchBookStaff } from '../altegio/staff';
 import { getAltegioConfig } from '../config';
 import { cachePublicCatalog } from './cache';
+
+const descriptionToText = compile({
+  wordwrap: false,
+  preserveNewlines: true,
+  selectors: [
+    { selector: 'a', options: { ignoreHref: true } },
+    { selector: 'img', format: 'skip' },
+  ],
+});
 
 function optionalText(value: unknown): string | null {
   return typeof value === 'string' ? value.trim() || null : null;
@@ -46,6 +56,7 @@ function normalizeStaff(data: unknown): CatalogStaffMember[] {
     staff.push({
       id,
       name,
+      description: typeof member.information === 'string' ? descriptionToText(member.information).trim() || undefined : undefined,
       specialization: optionalText(member.specialization),
       position: isRecord(member.position) ? optionalText(member.position.title) : null,
       imageUrl: portraitUrl(member.avatar_big) ?? portraitUrl(member.avatar),
@@ -64,17 +75,22 @@ async function loadStaff(locationId: number, locale: CatalogLocale, serviceId?: 
   }
 }
 
-const getCachedStaff = cachePublicCatalog('book-staff-v1', loadStaff);
-const staffNames = { en: en.home.team.cards, ru: ru.home.team.cards };
+const getCachedStaff = cachePublicCatalog('book-staff-v3', loadStaff);
+const staffTranslations: Record<CatalogLocale, StaffTranslations> = { en: en.home.team.cards, ru: ru.home.team.cards };
 
 export function localizeCatalogStaff<T extends BookingStaff>(locale: CatalogLocale, staff: T): T {
-  return withLocalizedStaffName(staff, staffNames[locale]);
+  return withLocalizedStaffName(staff, staffTranslations[locale]);
 }
 
 export async function getCatalogStaff(locale: CatalogLocale): Promise<CatalogStaffResponse> {
   const { locationId } = getAltegioConfig();
   const { staff } = await getCachedStaff(locationId, locale);
-  return { data: { staff: staff.map((member) => localizeCatalogStaff(locale, member)) }, meta: { source: 'altegio', locale } };
+  const localizedStaff = staff.map((member) => {
+    const translated = staffTranslations[locale][member.id]?.description;
+    const description = locale === 'ru' ? member.description ?? translated : translated ?? member.description;
+    return { ...localizeCatalogStaff(locale, member), description };
+  });
+  return { data: { staff: localizedStaff }, meta: { source: 'altegio', locale } };
 }
 
 /** The caller resolves the service against the public catalog before asking for its staff. */

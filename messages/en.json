@@ -396,7 +396,10 @@
       "cta": "Book with this specialist",
       "viewProfile": "View profile",
       "cards": {
-        "3069594": { "name": "Maksim" }
+        "3069594": {
+          "name": "Maksim",
+          "description": "Specialist in deep tissue, sports and myofascial massage.\n\nMaksim is a massage therapist with more than 20 years of experience. He uses deep tissue and myofascial techniques and offers sports and relaxation massage. His work is grounded in anatomy and the biomechanics of movement.\n\nHis main focus is easing muscle tension and tightness. After a session, you can move more easily and feel better overall.\n\nMaksim trained with experienced Russian massage practitioners. He regularly pursues further training and uses up-to-date techniques in his practice."
+        }
       },
       "people": "TODO(content): specialists: names, titles, photos, ratings"
     },

@@ -34,6 +34,7 @@ globalThis.fetch = async (input, init) => {
   if (resource === 'book_staff') {
     const staff = [
       { id: 91601, name: ru ? 'Анна Пример' : 'Anna Example', position: { title: ru ? 'Специалист студии' : 'Studio specialist' },
+        information: '<p>Experience &amp; training</p><p>Profile <a href="https://example.test">details</a></p><script>internal script</script>',
         specialization: ru ? 'Спортивный массаж' : 'Sports massage', avatar_big: 'https://images.example.test/portrait.webp', privateNote: 'fixture raw staff detail' },
       { id: 91602, name: 'No Portrait', avatar: 'https://app.alteg.io/images/no-master.png' },
       { id: 91603, name: 'Broken Portrait', avatar: 'https://images.example.test/broken.webp' },

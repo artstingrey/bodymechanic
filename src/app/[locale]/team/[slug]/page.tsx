@@ -34,7 +34,7 @@ const find = cache(async (locale: CatalogLocale, slug: string) => {
   if (!catalog) return { source: 'unavailable' } as const;
   const staff = catalog.data.staff.find((member) => member.id === id);
   return staff ? { source: 'altegio', profile: {
-    id, slug: catalogStaffSlug(id), name: staff.name, position: staff.position,
+    id, slug: catalogStaffSlug(id), name: staff.name, position: staff.position, description: staff.description,
     specialization: staff.specialization, avatarUrl: staff.imageUrl,
   } } as const : null;
 });
@@ -93,6 +93,8 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
         </div>
         <div className="profile__text">
           <PageHead crumbs={[{ href: '/team', label: t('team.title') }, { label: s.name }]} title={s.name} up eyebrow={real ? s.position : undefined} />
+          {detail.source === 'altegio' && detail.profile.description &&
+            <p className="profile__description">{detail.profile.description}</p>}
           <BookingLink preset={{ staff: s.id, staffProfile: real ? true : undefined }} className="btn btn--primary btn-book">
             {t('common.actions.bookWithSpecialist')}
           </BookingLink>
