@@ -55,7 +55,7 @@ export async function Footer() {
           <p>{t('footer.copyright', { year: 2026 })}{isTodo(legalEntity) ? null : <> {legalEntity}</>}</p>
           <ul className="site-footer__docs">
             <li><Link prefetch={false} href="/privacy">{t('footer.docs.privacy')}</Link></li>
-            <li><Link prefetch={false} href="/terms">{t('footer.docs.terms')}</Link></li>
+            {/* <li><Link prefetch={false} href="/terms">{t('footer.docs.terms')}</Link></li> */}
             <li><CookieSettingsLink label={t('footer.docs.cookies')} /></li>
           </ul>
         </div>
