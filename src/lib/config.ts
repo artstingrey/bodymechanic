@@ -10,7 +10,7 @@ export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER.replace(/\D/g, '')}
 export const whatsappUrl = (text: string) => text ? `${WHATSAPP_URL}?text=${encodeURIComponent(text)}` : WHATSAPP_URL;
 export const INSTAGRAM_URL = 'https://www.instagram.com/mechanic.body.uae/';
 /** Booking: demo captcha (Turnstile at stage 2, ТЗ §07). The prototype issues a mock token after a short check. */
-export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '';
+export const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || '';
 /** Google Tag Manager container (ТЗ §14, GA4 + Meta Pixel inside). Empty in the prototype → events stay in window.dataLayer. */
 export const GTM_ID = (process.env.NEXT_PUBLIC_GTM_ID || '').trim();
 /**

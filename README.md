@@ -65,7 +65,7 @@ npm run gate:clean
 
 ## Выкладка
 
-Для серверной версии нужен Render Web Service с Node.js 22. Команда сборки `npm ci && npm run build`, команда запуска `npm run start`. Укажите `NEXT_PUBLIC_SITE_URL` и `NEXT_PUBLIC_TURNSTILE_SITE_KEY` при сборке, а `ALTEGIO_LOCATION_ID`, `ALTEGIO_PARTNER_TOKEN` и `TURNSTILE_SECRET_KEY` в окружении запущенного сервиса.
+Для серверной версии нужен Render Web Service с Node.js 22. Команда сборки `npm ci && npm run build`, команда запуска `npm run start`. Укажите `NEXT_PUBLIC_SITE_URL` и `TURNSTILE_SITE_KEY` при сборке, а `ALTEGIO_LOCATION_ID`, `ALTEGIO_PARTNER_TOKEN` и `TURNSTILE_SECRET_KEY` в окружении запущенного сервиса.
 
 Текущий удалённый сайт работает как Render Static Site. Параметры будущего Web Service описаны в [CONFIG-DEPLOY.md](docs/CONFIG-DEPLOY.md).
 

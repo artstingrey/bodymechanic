@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   // Proxy adds a slash to localized pages while the API keeps its direct URL.
   skipTrailingSlashRedirect: true,
   poweredByHeader: false,
+  // The widget site key is public and is inlined into the client build.
+  env: { TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY?.trim() ?? '' },
   // Images are pre-generated (AVIF/WebP) at build time.
   images: { unoptimized: true },
   // A global 404 handles unmatched paths across the separate root layouts.
