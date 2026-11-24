@@ -353,6 +353,7 @@
 @media (hover: hover) { .home-sec .svc:hover { transform: translateY(-3px); } }
 .home-sec .svc:active { transform: scale(0.985); transition-duration: 90ms; }
 
+.home-sec[aria-labelledby="services-title"] { --service-photo-fit: cover; }
 [aria-labelledby="services-title"] .ph.home-service-image { border-radius: var(--r-photo); }
 [aria-labelledby="services-title"] .svc .head > div { width: 100%; }
 [aria-labelledby="services-title"] .svc .data:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
