@@ -298,25 +298,8 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-card dl > :only-child { padding-right: 0; }
 .lp-card .price-row { max-width: 100%; flex-wrap: wrap; gap: 2px 8px; }
 .lp-card .price-row > * { max-width: 100%; white-space: normal; }
-.lp-studio { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.lp-studio figure { position: relative; aspect-ratio: 4 / 5; border-radius: var(--r-card); background: var(--card-sand); overflow: hidden; display: flex; align-items: flex-end; justify-content: center; color: color-mix(in srgb, var(--accent) 22%, var(--card-sand)); }
-.lp-studio figure svg { width: 80%; height: auto; }
-.lp-studio .room { background: var(--card-sky); }
-.lp-studio figcaption { position: absolute; left: 10px; right: 10px; bottom: 10px; padding: 6px 8px; border-radius: 8px; background: rgba(247, 244, 240, .92); color: var(--text); font-size: 13px; line-height: 1.3; }
-.lp-studio .tick { position: absolute; left: 50%; top: 45%; }
-.lp-studio .tick::before, .lp-studio .tick::after { content: ""; position: absolute; background: color-mix(in srgb, var(--text) 30%, transparent); }
-.lp-studio .tick::before { width: 56px; height: 1px; left: -28px; } .lp-studio .tick::after { width: 1px; height: 56px; top: -28px; }
 .lp-two .fhead { margin-bottom: 16px; }
 #lp-directions { scroll-margin-top: 16px; }
-.lp-dirs { display: grid; gap: 14px; justify-items: start; }
-/* Keep the map area the same shape while the iframe loads. */
-.lp-dirs .map { position: relative; justify-self: stretch; aspect-ratio: 16 / 7; border-radius: var(--r-card, 16px); background: var(--surface); box-shadow: inset 0 0 0 1px var(--hairline);
-  background-image: repeating-linear-gradient(0deg, transparent 0 27px, var(--hairline) 27px 28px), repeating-linear-gradient(90deg, transparent 0 27px, var(--hairline) 27px 28px); }
-.lp-dirs .pin { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -18px 0 0 -9px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
-.lp-dirs .map--live { width: 100%; min-height: 200px; overflow: hidden; }
-.lp-dirs .map--live iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-.lp-dirs address { display: grid; gap: 4px; font-style: normal; font-size: 16px; }
-.lp-dirs p { margin: 0; font-size: 15px; }
 .lp-steps .lnk { display: inline-flex; align-items: center; min-height: 48px; font-size: 14px; font-weight: 600; color: var(--text); margin-top: 0; text-underline-offset: 3px; }
 .lp-risk { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
 .lp-risk li { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; }
@@ -465,7 +448,6 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
   .lp-steps li { grid-template-columns: 1fr; padding-bottom: 0; }
   .lp-steps li::before { left: 56px; right: -12px; top: 21.5px; bottom: auto; width: auto; height: 1px; }
   .lp-steps h3 { padding-top: 0; }
-  .lp-studio { grid-template-columns: repeat(2, minmax(0, 320px)); }
   .lp-foot { padding-bottom: 32px; text-align: left; }
   dialog.lp-sheet { width: min(560px, 100%); margin: auto; border-radius: var(--r-modal, 24px); }
 }
@@ -512,19 +494,17 @@ html[data-lp-form="sheet"] .lp-sticky .l-sheet { display: inline-flex; }
 .lp-cards { scroll-padding-inline: var(--lp-g); }
 /* 4 · Pending address and offer terms. */
 .lp .pending { margin: 0; font-size: 15px; }
-.lp-dirs .map { background-color: color-mix(in srgb, var(--text) 5%, var(--bg)); background-image: none; box-shadow: none; } /* a quiet Bone plaque with the pin, not a grid */
 /* 5 · the sticky bar is opaque: nothing reads through under its buttons */
 .lp-sticky { background: var(--bg); }
 /* 7 · «Вопросы и ответы»: air between the heading and the list */
 .lp-faq-wrap .fhead { margin-bottom: 20px; }
-/* 9 · «Специалисты и студия»: the brand placeholder with a caption. */
-.lp-studio { grid-template-columns: minmax(0, 1fr); }
-.lp-studio .ph { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: var(--r-card); }
-:is(.lp-studio, .lp-card) .ph[role="img"] { background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
-:is(.lp-studio, .lp-card) .ph[role="img"]::before { content: ""; position: absolute; inset: 12% 30% 30%; background: color-mix(in srgb, var(--text) 8%, transparent);
+/* 9 · Studio gallery and service photo placeholders. */
+.lp .lp-studio .head { grid-template-columns: minmax(0, 1fr); text-align: start; }
+.lp .lp-studio .head > .sub { max-width: 60ch; margin-inline: 0; }
+.lp-card .ph[role="img"] { background: color-mix(in srgb, var(--text) 5%, var(--bg)); }
+.lp-card .ph[role="img"]::before { content: ""; position: absolute; inset: 12% 30% 30%; background: color-mix(in srgb, var(--text) 8%, transparent);
   -webkit-mask: url(/brand/bm-full-mono-dark.svg) center / contain no-repeat; mask: url(/brand/bm-full-mono-dark.svg) center / contain no-repeat; }
-:is(.lp-studio, .lp-card) .ph__cap { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; line-height: 1.3; color: var(--muted); }
-@media (min-width: 768px) { .lp-studio .ph { aspect-ratio: 21 / 9; } }
+.lp-card .ph__cap { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; line-height: 1.3; color: var(--muted); }
 /* 10 · form errors: a short summary in a light box — no heavy dark ring; the field errors stay under the fields */
 .form-errors { box-shadow: none; background: color-mix(in srgb, var(--error) 6%, var(--surface)); }
 .form-errors:focus { outline: none; }

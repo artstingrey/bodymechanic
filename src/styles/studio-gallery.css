@@ -1,0 +1,9 @@
+.studio-gallery .car .track > li { width: auto; }
+.studio-gallery .car .track > li > img {
+  flex: none;
+  width: auto;
+  height: clamp(178px, 54vw, 360px);
+  max-width: none;
+  border-radius: var(--r-photo);
+  background: var(--surface);
+}

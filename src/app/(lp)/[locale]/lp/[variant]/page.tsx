@@ -7,10 +7,9 @@ import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import { isLocale, type Locale } from '@/i18n/routing';
 import { pageUrl, SITE_URL } from '@/lib/site';
-import { STUDIO, whatsappUrl } from '@/lib/config';
+import { whatsappUrl } from '@/lib/config';
 import CFG from '@/lib/lp/config.json';
 import HERO from '@/lib/lp/hero.json';
-import { PhotoPlaceholder } from '@/components/ui/Cards';
 import { isTodo } from '@/components/ui/Todo';
 import { Icon } from '@/components/ui/Icon';
 import { LeadForm } from '@/components/lp/LeadForm';
@@ -20,7 +19,8 @@ import { LpTracking } from '@/components/lp/LpTracking';
 import { LpConsent } from '@/components/lp/LpConsent';
 import { LandingCatalogCards } from '@/components/lp/LandingCatalogCards';
 import { chooseLandingOffer, LandingCatalogOffer } from '@/components/lp/LandingCatalogOffer';
-import { StudioMapFrame } from '@/components/ui/StudioMapFrame';
+import { StudioContacts } from '@/components/sections/StudioContacts';
+import { StudioGallery } from '@/components/sections/StudioGallery';
 import { getCatalogServices } from '@/server/catalog/services';
 
 /**
@@ -96,6 +96,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
   const privacyHref = `/${locale}/privacy/`;
   const [h1a, h1b] = splitH1(t(vc.defaultH1));
   const bt = CFG.blockTitleKeys;
+  const studioTitle = t(bt.studio);
   const hero = HERO[variant] as Record<Crop, { ar: number[]; widths: number[]; co: CO[] }>;
   const src = (c: Crop, fmt: string) => hero[c].widths.map((w) => `/lp/${variant}-${c}-${w}.${fmt} ${w}w`).join(', ');
   const MEDIA = { none: '(max-width: 767px) and (max-height: 600px)', tall: '(min-width: 1024px) and (orientation: landscape)', short: '(max-width: 767px) and (max-height: 700px)', band: '(max-width: 1023px), (min-width: 1024px) and (orientation: portrait)' } as const;
@@ -205,23 +206,20 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
           </div>
         </section>
 
-        <section className="lp-sec lp-rise" style={{ paddingTop: 0 }} aria-labelledby="lp-studio">
+        <section className="lp-sec lp-rise lp-studio" style={{ paddingTop: 0 }} aria-labelledby="lp-studio">
           <div className="w">
-            <div className="head"><h2 id="lp-studio">{t(bt.studio)}</h2></div>
-            {/* one brand placeholder, as on the site (design audit 9: a bust of three primitives + a crosshair, captions over them) */}
-            <div className="lp-studio">
-              <PhotoPlaceholder caption={t('placeholder.specialistPhoto')} />
+            <div className="head">
+              <h2 id="lp-studio">{studioTitle}</h2>
+              <p className="sub">{t('home.space.text')}</p>
             </div>
+            <StudioGallery title={studioTitle} t={t} landing />
           </div>
         </section>
 
         <section id="lp-directions" className="lp-sec lp-sec--tint lp-rise" aria-labelledby="lp-dir">
-          <div className="w lp-two">
-            <div className="fhead"><h2 id="lp-dir">{t(CFG.directions.titleKey)}</h2></div>
-            <div className="lp-dirs">
-              <StudioMapFrame className="map map--live" title={t('contacts.mapLabel')} />
-              <address>{STUDIO.streetAddress}</address>
-            </div>
+          <div className="w">
+            <div className="head"><h2 id="lp-dir">{t(CFG.directions.titleKey)}</h2></div>
+            <StudioContacts />
           </div>
         </section>
 

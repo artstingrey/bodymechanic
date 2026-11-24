@@ -210,7 +210,8 @@ async function checkCatalog(browser, variant, isChrome) {
       assert.equal(mapRequest.isNavigationRequest(), true);
       const directions = page.locator('#lp-directions');
       const map = directions.locator('iframe');
-      await expect(directions.locator('address')).toContainText('HDS Tower Cluster F, 16 floor, 1606');
+      await expect(directions.locator('.contacts__list dd').first()).toContainText('HDS Tower Cluster F, 16 floor, 1606');
+      await expect(directions.getByRole('link', { name: messages.contacts.openMap, exact: true })).toHaveAttribute('href', /^https:\/\/www\.google\.com\/maps\?cid=/);
       await expect(map).toHaveAttribute('src', mapUrl);
       await expect(map).toHaveAttribute('loading', 'eager');
       for (const width of [320, 1280]) {

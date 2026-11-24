@@ -222,6 +222,8 @@ for (const [locale, { contacts }] of [['ru', ru], ['en', en]] as const) {
     });
     await page.goto(`/${locale}/contacts/`, { waitUntil: 'networkidle' });
     const address = await page.locator('.contacts__list dd').first().textContent();
+    const contactRows = await page.locator('.contacts__list > div').allTextContents();
+    const contactLinks = await page.locator('.contacts__list a').evaluateAll((links) => links.map((link) => link.getAttribute('href')));
     const contactsLink = await page.getByRole('link', { name: contacts.openMap, exact: true }).getAttribute('href');
     const contactsEmbed = await page.locator('.contacts__map-frame iframe').getAttribute('src');
     expect(contactsLink).toBe(STUDIO_MAP.url);
@@ -241,8 +243,9 @@ for (const [locale, { contacts }] of [['ru', ru], ['en', en]] as const) {
         await section.scrollIntoViewIfNeeded();
         const map = section.getByRole('figure', { name: contacts.mapLabel });
         const frame = map.locator('iframe');
-        await expect(section.locator('address')).toHaveText(address!);
-        await expect(section.locator(`a[href="${STUDIO_MAP.url}"]`)).toHaveCount(0);
+        await expect(section.locator('.contacts__list > div')).toHaveText(contactRows);
+        expect(await section.locator('.contacts__list a').evaluateAll((links) => links.map((link) => link.getAttribute('href')))).toEqual(contactLinks);
+        await expect(section.getByRole('link', { name: contacts.openMap, exact: true })).toHaveAttribute('href', contactsLink!);
         await expect(map.getByRole('button')).toHaveCount(0);
         await expect(frame).toHaveAttribute('src', contactsEmbed!);
         await expect(frame).toHaveAttribute('title', contacts.mapLabel);
@@ -252,7 +255,7 @@ for (const [locale, { contacts }] of [['ru', ru], ['en', en]] as const) {
         await expect(frame.contentFrame().getByText('HDS Tower', { exact: true })).toBeVisible();
         expect(mapRequests).toEqual([STUDIO_MAP.embedUrl]);
         const bounds = (await map.boundingBox())!;
-        expect(bounds.height).toBeGreaterThanOrEqual(200);
+        expect(bounds.height).toBe(width === 320 ? 320 : 480);
         expect(bounds.x).toBeGreaterThanOrEqual(0);
         expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
         expect(await frame.boundingBox()).toEqual(bounds);
