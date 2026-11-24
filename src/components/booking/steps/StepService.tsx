@@ -23,7 +23,7 @@ export function StepService({ flow }: { flow: Flow }) {
         )}
         {catalogQ.status === 'ready' && (ordered.length > 0 ? (
           <BookingServiceOptions name="service" services={ordered} selected={selectedIds}
-            recommended={recommended[0]} suggestedLabel={t('booking.service.suggested')} onSelect={selectService} />
+            recommended={recommended} suggestedLabel={t('booking.service.suggested')} onSelect={selectService} />
         ) : <p className="hint" role="status">{t('booking.service.empty')}</p>)}
         <div className="bk-actions">
           <Button variant="secondary" onClick={() => go(1)}>{t('common.actions.back')}</Button>

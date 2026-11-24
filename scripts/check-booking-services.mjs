@@ -15,6 +15,10 @@ const availabilityFixture = path.join(dir, 'availability');
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
 const sports = 13982355;
 const classic = 13982356;
+const afterMassage = 13982351;
+const homeMassage = 13688504;
+const deepBodywork = 13983060;
+const fascia = 13983067;
 const other = 91201;
 const cacheKeys = new Set();
 let browser;
@@ -374,6 +378,8 @@ try {
         const rows = page.locator('input[name="service"]');
         const row = (id) => page.locator('.bk-opt', { has: rows.locator(`xpath=self::input[@value="${id}"]`) });
         const recommendation = page.locator('.bk-opt', { hasText: copy.suggested });
+        const expectRecommendations = (ids) => expect.poll(() => recommendation.locator('input')
+          .evaluateAll((inputs) => inputs.map((input) => Number(input.value)))).toEqual(ids);
         const requests = [];
         let catalogRequests = 0;
         let scenario = 'loading';
@@ -395,6 +401,8 @@ try {
           }
           const response = await route.fetch();
           const json = await response.json();
+          const sample = json.data.services.find(({ id }) => id === other);
+          json.data.services.push(...[afterMassage, homeMassage, deepBodywork, fascia].map((id) => ({ ...sample, id })));
           if (scenario === 'empty') json.data.services = [];
           if (scenario === 'missing') json.data.services = json.data.services.filter(({ id }) => id !== classic);
           await route.fulfill({ response, json });
@@ -431,20 +439,33 @@ try {
 
           await page.getByRole('button', { name: messages.common.actions.back }).click();
           const zones = page.locator('#zone-list');
-          const unknown = messages.body3d.zones.left.replace('{zone}', messages.body3d.zones.elbow_forearm);
-          await zones.getByRole('checkbox', { name: unknown, exact: true }).check();
+          const elbow = messages.body3d.zones.left.replace('{zone}', messages.body3d.zones.elbow_forearm);
+          const elbowOption = zones.getByRole('checkbox', { name: elbow, exact: true });
+          await elbowOption.check();
           await page.getByRole('button', { name: messages.body3d.panel.cta }).click();
-          await expect(rows.first()).toHaveValue(String(sports));
-          await expect(recommendation).toHaveCount(0);
+          await expect(rows.first()).toHaveValue(String(fascia));
+          await expectRecommendations([fascia]);
 
           await page.getByRole('button', { name: messages.common.actions.back }).click();
+          await elbowOption.uncheck();
           for (const zone of ['chest', 'neck_collar']) {
             await zones.getByRole('checkbox', { name: messages.body3d.zones[zone], exact: true }).check();
           }
           await page.getByRole('button', { name: messages.body3d.panel.cta }).click();
           await expect(rows.first()).toHaveValue(String(classic));
-          await expect(recommendation).toHaveCount(1);
-          await expect(row(classic)).toContainText(copy.suggested);
+          await expectRecommendations([classic, afterMassage, homeMassage]);
+
+          await page.getByRole('button', { name: messages.common.actions.back }).click();
+          const foot = messages.body3d.zones.left.replace('{zone}', messages.body3d.zones.foot);
+          const footOption = zones.getByRole('checkbox', { name: foot, exact: true });
+          await footOption.check();
+          await page.getByRole('button', { name: messages.body3d.panel.cta }).click();
+          await expect(rows.first()).toHaveValue(String(sports));
+          await expectRecommendations([sports, afterMassage, homeMassage]);
+
+          await page.getByRole('button', { name: messages.common.actions.back }).click();
+          await footOption.uncheck();
+          await page.getByRole('button', { name: messages.body3d.panel.cta }).click();
 
           await page.evaluate(() => {
             sessionStorage.setItem('bm.bookingSteps', JSON.stringify({
@@ -466,9 +487,8 @@ try {
 
           scenario = 'missing';
           await page.reload();
-          await expect(rows.first()).toHaveValue(String(sports));
-          await expect(recommendation).toHaveCount(1);
-          await expect(row(sports)).toContainText(copy.suggested);
+          await expect(rows.first()).toHaveValue(String(afterMassage));
+          await expectRecommendations([afterMassage, homeMassage]);
           await expect(page.locator('input[name="service"]:checked')).toHaveCount(0);
           assert.deepEqual(requests, []);
           scenario = 'ready';

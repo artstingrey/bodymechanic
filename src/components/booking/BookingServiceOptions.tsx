@@ -7,7 +7,7 @@ export function BookingServiceOptions({ name, services, selected, recommended, s
   name: string;
   services: { id: number; title: string; categoryTitle?: string; price: string; originalPrice?: string; duration: string | null }[];
   selected: readonly number[];
-  recommended?: number;
+  recommended?: readonly number[];
   suggestedLabel?: string;
   onSelect: (id: number, checked: boolean) => void;
 }) {
@@ -22,7 +22,7 @@ export function BookingServiceOptions({ name, services, selected, recommended, s
             <span className="bk-opt__body">
               <b>{service.title}</b>
               {service.categoryTitle && <span>{service.categoryTitle}</span>}
-              {recommended === service.id && <Badge tone="accent">{suggestedLabel}</Badge>}
+              {recommended?.includes(service.id) && <Badge tone="accent">{suggestedLabel}</Badge>}
             </span>
             <span className="bk-opt__meta tn"><b>{service.price}</b>{service.originalPrice && <s>{service.originalPrice}</s>}
               {service.duration && <span>{service.duration}</span>}</span>

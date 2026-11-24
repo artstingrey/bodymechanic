@@ -4,17 +4,29 @@ import type { CatalogLocale, CatalogServicesResponse } from '@/lib/contracts/cat
 
 const legacyServiceKeys = new Map(SERVICES.map(({ id, key }) => [id, key]));
 const legacyStaffIds = new Set(STAFF.map(({ id }) => id));
-const confirmedServices = new Map([['sports', 13982355], ['classic', 13982356]]);
+const sportsMassageId = 13982355;
+const classicMassageId = 13982356;
+const massageExtras = [13982351, 13688504]; // Ice bath after massage, home massage.
+const zoneRecommendations = new Map<string, readonly number[]>([
+  ['sports', [sportsMassageId, ...massageExtras]],
+  ['classic', [classicMassageId, ...massageExtras]],
+  ['lfkKinesio', [13983057]],
+  ['manual', [13983060]],
+  ['orthoRehab', [13983065]],
+  ['mfrPir', [13983067]],
+]);
 
-/** Only mappings confirmed for zone recommendations in 6.1. */
-export function confirmedCatalogId(demoId: number) {
-  const key = legacyServiceKeys.get(demoId);
-  return key === undefined ? undefined : confirmedServices.get(key);
+const legacyPresets = new Map([['sports', sportsMassageId], ['classic', classicMassageId]]);
+
+export function catalogRecommendationIds(legacyId: number): readonly number[] {
+  const key = legacyServiceKeys.get(legacyId);
+  return key === undefined ? [] : zoneRecommendations.get(key) ?? [];
 }
 
 export function restoreServiceId(id: number | null): number | null {
   if (id == null || !Number.isSafeInteger(id) || id <= 0) return null;
-  return legacyServiceKeys.has(id) ? confirmedCatalogId(id) ?? null : id;
+  const key = legacyServiceKeys.get(id);
+  return key === undefined ? id : legacyPresets.get(key) ?? null;
 }
 
 export function isLegacyStaffId(id: number) {

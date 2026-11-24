@@ -34,7 +34,7 @@ import { bookingUrl, getBookingOptions } from './useBookingOptions';
 import { useAsync } from './useAsync';
 import { bookingRejectionNotice } from './booking-submit';
 import { useBookingAttempt, type BookingAttemptOutcome } from './useBookingAttempt';
-import { confirmedCatalogId, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
+import { catalogRecommendationIds, getBookingCatalog, isLegacyStaffId, restoreServiceId } from './service-catalog';
 import { useBookingSelection } from './useBookingSelection';
 
 /** search params on the client only: calling useSearchParams() in the static prerender would make the whole flow
@@ -156,12 +156,17 @@ export function useBookingFlow() {
       };
     });
   }, [catalog, catalogByStaff, locale, removedServices, t]);
-  const recommended = useMemo(() => recommendServices(markers.map((m) => m.zoneId))
-    .map(confirmedCatalogId)
-    .filter((id): id is number => id !== undefined && services.some((s) => s.id === id)), [markers, services]);
+  const recommended = useMemo(() => {
+    const availableIds = new Set(services.map(({ id }) => id));
+    for (const legacyId of recommendServices(markers.map(({ zoneId }) => zoneId))) {
+      const matches = catalogRecommendationIds(legacyId).filter((id) => availableIds.has(id));
+      if (matches.length > 0) return matches;
+    }
+    return [];
+  }, [markers, services]);
   const ordered = useMemo(() => [...services].sort((a, b) => {
     const ra = recommended.indexOf(a.id), rb = recommended.indexOf(b.id);
-    return (ra < 0 ? 99 : ra) - (rb < 0 ? 99 : rb);
+    return (ra < 0 ? recommended.length : ra) - (rb < 0 ? recommended.length : rb);
   }), [services, recommended]);
   const selectedServices = selectedIds.flatMap((id) => services.find((item) => item.id === id) ?? []);
   const serviceTitle = selectedServices.map(({ title }) => title).join(' · ');
