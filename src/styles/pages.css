@@ -42,11 +42,11 @@
 
 /* ---------- service ---------- */
 .svc-hero { display: grid; gap: 24px; }
-.svc-hero__photo picture, .svc-hero__photo img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--r-card); }
+.svc-hero__photo picture, .svc-hero__photo img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: contain; border-radius: var(--r-card); }
 .svc-hero__photo .ph { width: 100%; aspect-ratio: 4 / 5; }
 .svc-hero__text .h1, .svc-hero__text [aria-current="page"], .svc-hero__text .eyebrow { overflow-wrap: anywhere; }
 /* tablets 600–1023 (AD's V1, lead: D-03 and the order «price → button → description → photo» stay): the full-width 4:5 photo
-   was ≈ 940×1100 on Fold 7 984 — capped at 60 % of the screen, cropped by object-fit around the photo's focal point */
+   was ≈ 940×1100 on Fold 7 984. Cap the frame at 60 % of the screen and keep the whole image visible. */
 @media (min-width: 600px) and (max-width: 1023px) { .svc-hero__photo picture, .svc-hero__photo img, .svc-hero__photo .ph { max-height: 60svh; } }
 .svc-hero__text { display: grid; gap: 20px; align-content: start; }
 .svc-hero__text .page-head { margin-bottom: 0; }
@@ -57,7 +57,7 @@
 .facts dt { font-size: var(--fs-micro); font-weight: 700; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--muted); }
 .facts dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
 @media (min-width: 1024px) {
-  .svc-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
+  .svc-hero { grid-template-columns: minmax(0, 3fr) minmax(0, 5fr); gap: 48px; align-items: start; }
   /* Let the text set the row height independently of the image's intrinsic size. */
   .svc-hero__photo:not(:empty) {
     position: relative;

@@ -116,7 +116,7 @@ async function browserChecks(origin) {
       await expect(hero.locator('.badge')).toHaveCount(0);
       const photo = hero.locator('.svc-hero__photo img');
       await expect(photo).toHaveAttribute('src', '/website-services/test/sports-massage.png');
-      await expect(photo).toHaveCSS('object-fit', 'cover');
+      await expect(photo).toHaveCSS('object-fit', 'contain');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
       await checkSectionVisibility(locale);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
@@ -151,6 +151,7 @@ async function browserChecks(origin) {
       assert.ok(await heading.evaluate((element) => element.scrollWidth <= element.clientWidth));
       const [photoBox, textBox] = await Promise.all([hero.locator('.svc-hero__photo').boundingBox(), hero.locator('.svc-hero__text').boundingBox()]);
       assert.ok(width === 320 ? textBox.y < photoBox.y : photoBox.x < textBox.x, 'hero order');
+      if (width >= 1024) assert.ok(Math.abs(photoBox.width - (photoBox.width + textBox.width) * 3 / 8) < 1, 'desktop photo column width');
     }
     for (const [slug, price] of [['service-91202', /From\s+AED\s+55\.5/], ['service-91203', /AED\s+125/], ['service-91204', 'Price to be confirmed']]) {
       await page.goto(origin + paths.page('en', slug));
