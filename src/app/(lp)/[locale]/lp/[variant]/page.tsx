@@ -212,7 +212,7 @@ export default async function LandingPage({ params }: { params: Promise<{ varian
               <h2 id="lp-studio">{studioTitle}</h2>
               <p className="sub">{t('home.space.text')}</p>
             </div>
-            <StudioGallery title={studioTitle} t={t} landing />
+            <StudioGallery title={studioTitle} t={t} />
           </div>
         </section>
 

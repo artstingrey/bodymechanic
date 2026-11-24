@@ -1208,11 +1208,7 @@
       "text": "To book a visit, message the studio on WhatsApp."
     },
     "studio": {
-      "title": "Specialists and studio",
-      "alt": {
-        "arina": "Arina, studio specialist",
-        "maksim": "Maksim, studio specialist"
-      }
+      "title": "Specialists and studio"
     },
     "why": {
       "title": "Why The Body Mechanic",

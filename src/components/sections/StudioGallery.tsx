@@ -19,27 +19,18 @@ const interior = [
   { file: 'DSC02943.webp', alt: 'home.space.alt.waitingArea', height: 1069 },
 ] as const;
 
-const specialists = [
-  { file: 'arina.webp', alt: 'lp.studio.alt.arina', height: 2396 },
-  { file: 'maksim.webp', alt: 'lp.studio.alt.maksim', height: 2396 },
-] as const;
-
-export function StudioGallery({ title, t, landing = false }: {
+export function StudioGallery({ title, t }: {
   title: string;
   t: Awaited<ReturnType<typeof getTranslations>>;
-  landing?: boolean;
 }) {
-  const folder = landing ? '/interier-lp' : '/interier';
-  const photos = landing ? [...specialists, ...interior] : interior;
-
   return (
     <div className="studio-gallery">
       <Carousel label={title} t={{
         label: t('a11y.carousel.label'), prev: t('a11y.carousel.prev'), next: t('a11y.carousel.next'),
         goTo: t.raw('a11y.carousel.goTo') as string, position: t.raw('a11y.carousel.position') as string,
       }}>
-        {photos.map(({ file, alt, height }) => (
-          <Image key={file} src={`${folder}/${file}`} alt={t(alt)} width={1600} height={height} draggable={false} />
+        {interior.map(({ file, alt, height }) => (
+          <Image key={file} src={`/interier/${file}`} alt={t(alt)} width={1600} height={height} draggable={false} />
         ))}
       </Carousel>
     </div>
