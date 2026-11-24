@@ -125,16 +125,13 @@
 .b3d-toolbar > button { margin-left: auto; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 0; background: transparent; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); font: 700 14px/1 var(--font-sans); cursor: pointer; }
 @media (hover: hover) { .b3d-toolbar > button:hover { background: var(--text); color: var(--bg); } }
 
-/* left panel: help / contraindications / prices as accordions */
+/* help panel */
 .b3d-left { display: grid; align-content: start; background: var(--surface); border-radius: var(--r-card); padding: 4px 20px; box-shadow: inset 0 0 0 1px var(--line); }
-.b3d-left details { border-top: 1px solid var(--line); }
-.b3d-left details:first-child { border-top: 0; }
 .b3d-left summary { list-style: none; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; cursor: pointer; }
 .b3d-left summary::-webkit-details-marker { display: none; }
 .b3d-left summary::after { content: ""; width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin-top: -4px; }
 .b3d-left details[open] summary::after { transform: rotate(-135deg); margin-top: 4px; }
 .b3d-left details > :not(summary) { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
-.b3d-left ol, .b3d-left ul { padding-left: 18px; display: grid; gap: 6px; }
 
 /* marker panel */
 .b3d-panel { display: grid; gap: 12px; background: var(--surface); border-radius: var(--r-card); padding: 20px; box-shadow: inset 0 0 0 1px var(--line); }
@@ -200,7 +197,7 @@ dialog.sheet-dialog[open] { animation: bk-sheet-in var(--d-2, 400ms) var(--e-out
 
 @media (max-width: 1023px) {
   .booking-3d__left { display: contents; }
-  .booking-3d__left > .b3d-left { display: none; } /* «Помощь / Противопоказания / Цены» live in the «?» sheet */
+  .booking-3d__left > .b3d-left { display: none; } /* The «?» sheet shows help on these screens. */
   .booking-3d__model { order: 1; } .booking-3d__right { order: 2; }
   .b3d-help-btn { display: inline-flex; }
 }

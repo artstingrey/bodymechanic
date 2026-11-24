@@ -458,7 +458,7 @@
       },
       "contraindications": {
         "q": "Are there any contraindications?",
-        "a": "Yes, any kind of bodywork has limits. The list of contraindications is in the left-hand panel on the booking page and on each service page. If in doubt, check with your doctor."
+        "a": "Yes, any kind of bodywork has limits. If in doubt, check with your doctor."
       }
     },
     "form": {
@@ -549,16 +549,6 @@
       "step3": "Book your session: choose a service, a specialist and a time.",
       "sides": "Left and right are counted from your own body, not from the screen.",
       "tools": "Rotate the model with your finger or mouse and zoom with the scroll wheel or by pinching. Double-click to reset the view."
-    },
-    "contra": {
-      "title": "Contraindications",
-      "intro": "Please read this before you book."
-    },
-    "prices": {
-      "title": "Prices",
-      "note": "Current prices from the booking system. The exact cost is shown at the “Service” step.",
-      "all": "All prices",
-      "loadError": "We couldn’t load the prices."
     },
     "helpButtonAria": "Help",
     "panel": {
@@ -663,18 +653,6 @@
     "todo": {
       "zoneRules": "TODO(content): rules for matching a service to the marked areas"
     }
-  },
-  "contraindications": {
-    "items": {
-      "thrombosis": "Thrombosis",
-      "thrombophlebitis": "Thrombophlebitis",
-      "oncology": "Cancer",
-      "neurologicalAcute": "Acute neurological conditions, including numbness, weakness or loss of coordination",
-      "cardiovascularNoClearance": "Cardiovascular conditions without a doctor’s clearance",
-      "pregnancy": "Pregnancy",
-      "acuteInjuries": "Acute injuries, including fractures, ligament tears and dislocations"
-    },
-    "todo": "TODO(content): the final list of contraindications"
   },
   "booking": {
     "summary": {
@@ -1281,7 +1259,7 @@
       },
       "contraindications": {
         "q": "Are there any contraindications?",
-        "a": "Yes, any kind of bodywork has limits. You can see the list on the booking page, and our admin will confirm the details before your visit. If you are recovering from an injury or surgery, please check with your doctor before booking."
+        "a": "Yes, any kind of bodywork has limits. Our admin will confirm the details before your visit. If you are recovering from an injury or surgery, please check with your doctor before booking."
       },
       "afterRequest": {
         "q": "What happens after I send the request?",

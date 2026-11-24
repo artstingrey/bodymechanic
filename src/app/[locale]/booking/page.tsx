@@ -31,7 +31,7 @@ export default async function BookingPage() {
   preload(assets.posters.male.avif, { as: 'image', type: 'image/avif', fetchPriority: 'high' });
   return (
     <ScopeMessages messages={await pickMessages([
-      'body3d', 'home.hero', 'booking', 'forms', 'contraindications', 'mock',
+      'body3d', 'home.hero', 'booking', 'forms', 'mock',
       'home.services.cards', 'home.services.priceUnknown', 'home.services.priceFrom', 'home.services.duration',
       'home.form.feedback', 'account.sampleRecords',
     ])}>

@@ -1,19 +1,14 @@
 'use client';
 /**
  * Booking step 1 «Зоны» (ТЗ 6.2–6.7): tools, marker list (note ≤ 200, intensity 1–10), clear all, general note ≤ 400,
- * left-panel accordions (help / contraindications / prices). Structure only — layout comes from the style frame.
+ * and help with the 3D model.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { body, MAX_MARKERS, useBody, type Marker, type Tool } from '@/lib/body3d/store';
 import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, MARKER_NOTE_LIMIT } from '@/lib/body3d/booking-details';
 import { zoneLabel } from '@/lib/body3d/zones';
-import { getBookingCatalog } from '@/components/booking/service-catalog';
-import { homeServiceTitle, type HomeServiceTranslations } from '@/content/home-services';
-import { formatCatalogServicePrice } from '@/lib/catalog-service-price';
-import type { CatalogLocale, CatalogService } from '@/lib/contracts/catalog';
 import { ModelSwitch } from './HeroControls';
-import { Todo } from '@/components/ui/Todo';
 import { Icon } from '@/components/ui/Icon';
 import { useDialogBackCloses } from '@/lib/ui/useBackCloses';
 
@@ -135,39 +130,8 @@ export function MarkerList({ countSlot }: { countSlot?: ReactNode } = {}) {
   );
 }
 
-function BookingPrices({ locale }: { locale: CatalogLocale }) {
+export function LeftPanel() {
   const t = useTranslations();
-  const [services, setServices] = useState<CatalogService[] | null>();
-  useEffect(() => {
-    const request = new AbortController();
-    getBookingCatalog(locale, request.signal).then(
-      (catalog) => { if (!request.signal.aborted) setServices(catalog.services); },
-      () => { if (!request.signal.aborted) setServices(null); },
-    );
-    return () => request.abort();
-  }, [locale]);
-
-  if (services === undefined) return <p role="status">{t('common.state.loading')}</p>;
-  if (services === null) return <p role="status">{t('body3d.prices.loadError')}</p>;
-  if (!services.length) return <p role="status">{t('booking.service.empty')}</p>;
-
-  const translations = t.raw('home.services.cards') as HomeServiceTranslations;
-  return (
-    <ul>{services.map((service) => {
-      const title = homeServiceTitle(locale, service, translations);
-      const price = formatCatalogServicePrice(service, locale, {
-        unknown: () => t('home.services.priceUnknown'),
-        from: (value) => t('home.services.priceFrom', { price: value }),
-      });
-      const duration = service.durationMin === null ? null : t('home.services.duration', { minutes: service.durationMin });
-      return <li key={service.id}>{[title, price, duration].filter(Boolean).join(' · ')}</li>;
-    })}</ul>
-  );
-}
-
-export function LeftPanel({ locale }: { locale: CatalogLocale }) {
-  const t = useTranslations();
-  const [pricesOpen, setPricesOpen] = useState(false);
   return (
     <aside className="b3d-left" aria-label={t('body3d.helpButtonAria')}>
       <details open>
@@ -177,18 +141,6 @@ export function LeftPanel({ locale }: { locale: CatalogLocale }) {
         <p>{t('body3d.help.step3')}</p>
         <p>{t('body3d.help.sides')}</p>
         <p>{t('body3d.help.tools')}</p>
-      </details>
-      <details>
-        <summary>{t('body3d.contra.title')}</summary>
-        <p>{t('body3d.contra.intro')}</p>
-        {/* starting list of 7 (client, HI-FI decisions; CMS at stage 2, «юристы»): the item set comes from the deck */}
-        <ul>{Object.keys(t.raw('contraindications.items') as Record<string, string>).map((k) => <li key={k}>{t(`contraindications.items.${k}`)}</li>)}</ul>
-        <Todo as="p">{t('contraindications.todo')}</Todo>
-      </details>
-      <details onToggle={(event) => setPricesOpen(event.currentTarget.open)}>
-        <summary>{t('body3d.prices.title')}</summary>
-        <p>{t('body3d.prices.note')}</p>
-        {pricesOpen && <BookingPrices key={locale} locale={locale} />}
       </details>
     </aside>
   );
