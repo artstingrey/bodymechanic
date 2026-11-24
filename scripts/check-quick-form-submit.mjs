@@ -72,7 +72,17 @@ async function openForm(browser, origin, locale, analytics, staffId, suffix, sel
     await form.getByRole('button', { name: copy.booking.captcha.retry }).click();
   }
   await expect(button).toBeEnabled();
-  await expect(form.locator('.captcha.cap').getByTitle('Synthetic Turnstile')).toBeVisible();
+  const widget = form.locator('.captcha.cap').getByTitle('Synthetic Turnstile');
+  await expect(widget).toBeVisible();
+  assert.ok(await widget.evaluate((iframe) => {
+    const { options } = [...window.fixtureTurnstile.widgets.values()].find((item) => item.iframe === iframe);
+    const container = iframe.closest('.captcha');
+    const { paddingLeft, paddingRight } = getComputedStyle(container);
+    const width = container.getBoundingClientRect().width - parseFloat(paddingLeft) - parseFloat(paddingRight);
+    const iframeWidth = iframe.getBoundingClientRect().width;
+    if (innerWidth < 768) return options.size === 'flexible' && Math.abs(iframeWidth - width) < 1;
+    return width < 300 ? options.size === 'compact' && iframeWidth === 150 : options.size === 'normal' && iframeWidth === 300;
+  }));
   const service = form.locator('#qf-service');
   await service.click();
   await form.locator(`#qf-service-options input[value="${selectedService}"]`).check();

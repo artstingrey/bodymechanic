@@ -11,3 +11,13 @@
 }
 .captcha p { margin: 0; }
 .captcha p:empty { position: absolute; }
+
+.captcha__frame { display: contents; }
+
+@media (max-width: 767px) {
+  .captcha { padding-inline: clamp(8px, calc((100% - 300px) / 2), 16px); }
+  .captcha__frame { display: block; width: 100%; overflow: hidden; }
+  .captcha__frame:focus-within { outline: 2px solid var(--focus-ring); }
+  /* Turnstile's flexible layout has a 300px minimum. Fit narrow forms without clipping the iframe. */
+  .captcha__frame > div { transform: scaleX(var(--captcha-scale-x, 1)); transform-origin: left center; }
+}

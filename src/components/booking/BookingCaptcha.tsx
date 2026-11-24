@@ -9,6 +9,8 @@ import type { CatalogLocale } from '@/lib/contracts/catalog';
 
 const TOKEN_LIFETIME_MS = 300_000;
 const LOAD_TIMEOUT_MS = 12_000;
+const FULL_WIDGET_MIN_WIDTH = 300;
+const MOBILE_QUERY = '(max-width: 767px)';
 let scriptReady: Promise<void> | undefined;
 
 function loadScript() {
@@ -55,9 +57,10 @@ export function useBookingCaptcha() {
 
 type Captcha = ReturnType<typeof useBookingCaptcha>;
 type WidgetState = 'loading' | 'waiting' | 'ready' | 'expired' | 'error';
+type WidgetSize = 'normal' | 'compact' | 'flexible';
 
 function CaptchaWidget({ locale, size, id, updateToken }: {
-  locale: CatalogLocale; size: 'normal' | 'compact'; id: string; updateToken: Captcha['updateToken'];
+  locale: CatalogLocale; size: WidgetSize; id: string; updateToken: Captcha['updateToken'];
 }) {
   const t = useTranslations('booking.captcha');
   const widget = useRef<TurnstileInstance>(undefined);
@@ -92,22 +95,24 @@ function CaptchaWidget({ locale, size, id, updateToken }: {
 
   return (
     <>
-      <Turnstile key={attempt} id={`${id}-widget`} ref={widget} siteKey={TURNSTILE_SITE_KEY} injectScript={false}
-        options={{
-          size, language: locale, action: BOOKING_CAPTCHA_ACTION, appearance: 'always',
-          responseField: false, retry: 'never', refreshExpired: 'manual', refreshTimeout: 'never',
-        }}
-        onWidgetLoad={() => { loaded.current = true; setState((state) => state === 'loading' ? 'waiting' : state); }}
-        onSuccess={(value) => {
-          clearTimeout(expiry.current);
-          updateToken(value);
-          setState('ready');
-          expiry.current = window.setTimeout(() => invalidate('expired'), TOKEN_LIFETIME_MS);
-        }}
-        onExpire={() => invalidate('expired')}
-        onError={() => { invalidate('error'); return true; }}
-        onTimeout={() => invalidate('error')}
-        onUnsupported={() => invalidate('error')} />
+      <div className="captcha__frame">
+        <Turnstile key={attempt} id={`${id}-widget`} ref={widget} siteKey={TURNSTILE_SITE_KEY} injectScript={false}
+          options={{
+            size, language: locale, action: BOOKING_CAPTCHA_ACTION, appearance: 'always',
+            responseField: false, retry: 'never', refreshExpired: 'manual', refreshTimeout: 'never',
+          }}
+          onWidgetLoad={() => { loaded.current = true; setState((state) => state === 'loading' ? 'waiting' : state); }}
+          onSuccess={(value) => {
+            clearTimeout(expiry.current);
+            updateToken(value);
+            setState('ready');
+            expiry.current = window.setTimeout(() => invalidate('expired'), TOKEN_LIFETIME_MS);
+          }}
+          onExpire={() => invalidate('expired')}
+          onError={() => { invalidate('error'); return true; }}
+          onTimeout={() => invalidate('error')}
+          onUnsupported={() => invalidate('error')} />
+      </div>
       <p id={id} role="status">{state === 'ready' ? '' : t(state)}</p>
       {(state === 'error' || state === 'expired') &&
         <button className="btn btn--text btn--sm" type="button" onClick={retry}>{t('retry')}</button>}
@@ -120,18 +125,34 @@ export function BookingCaptcha({ captcha, locale, className = 'captcha' }: {
 }) {
   const t = useTranslations('booking.captcha');
   const root = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<'normal' | 'compact' | null>(null);
+  const [size, setSize] = useState<WidgetSize | null>(null);
   const { id, generation, updateToken } = captcha;
 
   useEffect(() => {
     const element = root.current;
     if (!element || !TURNSTILE_SITE_KEY) return;
+    const mobile = window.matchMedia(MOBILE_QUERY);
+    let width = 0;
+    const resizeWidget = () => {
+      if (width <= 0) {
+        setSize(null);
+      } else if (mobile.matches) {
+        element.style.setProperty('--captcha-scale-x', String(Math.min(1, width / FULL_WIDGET_MIN_WIDTH)));
+        setSize('flexible');
+      } else {
+        setSize(width < FULL_WIDGET_MIN_WIDTH ? 'compact' : 'normal');
+      }
+    };
     const observer = new ResizeObserver(([entry]) => {
-      const width = entry.contentRect.width;
-      setSize(width === 0 ? null : width < 300 ? 'compact' : 'normal');
+      width = entry.contentRect.width;
+      resizeWidget();
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    mobile.addEventListener('change', resizeWidget);
+    return () => {
+      observer.disconnect();
+      mobile.removeEventListener('change', resizeWidget);
+    };
   }, []);
 
   return (
