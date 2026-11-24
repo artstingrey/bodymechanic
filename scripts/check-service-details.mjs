@@ -238,7 +238,7 @@ try {
         assert.equal(redirectUrl.origin + redirectUrl.pathname, origin + pathname);
         assert.deepEqual([...redirectUrl.searchParams], [...new URLSearchParams(query)]);
         const { text: html, headers } = await request(origin, pathname, 200);
-        assert.equal(headers.get('x-robots-tag'), 'noindex, nofollow');
+        assert.equal(headers.get('x-robots-tag'), null);
         assert.match(headers.get('cache-control'), /no-store/);
         const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)[1];
         assert.equal(new URL(canonical).pathname, pathname);

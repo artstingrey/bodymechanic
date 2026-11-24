@@ -7,7 +7,6 @@ export { SITE_URL, pageUrl } from './site';
 
 /**
  * Per-page metadata from messages (meta.<key>.title/description/og*), hreflang ru/en/x-default, canonical.
- * The prototype is closed for indexing (DEL-13): noindex, nofollow on every page.
  */
 export async function pageMetadata(locale: Locale, key: string, path: string, values: Record<string, string> = {}, opts: { ogFromDescription?: boolean; description?: string } = {}): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: 'meta' });
@@ -16,7 +15,6 @@ export async function pageMetadata(locale: Locale, key: string, path: string, va
   return {
     title: t(`${key}.title`, values),
     description,
-    robots: { index: false, follow: false },
     alternates: {
       canonical: url(locale),
       languages: { ...Object.fromEntries(locales.map((l) => [l, url(l)])), 'x-default': url('en') },
@@ -29,10 +27,8 @@ export async function pageMetadata(locale: Locale, key: string, path: string, va
 }
 
 /**
- * Metadata of the account pages (RC-9, security review S-2, lib/analytics/private): the same as a public page plus
- * <meta name="referrer" content="no-referrer"> — the address of a record link (/account/record/{id}/{hash}/) must not travel
- * as the referrer to the next document (the language switch there is a full page load) or to another site.
+ * Keep private account pages out of search and suppress the referrer on links from a booking record.
  */
 export async function privateMetadata(locale: Locale, key: string, path: string): Promise<Metadata> {
-  return { ...(await pageMetadata(locale, key, path)), referrer: 'no-referrer' };
+  return { ...(await pageMetadata(locale, key, path)), robots: { index: false, follow: false }, referrer: 'no-referrer' };
 }

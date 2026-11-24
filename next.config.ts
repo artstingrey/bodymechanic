@@ -9,8 +9,8 @@ if (process.env.RENDER && !process.env.NEXT_PUBLIC_SITE_URL) {
   throw new Error('NEXT_PUBLIC_SITE_URL is not set: add the service URL in Render → Environment (README, «Render»).');
 }
 // Any other host (and a local build): the placeholder origin is used — say so in the build log instead of shipping it silently
-if (!process.env.NEXT_PUBLIC_SITE_URL && process.env.NODE_ENV === 'production') {
-  console.warn('! NEXT_PUBLIC_SITE_URL is not set: canonical, hreflang, Open Graph and sitemap.xml use https://bodymechanic.example (docs/CONFIG-DEPLOY.md)');
+if (!process.env.NEXT_PUBLIC_SITE_URL?.trim() && !process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim() && process.env.NODE_ENV === 'production') {
+  console.warn('! Site domain is not set: canonical, hreflang, Open Graph and sitemap.xml use https://bodymechanic.example (docs/CONFIG-DEPLOY.md)');
 }
 
 const nextConfig: NextConfig = {
@@ -57,7 +57,6 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
           { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'" },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'accelerometer=(), gyroscope=(), magnetometer=(), camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), hid=(), midi=(), display-capture=(), xr-spatial-tracking=(), browsing-topics=()' },
@@ -66,9 +65,18 @@ const nextConfig: NextConfig = {
       {
         source: '/:locale(ru|en)/account/:path*',
         headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
           { key: 'Referrer-Policy', value: 'no-referrer' },
           { key: 'Cache-Control', value: 'no-store' },
         ],
+      },
+      {
+        source: '/:locale(ru|en)/lp/:variant(a|b)/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      {
+        source: '/api/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
       },
       {
         source: '/models/:file*',

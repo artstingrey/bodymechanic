@@ -33,7 +33,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations({ locale: isLocale(locale) ? locale : 'en', namespace: 'meta' });
   return {
     title: { default: t('home.title'), template: '%s' },
-    robots: { index: false, follow: false }, // DEL-13: prototype closed for indexing (+ robots.txt from app/robots.ts)
     applicationName: 'Body Mechanic', // README §11: manifest short_name
     manifest: locale === 'ru' ? '/site.ru.webmanifest' : '/site.webmanifest',
     icons: {

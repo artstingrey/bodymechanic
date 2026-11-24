@@ -21,10 +21,15 @@ test('route inventory: every §04 template built for both locales, no unknown pa
   }
 });
 
-test('robots.txt disallows everything (DEL-13)', async ({ request }) => {
+test('robots.txt allows crawling with exceptions for landings and private accounts', async ({ request }) => {
   const res = await request.get('/robots.txt');
   expect(res.status()).toBe(200);
-  expect(await res.text()).toMatch(/User-agent:\s*\*\s*[\r\n]+Disallow:\s*\/\s*$/im); // app/robots.ts (Next writes «User-Agent»)
+  const rules = await res.text();
+  expect(rules).toMatch(/^User-agent: \*$/im);
+  expect(rules).toMatch(/^Allow: \/$/m);
+  expect(rules.split(/\r?\n/).filter((rule) => rule.startsWith('Disallow: ')).sort()).toEqual([
+    'Disallow: /en/account', 'Disallow: /en/lp/', 'Disallow: /lp/', 'Disallow: /ru/account', 'Disallow: /ru/lp/',
+  ]);
 });
 
 test.describe('root / picks the language in the browser', () => {
@@ -51,8 +56,10 @@ test.describe('root / picks the language in the browser', () => {
     await page.waitForURL('**/en/');
     await ctx.close();
   });
-  test('root HTML itself is noindex', async ({ request }) => {
-    expect(await (await request.get('/')).text()).toMatch(/<meta name="robots" content="noindex, ?nofollow"/);
+  test('root HTML allows crawling and points to the English canonical', async ({ request }) => {
+    const body = await (await request.get('/')).text();
+    expect(body).not.toMatch(/<meta name="robots" content="[^"]*noindex/);
+    expect(body).toMatch(/<link rel="canonical" href="https?:\/\/[^"]+\/en\/"\/>/);
   });
 });
 

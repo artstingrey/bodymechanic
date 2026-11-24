@@ -20,7 +20,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, view
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('body3d.viewer');
-  return { title: t('title'), robots: { index: false, follow: false } };
+  return { title: t('title') };
 }
 
 export default async function ViewerLayout({ children }: LayoutProps<'/[locale]'>) {

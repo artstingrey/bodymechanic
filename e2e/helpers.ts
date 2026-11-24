@@ -185,9 +185,11 @@ export async function domChecks(page: Page, locale: string) {
     const p: string[] = [];
     const html = document.documentElement;
     if (html.lang !== loc) p.push(`html lang="${html.lang}", expected "${loc}"`);
-    // Next adds its own <meta robots="noindex"> on some pages; all tags together must say noindex + nofollow
     const robots = [...document.querySelectorAll('meta[name="robots"]')].map((m) => m.getAttribute('content')).join(', ');
-    if (!/noindex/.test(robots) || !/nofollow/.test(robots)) p.push(`meta robots="${robots}" (needs noindex, nofollow)`);
+    const restricted = /^\/(ru|en)\/(account|lp)(?:\/|$)/.test(location.pathname);
+    if (restricted) {
+      if (!/noindex/.test(robots) || !/nofollow/.test(robots)) p.push(`meta robots="${robots}" (needs noindex, nofollow)`);
+    } else if (/noindex|nofollow/.test(robots)) p.push(`meta robots="${robots}" (public page)`);
     const vp = document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '';
     if (!/width=device-width/.test(vp) || /user-scalable\s*=\s*no|maximum-scale\s*=\s*1(\.0)?\b/.test(vp)) p.push(`viewport="${vp}"`);
     const h1 = document.querySelectorAll('h1').length;

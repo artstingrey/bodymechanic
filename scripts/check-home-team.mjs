@@ -86,7 +86,7 @@ const staffCalls = (logs) => calls(logs, 'staff');
 async function home(origin, locale) {
   const response = await fetch(`${origin}/${locale}/`);
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
+  assert.equal(response.headers.get('x-robots-tag'), null);
   const html = await response.text();
   checkPrivacy(html);
   return html;

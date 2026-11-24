@@ -55,7 +55,11 @@ export async function checkServer(origin) {
   }
 
   await get('/', 200, /bm\.locale/);
-  await get('/robots.txt', 200, /Disallow: \//);
+  const robots = await get('/robots.txt', 200, /^Allow: \/$/m);
+  assert.doesNotMatch(robots.body, /^Disallow: \/$/m);
+  for (const path of ['/lp/', '/en/lp/', '/ru/lp/', '/en/account', '/ru/account']) {
+    assert.ok(robots.body.split(/\r?\n/).includes(`Disallow: ${path}`));
+  }
   await get('/sitemap.xml', 200, /<urlset/);
   const catalog = await get('/api/catalog/services?locale=unknown', 400, /INVALID_QUERY/);
   assert.equal(catalog.headers.get('cache-control'), 'no-store');
@@ -68,7 +72,8 @@ export async function checkServer(origin) {
   for (const locale of ['en', 'ru']) {
     await redirect(`/${locale}`, `/${locale}/`);
     const { body, headers } = await get(`/${locale}/`, 200, new RegExp(`<html lang="${locale}"`));
-    assert.equal(headers.get('x-robots-tag'), 'noindex, nofollow');
+    assert.equal(headers.get('x-robots-tag'), null);
+    assert.doesNotMatch(body, /<meta name="robots" content="[^"]*noindex/);
     // Streaming puts resource hints in the HTTP Link header; prerendered HTML can carry them in the document.
     assert.deepEqual([...fontLinks(body), ...headerFontLinks(headers)].map((link) => link[1]), ['Manrope.woff2']);
     for (const path of ['services', 'services/sports', 'services/manual', 'team/specialist-1', 'journal/demo-article-1']) {
@@ -81,6 +86,8 @@ export async function checkServer(origin) {
       const query = '?form=sheet&utm_source=campaign%20name&tag=a&tag=b';
       await redirect(`/${locale}/lp/${variant}${query}`, `/${locale}/lp/${variant}/${query}`);
       const lp = await get(`/${locale}/lp/${variant}/`, 200, /data-lp-form=/);
+      assert.equal(lp.headers.get('x-robots-tag'), 'noindex, nofollow');
+      assert.match(lp.body, /<meta name="robots" content="noindex, ?nofollow"/);
       const links = fontLinks(lp.body);
       const headerLinks = headerFontLinks(lp.headers);
       assert.deepEqual([...links, ...headerLinks].map((link) => link[1]).sort(),
@@ -91,6 +98,8 @@ export async function checkServer(origin) {
     for (const path of ['account/', 'account/record/', 'account/record/777/abc123/']) {
       await redirect(`/${locale}/${path.slice(0, -1)}`, `/${locale}/${path}`);
       const account = await get(`/${locale}/${path}`, 200, /<meta name="referrer" content="no-referrer"/);
+      assert.equal(account.headers.get('x-robots-tag'), 'noindex, nofollow');
+      assert.match(account.body, /<meta name="robots" content="noindex, ?nofollow"/);
       assert.equal(account.headers.get('referrer-policy'), 'no-referrer');
       assert.match(account.headers.get('cache-control') ?? '', /\bno-store\b/);
       if (path.includes('abc123')) {

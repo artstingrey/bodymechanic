@@ -196,7 +196,8 @@ function checkSitemap(urls: Awaited<ReturnType<typeof readSitemap>>, origin: str
 test('sitemap.xml: public pages and working language alternates; robots.txt points to it', async ({ request, page }) => {
   const urls = await readSitemap(request, page);
   const robots = await html(request, '/robots.txt');
-  expect(robots).toMatch(/Disallow:\s*\/\s*$/im); // prototype: closed (DEL-13)
+  expect(robots).toMatch(/^Allow: \/$/m);
+  expect(robots).not.toMatch(/^Disallow: \/$/m);
   const origin = new URL(urls[0].loc).origin;
   expect(robots).toContain(`Sitemap: ${origin}/sitemap.xml`);
   const paths = inBothLocales(sitemapPublic);

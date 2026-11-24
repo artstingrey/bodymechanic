@@ -1,7 +1,7 @@
 /**
  * Page matrix: every page × 2 locales × the width of the current project (5 projects = 390/768/1280/1920/2560).
  * Per page: document 200 by direct link, 0 HTTP ≥400 / failed requests, only the expected studio map on contacts, 0 console errors,
- * meta robots noindex,nofollow, viewport, html lang, one h1, no horizontal overflow, no dead links,
+ * robots policy, viewport, html lang, one h1, no horizontal overflow, no dead links,
  * every internal link resolves (and its #anchor exists), DEL-09 screenshot.
  */
 import fs from 'node:fs';

@@ -45,7 +45,7 @@ function run(check, env = fixtureEnv()) {
 async function home(origin, locale = 'en') {
   const response = await fetch(`${origin}/${locale}/`);
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow');
+  assert.equal(response.headers.get('x-robots-tag'), null);
   assert.match(response.headers.get('cache-control') ?? '', /\bno-store\b/);
   const html = await response.text();
   assert.ok(privateValues.every((value) => !html.includes(value)), 'private values in HTML or RSC');

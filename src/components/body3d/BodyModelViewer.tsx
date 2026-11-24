@@ -42,7 +42,7 @@ export function BodyModelViewer({ autoRotate = false }: { autoRotate?: boolean }
             {locales.map((id) => id === locale ? (
               <span key={id} lang={id} aria-current="page">{language(id)}</span>
             ) : (
-              <a key={id} href={`/${id}/${page}/`} hrefLang={id} rel="nofollow"
+              <a key={id} href={`/${id}/${page}/`} hrefLang={id}
                 aria-label={`${language(id)}. ${language(id === 'ru' ? 'toRu' : 'toEn')}`}>{language(id)}</a>
             ))}
           </nav>
