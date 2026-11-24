@@ -96,9 +96,8 @@
 }
 @media (min-width: 1024px) {
   .svc-hero__text > .page-head, .profile__text > .page-head { order: -2; padding-bottom: 0; border-bottom: 0; }
-  .svc-hero__text > .hero-lead, .profile__text > .hero-lead { order: -1; }
+  .svc-hero__text > .hero-lead { order: -1; }
   .svc-hero__text > .hero-lead { margin-top: -8px; }   /* gap 20 → 12, the head's own gap */
-  .profile__text > .hero-lead { margin-top: -4px; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
   .profile__text > .profile__slots { order: 0; }
   .profile__text > .btn-book { order: 1; }
   .profile__text > .btn--text { order: 2; }

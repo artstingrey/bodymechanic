@@ -187,7 +187,7 @@ try {
           await expect(page.getByRole('heading', { level: 1, name, exact: true })).toBeVisible();
           await expect(page.locator('.profile__slots [role="status"]')).toHaveText(copy.a11y.loading);
           await expect(page.locator('.profile .eyebrow')).toHaveText(position);
-          await expect(page.locator('.profile .hero-lead')).toContainText(specialization);
+          await expect(page.locator('.profile .hero-lead')).toHaveCount(0);
           await expect(page.locator('.profile .crumbs [aria-current="page"]')).toHaveText(name);
           await expect(page.locator(`.profile .crumbs a[href="/${locale}/team/"]`)).toBeVisible();
           await expect(page).toHaveTitle(`${name}, ${position} · The Body Mechanic`);

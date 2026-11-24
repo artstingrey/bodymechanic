@@ -85,7 +85,7 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
     <article className="container page">
       <PageLd kind="staff" profile={s} />
       {/* R-FINAL-2 D-03 (lead, option A), the same template as /services/[slug]: below 1024 — head, «Записаться к специалисту»,
-          specialization, nearest slots, then the photo; ≥ 1024 looks as before (pages.css restores the order). */}
+          nearest slots, then the photo; ≥ 1024 looks as before (pages.css restores the order). */}
       <div className="profile">
         <div className="profile__photo staff">
           {real ? <HomeTeamPhoto key={s.avatarUrl} src={s.avatarUrl} alt={s.name} unavailable={t('home.team.photoUnavailable')} />
@@ -96,8 +96,6 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
           <BookingLink preset={{ staff: s.id, staffProfile: real ? true : undefined }} className="btn btn--primary btn-book">
             {t('common.actions.bookWithSpecialist')}
           </BookingLink>
-          {detail.source === 'altegio' && detail.profile.specialization && detail.profile.specialization !== s.position
-            ? <p className="lead hero-lead">{`${t('team.profile.specialization')}: ${detail.profile.specialization}`}</p> : null}
           <section className="profile__slots">
             <h2 className="h3">{t('team.profile.nearestSlots')}</h2>
             {real ? <StaffTodaySlots key={`${locale}:${s.id}`} staffId={s.id} /> : <NearestSlots staffId={s.id} />}
