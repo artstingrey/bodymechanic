@@ -58,10 +58,19 @@
 .facts dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
 @media (min-width: 1024px) {
   .svc-hero { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
-  .svc-hero__photo { position: sticky; top: calc(var(--header-h) + 16px); }
+  /* Let the text set the row height independently of the image's intrinsic size. */
+  .svc-hero__photo:not(:empty) {
+    position: relative;
+    align-self: stretch;
+    min-height: 260px;
+    max-height: min(520px, 72svh);
+    overflow: hidden;
+    border-radius: var(--r-card);
+  }
+  .svc-hero__photo > * { position: absolute; inset: 0; }
   .svc-hero__photo picture, .svc-hero__photo img, .svc-hero__photo .ph {
-    aspect-ratio: 3 / 2;
-    max-height: 400px;
+    height: 100%;
+    aspect-ratio: auto;
   }
   .svc-hero__text { display: flex; flex-direction: column; align-self: stretch; }
   .svc-hero__text > .facts { margin-top: auto; }
