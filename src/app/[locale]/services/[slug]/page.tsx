@@ -120,7 +120,7 @@ export default async function ServicePage({ params }: PageProps<'/[locale]/servi
       <div className="svc-hero">
         <div className="svc-hero__photo">
           {detail.source === 'altegio'
-            ? <CatalogServicePhoto service={detail.service} title={s.title} t={t} detail />
+            ? <CatalogServicePhoto serviceId={s.id} title={s.title} t={t} detail />
             : hasPhoto('services', s.slug)
               ? <Photo set="services" id={s.slug} alt={s.title} sizes={PHOTO_SIZES} priority="high" /> : null}
         </div>

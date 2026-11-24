@@ -23,7 +23,7 @@ export function CatalogServiceCard({ service, locale, t, index, titleAs, linkLab
   return (
     <ServiceCard href={`/services/${catalogServiceSlug(service.id)}`} linkLabel={linkLabel} index={index} title={title} titleAs={titleAs}
       description={description ?? undefined} tone={TONES[(index - 1) % TONES.length]}
-      photo={<CatalogServicePhoto service={service} title={title} t={t} />}
+      photo={<CatalogServicePhoto serviceId={service.id} title={title} t={t} />}
       priceLabel={t('services.card.priceLabel')} durationLabel={t('services.card.durationLabel')}
       price={formatCatalogServicePrice(service, locale, {
         unknown: () => t('home.services.priceUnknown'), from: (price) => t('home.services.priceFrom', { price }),

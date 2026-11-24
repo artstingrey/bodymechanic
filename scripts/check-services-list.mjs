@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import en from '../messages/en.json' with { type: 'json' };
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -196,7 +197,7 @@ try {
       },
       en: {
         sports: 'Sports massage',
-        sportsDescription: 'Massage for people who train: before a session, after a race and between workouts.',
+        sportsDescription: en.home.services.cards['13982355'].description,
         longTitle: /very long service title/,
         classicDescription: 'A calm, classic massage in a private room.',
         from: 'From', minutes: 'min', unknown: 'Price to be confirmed',
@@ -229,7 +230,7 @@ try {
       const photo = sports.locator('img');
       await photo.scrollIntoViewIfNeeded();
       await expect(photo).toHaveAttribute('alt', labels.sports);
-      await expect(photo).toHaveAttribute('src', '/website-services/sports-massage.webp');
+      await expect(photo).toHaveAttribute('src', '/website-services/test/sports-massage.png');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
 
       const grid = page.locator('main .card-grid');

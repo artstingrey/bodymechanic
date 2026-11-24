@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
+import en from '../messages/en.json' with { type: 'json' };
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -104,7 +105,7 @@ async function browserChecks(origin) {
     await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
     const localized = [
       ['ru', 'Спортивный массаж из каталога', 'Описание из каталога.', 'Массаж из каталога'],
-      ['en', 'Sports massage', 'Massage for people who train: before a session, after a race and between workouts.', 'Catalog massage'],
+      ['en', 'Sports massage', en.home.services.cards['13982355'].description, 'Catalog massage'],
     ];
     await page.goto(`${origin}${paths.page('ru', 'sports')}?ref=test`);
     for (const [locale, title, description, category] of localized) {
@@ -114,7 +115,7 @@ async function browserChecks(origin) {
       await expect(facts).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/, '']);
       await expect(hero.locator('.badge')).toHaveCount(0);
       const photo = hero.locator('.svc-hero__photo img');
-      await expect(photo).toHaveAttribute('src', '/website-services/sports-massage.webp');
+      await expect(photo).toHaveAttribute('src', '/website-services/test/sports-massage.png');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
       await checkSectionVisibility(locale);
       sectionHeadingsByLocale.set(locale, await sectionHeadings.allTextContents());
@@ -176,7 +177,7 @@ async function browserChecks(origin) {
     await demoCta.click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
     await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
-    await page.route('**/website-services/sports-massage.webp', (route) => route.fulfill({ status: 404 }));
+    await page.route('**/website-services/test/sports-massage.png', (route) => route.fulfill({ status: 404 }));
     await page.goto(origin + paths.page('en', 'sports'));
     await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
     assert.deepEqual(unexpectedRequests, []);

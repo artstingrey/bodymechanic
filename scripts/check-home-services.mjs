@@ -256,7 +256,7 @@ try {
         const classic = block.locator('article').filter({ has: page.locator(`a[href="/${locale}/services/classic/"]`) });
         const photo = classic.locator('img');
         await photo.scrollIntoViewIfNeeded();
-        await expect(photo).toHaveAttribute('src', '/website-services/classic-massage.webp');
+        await expect(photo).toHaveAttribute('src', '/website-services/test/classic-massage.png');
         await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
         await expect(block.getByText(/Иллюстративное фото|Illustrative photo/i)).toHaveCount(0);
         for (const [slug, title] of [['sports', sportsTitle], ['service-91206', 'Новая услуга']]) {

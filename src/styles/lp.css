@@ -280,7 +280,7 @@ dialog.lp-sheet[open] { animation: lp-up 400ms var(--e-out) both; }
 .lp-card .ph { position: relative; aspect-ratio: 4 / 4.6; border-radius: var(--r-photo); overflow: hidden; }
 .lp-card .ph picture, .lp-card .ph img { width: 100%; height: 100%; object-fit: cover; }
 .lp-card .home-service-image { height: 100%; }
-.lp-card .home-service-image[data-square] > img { object-fit: contain; }
+.lp-card .home-service-image[data-printed-price] > img { object-fit: contain; }
 .lp-card .bd { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 14px 6px 0; }
 .lp-card .n { font-size: 13px; font-weight: 800; color: var(--accent-ink-card); font-variant-numeric: tabular-nums; }
 .lp-card h3 { font-size: var(--fs-h3); line-height: 1.2; font-weight: 700; letter-spacing: -.015em; }

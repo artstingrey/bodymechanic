@@ -137,8 +137,9 @@ async function checkCatalog(browser, variant, isChrome) {
       const loadedPhoto = cards.nth(0).locator('img');
       await loadedPhoto.scrollIntoViewIfNeeded();
       await expect.poll(() => loadedPhoto.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
-      for (const [index, name] of ['sports-massage', 'classic-massage', 'ice-bath', 'infrared', 'Functional-Training-%26-Mobility'].entries()) {
-        await expect(cards.nth(index).locator('img')).toHaveAttribute('src', `/website-services/${name}.webp`);
+      const photoNames = ['sports-massage', 'classic-massage', 'Individual-Ice-Bath-session +infrared-capsule', 'infrared', 'Functional-Training-&-Mobility'];
+      for (const [index, name] of photoNames.entries()) {
+        await expect(cards.nth(index).locator('img')).toHaveAttribute('src', `/website-services/test/${encodeURIComponent(name)}.png`);
       }
 
       for (const width of [320, 390, 768, 1280]) {
