@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { body, MAX_MARKERS, useBody, type Marker, type Tool } from '@/lib/body3d/store';
+import { body, MAX_MARKERS, useBody, type Marker } from '@/lib/body3d/store';
 import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, MARKER_NOTE_LIMIT } from '@/lib/body3d/booking-details';
 import { zoneLabel } from '@/lib/body3d/zones';
 import { ModelSwitch } from './HeroControls';
@@ -15,22 +15,10 @@ import { useDialogBackCloses } from '@/lib/ui/useBackCloses';
 export function Toolbar() {
   const t = useTranslations();
   const mode2d = useBody((s) => s.mode2d);
-  const tool = useBody((s) => s.tool);
-  const tools: Tool[] = ['rotate', 'zoom', 'marker'];
   return (
     <div className="b3d-toolbar" role="toolbar" aria-label={t('body3d.toolbar.label')}>
       <ModelSwitch />
-      {/* 3D tools only with the 3D model — in 2D they would be dead buttons (R-APP-02 F-01) */}
-      {mode2d ? null : (
-        <>
-          <div role="group" aria-label={t('body3d.toolbar.label')}>
-            {tools.map((k) => <button key={k} type="button" aria-pressed={tool === k} title={t(`body3d.toolbar.${k}Hint`)} onClick={() => body.setTool(k)}>{t(`body3d.toolbar.${k}`)}</button>)}
-          </div>
-          {/* the icon shows only where «Сброс вида» becomes a 44 px icon button (landscape phones ≤ 320 px high, booking.css);
-              the label stays the accessible name there */}
-          <button type="button" className="b3d-reset" title={t('body3d.toolbar.resetHint')} onClick={() => body.resetView()}><Icon name="undo" /><span className="b3d-reset__t">{t('body3d.toolbar.reset')}</span></button>
-        </>
-      )}
+      {!mode2d && <button type="button" className="b3d-reset" title={t('body3d.toolbar.resetHint')} onClick={() => body.resetView()}><Icon name="undo" /><span className="b3d-reset__t">{t('body3d.toolbar.reset')}</span></button>}
       {/* ТЗ 6.10: the 2D diagram on demand (keyboard / screen reader / preference); «Try 3D again» brings the model back */}
       {mode2d ? (
         mode2d !== 'noWebgl' ? <button type="button" data-testid="switch-3d" aria-label={`${t('body3d.toolbar.switch3d')}. ${t('body3d.toolbar.switch3dAria')}`} onClick={() => body.setMode2d(false)}><span className="b3d-sw__full">{t('body3d.toolbar.switch3d')}</span><span className="b3d-sw__short" aria-hidden="true">{t('body3d.toolbar.switch3dShort')}</span></button> : null

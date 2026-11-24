@@ -499,12 +499,6 @@
   "body3d": {
     "toolbar": {
       "label": "Model tools",
-      "rotate": "Rotate",
-      "zoom": "Zoom",
-      "marker": "Marker",
-      "rotateHint": "Drag to rotate",
-      "zoomHint": "Scroll or pinch to zoom",
-      "markerHint": "Tap the body to place a marker",
       "resetHint": "Double-click to reset the view",
       "reset": "Reset view",
       "pause": "Pause",

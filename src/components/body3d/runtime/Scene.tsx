@@ -1,7 +1,7 @@
 'use client';
 /**
  * Body scene inside the persistent canvas. Lights, camera limits and material look = the prototype (see spike report §4).
- * Input is handled on the canvas element (tap vs drag, double tap → reset, delayed marker placement, one-finger zoom tool).
+ * Canvas taps place markers in booking. OrbitControls handles rotation and zoom.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -35,7 +35,7 @@ const TOUCH_HALF_TURN_WIDTH = 0.3;
 // from 12 px), and at the default framing the body takes ≈ 72 % of it (105–123 px on main 6b101c5 with the old layout).
 // The camera zooms in ×1.2 there (≈ 86 % by the red silhouette, the lead's «≈ 88 %») and the view moves down by 3.5 % of
 // its height: the body's centre (y 0.43) sits below the camera's target (0.5), at ×1.2 the feet would touch the edge.
-// Projection only (zoom + view offset as fractions — resize-safe): orbit distances, the zoom tool and the reset stay.
+// Projection only (zoom + view offset as fractions — resize-safe): orbit distances and reset are independent.
 const LAND_ZOOM = 1.2;
 const LAND_SHIFT = 0.035;
 const VIEWER_ZOOM = 1.12;
@@ -55,7 +55,6 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
   const [entry, setEntry] = useState<ModelEntry | null>(null);
   const entryRef = useRef<ModelEntry | null>(null);
   const model = useBody((s) => s.model);
-  const tool = useBody((s) => s.tool);
   const markers = useBody((s) => s.markers);
   const selectedZones = useBody((s) => s.selectedZones);
   const resetSeq = useBody((s) => s.resetSeq);
@@ -255,27 +254,24 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
     });
   }, [hero, camera, gl, store]);
 
-  // ---- input on the canvas: taps, double tap, marker placement, one-finger zoom tool
+  // ---- input on the canvas: tap to select, double tap to reset in booking
   useEffect(() => {
     if (!interactive) return;
     const el = gl.domElement;
     const raycaster = new THREE.Raycaster() as THREE.Raycaster & { firstHitOnly?: boolean };
     raycaster.firstHitOnly = true;
-    let down: { x: number; y: number; t: number; id: number; lastY: number; dragged: boolean } | null = null;
+    let down: { x: number; y: number; t: number; id: number; dragged: boolean } | null = null;
     let lastTap: { t: number; x: number; y: number } | null = null;
     let pending = 0;
     const onDown = (e: PointerEvent) => {
-      if (viewer && (down || !e.isPrimary || e.button !== 0)) { down = null; return; }
+      // A second touch cancels the tap candidate so a pinch cannot place a marker.
+      if (!e.isPrimary || e.button !== 0 || (viewer && down)) { down = null; return; }
       if (viewer) el.setPointerCapture(e.pointerId);
-      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, lastY: e.clientY, dragged: false };
+      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, dragged: false };
     };
     const onMove = (e: PointerEvent) => {
       if (!down || e.pointerId !== down.id) return;
-      if (viewer && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.dragged = true;
-      if (store.get().tool !== 'zoom' || !controls.current) return;
-      const dy = e.clientY - down.lastY; down.lastY = e.clientY;
-      const off = camera.position.clone().sub(controls.current.target);
-      camera.position.copy(controls.current.target).add(off.setLength(THREE.MathUtils.clamp(off.length() * Math.exp(dy * 0.006), CAM.minDist, CAM.maxDist)));
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) down.dragged = true;
     };
     const place = (x: number, y: number) => {
       const cur = entryRef.current; if (!cur || !pivot.current) return;
@@ -305,17 +301,18 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
       if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) { clearTimeout(pending); lastTap = null; store.resetView(); return; }
       lastTap = { t: now, x: e.clientX, y: e.clientY };
       // DECISION: a tap places the marker after 230 ms, so a double tap resets the view instead of adding a marker.
-      // R-FINAL F-04 (lead): in ANY tool — the hints say «tap the model»; drags rotate (or zoom), a tap without a move marks
       const { clientX: x, clientY: y } = e; pending = window.setTimeout(() => place(x, y), 230);
     };
     const onCancel = () => { down = null; };
     const noDbl = (e: MouseEvent) => e.preventDefault();
     el.addEventListener('pointerdown', onDown); el.addEventListener('pointermove', onMove); el.addEventListener('pointerup', onUp); el.addEventListener('dblclick', noDbl);
+    el.addEventListener('pointercancel', onCancel);
     if (viewer) el.addEventListener('lostpointercapture', onCancel);
     return () => {
       clearTimeout(pending);
       el.removeEventListener('pointerdown', onDown); el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp); el.removeEventListener('dblclick', noDbl);
+      el.removeEventListener('pointercancel', onCancel);
       el.removeEventListener('lostpointercapture', onCancel);
     };
   }, [gl, camera, interactive, viewer, store]);
@@ -373,7 +370,7 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
       <ambientLight intensity={0.9} />
       <hemisphereLight args={['#ffffff', '#f1f3f5', 1.4]} position={[0, 2, 0]} />
       {lights.map((l, k) => <directionalLight key={k} position={l.p} intensity={l.i} color={l.c} />)}
-      {interactive && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07} enableRotate={tool !== 'zoom'}
+      {interactive && <OrbitControls ref={controls} makeDefault enablePan={false} enableDamping dampingFactor={0.07}
         minDistance={CAM.minDist} maxDistance={CAM.maxDist} minPolarAngle={CAM.minPolar} maxPolarAngle={CAM.maxPolar} target={CAM.target}
         touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }} />}
       <group ref={pivot}>

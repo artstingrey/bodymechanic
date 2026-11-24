@@ -107,7 +107,7 @@
   .booking-3d__side .b3d-general textarea { min-height: 88px; } /* the placeholder wraps to 3 lines in the 288–346 px panel */
 }
 
-/* toolbar in the workspace: М/Ж + tools + «Сброс вида» on one row ≥1280 (two below); «Схема тела (2D)» is a chip in the
+/* toolbar in the workspace: model switch and «Сброс вида»; «Схема тела (2D)» is a chip in the
    slot's top-right corner — right after the toolbar in reading and tab order, so the visual order matches the DOM */
 .booking-3d .b3d-toolbar { position: relative; }
 .booking-3d .booking-3d__model .b3d-toolbar [role="group"] button { padding: 0 11px; font-size: 13px; }
@@ -115,13 +115,7 @@
 .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: absolute; z-index: 3; top: calc(100% + 18px); right: 10px; min-height: 44px; padding: 0 16px;
   border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 0 0 1px var(--field-border); text-decoration: none; font-size: 13px; }
 @media (hover: hover) { .booking-3d .b3d-toolbar > [data-testid="switch-2d"]:hover { background: var(--text); color: var(--bg); box-shadow: none; } }
-@media (max-width: 1279px) { .booking-3d .b3d-toolbar > [role="group"]:not(:first-child) { order: 2; } } /* row 1: М/Ж + «Сброс вида», row 2: tools */
-
-/* toolbar: model switch + tools as a segmented group + «Сброс вида» */
 .b3d-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.b3d-toolbar > [role="group"]:not(.b3d-switch) { display: inline-flex; padding: 4px; border-radius: var(--r-pill); background: rgba(38, 34, 31, 0.06); gap: 2px; }
-.b3d-toolbar > [role="group"]:not(.b3d-switch) button { min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 0; background: transparent; font: 600 14px/1 var(--font-sans); color: var(--muted-card); cursor: pointer; }
-.b3d-toolbar > [role="group"]:not(.b3d-switch) button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--sh-1); }
 .b3d-toolbar > button { margin-left: auto; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 0; background: transparent; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); font: 700 14px/1 var(--font-sans); cursor: pointer; }
 @media (hover: hover) { .b3d-toolbar > button:hover { background: var(--text); color: var(--bg); } }
 
@@ -239,7 +233,6 @@ dialog.sheet-dialog[open] { animation: bk-sheet-in var(--d-2, 400ms) var(--e-out
   .booking-3d .b3d-toolbar > [role="group"] { background: color-mix(in srgb, var(--surface) 88%, transparent) !important; box-shadow: var(--sh-1); }
   .booking-3d .b3d-toolbar > button:not([data-testid]) { margin-left: 0; background: var(--surface); }
   .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: static; }
-  .booking-3d .b3d-toolbar > [role="group"]:not(:first-child) { order: 0; } /* one scrolling row: М/Ж, tools, reset, 2D */
   .b3d-help-btn { top: 6px; right: 8px; }
   .b3d-list-link { position: absolute; z-index: 3; left: 8px; bottom: 8px; padding: 0 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text); }
   .booking-3d__model .b2d-mode { padding-bottom: calc(8px + 44px + 12px); } /* 2D: «Попробовать 3D ещё раз» ends above the floating zone-list link (it covered the button in EN) */
@@ -289,21 +282,18 @@ dialog.sheet-dialog[open] { animation: bk-sheet-in var(--d-2, 400ms) var(--e-out
   .bk-step--zones .bk-head .h2 { font-size: 16px; letter-spacing: -0.015em; white-space: normal; overflow: visible; text-overflow: clip; }
 }
 /* design audit (BD, site/review/design-audit-mobile.html), phones:
-   F01 — the 3D tools never scroll under «?»: the top row keeps «Мужчина / Женщина» only; the tools + «Сброс вида» are a
-   column on the left edge (the model stands in the middle of the canvas, the column never covers it); «Схема тела (2D)»
-   sits bottom-right, «Список зон» bottom-left. The toolbar box spans the canvas but lets the pointer through.
+   F01 — the toolbar box spans the canvas but lets the pointer through. The model switch sits at the top left,
+   «Сброс вида» is under «?», and «Схема тела (2D)» sits bottom-right.
    F02 — in 2D the row stays a row (switch + «Модель (3D)»); the 2D content starts below it (no badge peeking between
-   the pills, 14 px of air); both segmented switches have the same grey track and white thumb.
+   the pills, 14 px of air).
    F03 — the sticky «Назад / Далее» of steps 2–6 is opaque, with a soft fade above it. */
 @media (max-width: 767px) and (orientation: portrait), (max-width: 767px) and (min-height: 481px) {
   .booking-3d .b3d-toolbar { inset: 6px 8px 8px 8px; right: 8px; display: block; overflow: visible; pointer-events: none; }
   .booking-3d .b3d-toolbar > * { pointer-events: auto; }
   .booking-3d .b3d-toolbar > .b3d-switch { position: absolute; left: 0; top: 0; }
-  .booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch) { position: absolute; left: 0; top: 60px; flex-direction: column; align-items: stretch; border-radius: 26px; }
-  .booking-3d .booking-3d__model .b3d-toolbar > [role="group"]:not(.b3d-switch) button { justify-content: flex-start; padding: 0 14px; }
-  .booking-3d .b3d-toolbar > button:not([data-testid]) { position: absolute; left: auto; right: 0; top: 52px; } /* «Сброс вида» under «?» on the right — under the tools column the model's hand reached it (344 px, Hard Reviewer T1) */
+  .booking-3d .b3d-toolbar > button:not([data-testid]) { position: absolute; left: auto; right: 0; top: 52px; }
   .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: absolute; top: auto; right: 0; bottom: 0; background: var(--surface); box-shadow: var(--sh-1); }
-  /* one look for both switches: an opaque grey track (it floats over the model) and a white thumb */
+  /* opaque track for the model switch over the canvas */
   .booking-3d .b3d-toolbar > [role="group"] { background: color-mix(in srgb, var(--text) 7%, var(--bg)) !important; }
   /* 2D: a plain row again; the 2D content starts below it */
   .booking-3d__model:has(.b3d-slot[data-mode2d]) .b3d-toolbar { inset: 6px 64px auto 8px; display: flex; overflow-x: auto; }
@@ -461,8 +451,6 @@ dialog.b3d-confirm button + button { background: transparent; color: var(--text)
   .booking-3d .b3d-toolbar { position: absolute; z-index: 3; inset: 6px 8px 8px 8px; display: block; pointer-events: none; }
   .booking-3d .b3d-toolbar > * { pointer-events: auto; }
   .booking-3d .b3d-toolbar > .b3d-switch { position: absolute; left: 0; top: 0; }
-  .booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch) { position: absolute; left: 0; top: 60px; flex-direction: column; align-items: stretch; border-radius: 26px; }
-  .booking-3d .booking-3d__model .b3d-toolbar > [role="group"]:not(.b3d-switch) button { justify-content: flex-start; padding: 0 14px; }
   .booking-3d .b3d-toolbar > button:not([data-testid]) { position: absolute; top: 0; right: 56px; margin: 0; background: var(--surface); }
   .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: absolute; top: auto; right: 0; bottom: 0; background: var(--surface); box-shadow: var(--sh-1); }
   .booking-3d .b3d-toolbar > [role="group"] { background: color-mix(in srgb, var(--text) 7%, var(--bg)) !important; }
@@ -516,26 +504,16 @@ dialog.b3d-confirm button + button { background: transparent; color: var(--text)
   .b3d-reset .i { display: block; width: 20px; height: 20px; }
   .b3d-reset .b3d-reset__t { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   .booking-3d__model .b3d-list-link { top: 58px; }
-  /* the tools column (≈ 144 px) started at 66 and ran ~7 px past the 204 px canvas; with the switch it did not fit at all:
-     the tracks of both get 2 px instead of 4 (the buttons stay 44 px) — switch 48, column 140, 4 px between them, 6 to the
-     canvas edge */
   .booking-3d .b3d-toolbar > [role="group"] { padding: 2px; }
-  .booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch) { top: 52px; }
 }
-/* RC-4 (lead: option 2, CSS only; FB frames the camera tighter in rc4-fb): on short landscape phones under 768 the model
-   switch stands vertically at the top of the left column, the tools under it — full labels, both tracks 112 px wide —, so
-   the top row is free and the model starts 12 px under the canvas top (the figure ≥ 190 px with FB's framing) */
+/* On short landscape phones the model switch stacks and the model starts 12 px under the canvas top. */
 @media (max-width: 767px) and (orientation: landscape) and (max-height: 480px) {
   .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > .b3d-switch { flex-direction: column; align-items: stretch; width: 112px; border-radius: 26px; } /* 3D only: 2D keeps its row */
   .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > .b3d-switch button { padding: 0 14px; text-align: left; }
-  .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > [role="group"]:not(.b3d-switch) { top: 106px; width: 112px; } /* switch 2 × 44 + 2 + 2 × 4 = 98, 8 between */
   .booking-3d__model .b3d-slot:not([data-mode2d]) :is(.b3d-host, .b3d-poster) { top: 12px; }
 }
-@media (max-width: 767px) and (orientation: landscape) and (max-height: 320px) {
-  .booking-3d__model:not(:has(.b3d-slot[data-mode2d])) .b3d-toolbar > [role="group"]:not(.b3d-switch) { top: 98px; } /* 2 px tracks: switch 94, 4 between, the column ends at the canvas bottom (244 on 640×300) */
-}
 /* SE landscape (< 768, ≤ 330 high: 640×300, 667×325 — RC-4, lead: option A): the figure ≥ 190 px (FB's framing) did not fit
-   between the tools column (120 px) and the text buttons on the right — Hard Reviewer T1 / T3. On the right a column of
+   between the model switch (120 px) and the text buttons on the right — Hard Reviewer T1 / T3. On the right a column of
    44 px icons: «?» 6–50, «Сброс вида» 58–102, «Список зон» 110–154 (full names stay the accessible name and the title),
    «Схема тела (2D)» → «2D» bottom-right; the canvas shifts 34 px right at its full width — the model stands in the middle
    of the free strip (120 … width − 52) and the camera framing is unchanged. 740×360 and taller: nothing changes */

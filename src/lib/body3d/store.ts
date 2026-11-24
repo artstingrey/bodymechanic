@@ -13,7 +13,6 @@ import { DEFAULT_MARKER_INTENSITY, GENERAL_NOTE_LIMIT, isMarkerIntensity, limitN
 export { MAX_MARKERS } from './booking-details';
 
 export type Gender = 'male' | 'female';
-export type Tool = 'rotate' | 'zoom' | 'marker';
 export type Status = 'idle' | 'loading' | 'ready' | 'error' | 'timeout' | 'unavailable';
 export type Marker = BodyMarker & { n: number; normal?: [number, number, number] };
 
@@ -27,8 +26,6 @@ export type LiveEvent =
 
 export interface BodyState {
   model: Gender;
-  /** R-FINAL F-04 (lead): «Маркер» by default on /booking — a drag still rotates, a short tap places a marker */
-  tool: Tool;
   autorotate: boolean;
   status: Status;
   progress: number; // 0..1
@@ -58,7 +55,7 @@ const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('
 /** Each standalone viewer gets a fresh store for its document lifetime. */
 export function createBodyStore(viewer = false) {
   let state: BodyState = {
-    model: 'male', tool: viewer ? 'rotate' : 'marker', autorotate: true, status: 'idle', progress: 0, mode2d: false,
+    model: 'male', autorotate: true, status: 'idle', progress: 0, mode2d: false,
     markers: [], selectedZones: [], generalNote: '', live: { seq: 0, event: null }, liveLog: [], resetSeq: 0, hint: null, quality: 'high', restored: false, loadSeq: 0,
   };
   const listeners = new Set<() => void>();
@@ -127,7 +124,6 @@ export function createBodyStore(viewer = false) {
       set({ model }, !viewer);
       if (!viewer) track('body_model_switch', { model });
     },
-    setTool(tool: Tool) { set(tool === 'marker' ? { tool, autorotate: false } : { tool }); },
     setAutorotate(on: boolean) { set({ autorotate: on && !reducedMotion() }); },
     setStatus(status: Status, progress?: number) { set(progress === undefined ? { status } : { status, progress }); },
     setProgress(progress: number) { set({ progress }); },

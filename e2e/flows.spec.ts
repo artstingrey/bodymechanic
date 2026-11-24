@@ -489,7 +489,7 @@ test('tap on the front of the shin → marker shin_l; tap on the head → hint, 
   const a = await page.evaluate(() => window.__bm3d!.anchors!.get());
   const z = (id: string) => a.zones.find((q) => q.zoneId === id)!;
   const box = (await page.locator('.b3d-slot canvas').boundingBox())!;
-  await page.getByRole('button', { name: en.body3d.toolbar.marker, exact: true }).click();
+  await expect(page.locator('.b3d-toolbar [role="group"]:not(.b3d-switch)')).toHaveCount(0);
   await page.mouse.click(box.x + z('shin_l').x, box.y + z('shin_l').y);
   await expect(page.getByTestId('b3d-live')).toContainText(en.body3d.zones.left.replace('{zone}', en.body3d.zones.shin));
   await page.waitForFunction(() => window.__bm3d!.anchors!.get().markers.some((m) => m.zoneId === 'shin_l'));

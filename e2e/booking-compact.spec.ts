@@ -117,7 +117,7 @@ test('booking step 1 on phones: the floating controls never overlap each other o
     await page.goto('/ru/booking/', { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     const found = await page.evaluate(() => {
-      const els: Record<string, string> = { switch: '.booking-3d .b3d-switch', tools: '.booking-3d .b3d-toolbar > [role="group"]:not(.b3d-switch)', reset: '.booking-3d .b3d-toolbar > button:not([data-testid])',
+      const els: Record<string, string> = { switch: '.booking-3d .b3d-switch', reset: '.booking-3d .b3d-toolbar > button:not([data-testid])',
         help: '.booking-3d__model .b3d-help-btn', twoD: '[data-testid="switch-2d"]', list: '.b3d-list-link', sheet: '.bk-step--zones .bsheet' };
       const R: Record<string, DOMRect> = {};
       // a control scrolled out of the toolbar row is clipped by it: compare what is visible

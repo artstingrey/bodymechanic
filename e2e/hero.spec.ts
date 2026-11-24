@@ -89,21 +89,18 @@ test('stage 11: desktop hero mouse gestures and the shared booking camera', asyn
     await page.waitForURL(/\/booking\//);
     ({ x, y } = await liveCanvas(page, 'booking'));
     const reset = page.locator('.b3d-reset');
-    const rotate = page.getByRole('button', { name: 'Поворот', exact: true });
-    const zoom = page.getByRole('button', { name: 'Масштаб', exact: true });
-    await rotate.click();
+    await expect(page.locator('.b3d-toolbar [role="group"]:not(.b3d-switch)')).toHaveCount(0);
     const bookingFront = { camera: front.camera, target: front.target, zoom: 1, yaw: 0 };
+    await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
+    await page.mouse.move(x, y);
+    await page.mouse.wheel(0, -120);
+    await expect.poll(async () => distance(await readView(page))).toBeLessThan(distance(bookingFront) - 0.1);
+    await reset.click();
     await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
     await drag(80, -60);
     await page.mouse.up();
     await expect.poll(async () => Math.abs((await readView(page)).camera[0])).toBeGreaterThan(0.5);
-    await reset.click();
-    await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
-    await zoom.click();
-    await drag(0, -80);
-    await page.mouse.up();
-    await expect.poll(async () => distance(await readView(page))).toBeLessThan(distance(bookingFront) - 0.4);
-    // Return to hero while Zoom is still selected, then return to booking on the same WebGL context.
+    // Return to the hero and booking on the same WebGL context.
     await page.goBack();
     ({ x, y } = await liveCanvas(page, 'hero'));
     expect(await page.evaluate(() => window.__bm3d!.contextId)).toBe(contextId);
@@ -117,7 +114,6 @@ test('stage 11: desktop hero mouse gestures and the shared booking camera', asyn
     await page.waitForURL(/\/booking\//);
     ({ x, y } = await liveCanvas(page, 'booking'));
     expect(await page.evaluate(() => window.__bm3d!.contextId)).toBe(contextId);
-    await expect(zoom).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(async () => viewGap(await readView(page), bookingFront)).toBeLessThan(0.01);
     const point = await page.evaluate(({ x, y }) => {
       for (let dy = -40; dy <= 60; dy += 5) {

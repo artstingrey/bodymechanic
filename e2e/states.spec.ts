@@ -351,7 +351,7 @@ test.describe('2D without WebGL on /booking (R-APP-02 F-01)', () => {
     await front.locator('.b2d-zone').first().waitFor();
     // labels in the page language; no 3D tools in 2D; no way back to 3D without WebGL
     await expect(front.locator('.b2d-zone[data-zone-id="chest"]')).toHaveAttribute('aria-label', msgs.body3d.zones.chest);
-    await expect(page.getByRole('button', { name: msgs.body3d.toolbar.rotate, exact: true })).toHaveCount(0);
+    await expect(page.locator('.b3d-reset')).toHaveCount(0);
     await expect(page.getByTestId('switch-3d')).toHaveCount(0);
     // diagram → marker list
     await front.locator('.b2d-zone[data-zone-id="chest"]').click();
