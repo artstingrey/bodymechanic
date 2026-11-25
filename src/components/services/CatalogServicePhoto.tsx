@@ -1,5 +1,5 @@
 import type { getTranslations } from 'next-intl/server';
-import { catalogServicePhoto } from '@/content/home-services';
+import { catalogServicePhoto } from '@/content/service-photos';
 import { HomeServicePhoto } from '@/components/sections/HomeServicePhoto';
 
 export function CatalogServicePhoto({ serviceId, title, t, detail, sizes }: {
@@ -11,7 +11,7 @@ export function CatalogServicePhoto({ serviceId, title, t, detail, sizes }: {
 }) {
   const src = catalogServicePhoto(serviceId);
   return (
-    <HomeServicePhoto key={src} src={src} alt={title} detail={detail} sizes={sizes}
+    <HomeServicePhoto key={src?.src} src={src} alt={title} detail={detail} sizes={sizes}
       unavailable={t('home.services.photoUnavailable')} />
   );
 }

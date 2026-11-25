@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium, expect } from '@playwright/test';
-import { optimizerSource } from '../e2e/fixtures/optimized-image.mjs';
+import { optimizedServicePhotoName } from '../e2e/fixtures/optimized-image.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -257,7 +257,7 @@ try {
         const classic = block.locator('article').filter({ has: page.locator(`a[href="/${locale}/services/classic/"]`) });
         const photo = classic.locator('img');
         await photo.scrollIntoViewIfNeeded();
-        await expect.poll(async () => optimizerSource(await photo.getAttribute('src'))).toBe('/website-services/classic-massage.png');
+        await expect.poll(async () => optimizedServicePhotoName(await photo.getAttribute('src'))).toBe('classic-massage');
         await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
         await expect(block.getByText(/Иллюстративное фото|Illustrative photo/i)).toHaveCount(0);
         for (const [slug, title] of [['sports', sportsTitle], ['service-91206', 'Новая услуга']]) {

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { chromium, expect, webkit } from '@playwright/test';
 import en from '../messages/en.json' with { type: 'json' };
 import ru from '../messages/ru.json' with { type: 'json' };
-import { optimizerSource } from '../e2e/fixtures/optimized-image.mjs';
+import { optimizedServicePhotoName, optimizerSource } from '../e2e/fixtures/optimized-image.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -140,10 +140,10 @@ async function checkCatalog(browser, variant, isChrome) {
       const loadedPhoto = cards.nth(0).locator('img');
       await loadedPhoto.scrollIntoViewIfNeeded();
       await expect.poll(() => loadedPhoto.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
-      const photoNames = ['sports-massage', 'classic-massage', 'Individual-Ice-Bath-session +infrared-capsule', 'infrared', 'Functional-Training-&-Mobility'];
+      const photoNames = ['sports-massage', 'classic-massage', 'Individual-Ice-Bath-session+infrared-capsule', 'infrared', 'Functional-Training-&-Mobility'];
       for (const [index, name] of photoNames.entries()) {
         const cardPhoto = cards.nth(index).locator('img');
-        await expect.poll(async () => optimizerSource(await cardPhoto.getAttribute('src'))).toBe(`/website-services/${encodeURIComponent(name)}.png`);
+        await expect.poll(async () => optimizedServicePhotoName(await cardPhoto.getAttribute('src'))).toBe(name);
       }
 
       for (const width of [320, 390, 768, 1280]) {

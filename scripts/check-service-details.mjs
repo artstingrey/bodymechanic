@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { chromium, expect } from '@playwright/test';
 import en from '../messages/en.json' with { type: 'json' };
-import { optimizerSource } from '../e2e/fixtures/optimized-image.mjs';
+import { optimizedServicePhotoName } from '../e2e/fixtures/optimized-image.mjs';
 import { withProductionServer } from './check-server.mjs';
 
 const preload = new URL('../e2e/fixtures/altegio-catalog.mjs', import.meta.url).href;
@@ -116,7 +116,7 @@ async function browserChecks(origin) {
       await expect(facts).toHaveText([/80\s*–\s*160.*AED|AED.*80\s*–\s*160/, '']);
       await expect(hero.locator('.badge')).toHaveCount(0);
       const photo = hero.locator('.svc-hero__photo img');
-      await expect.poll(async () => optimizerSource(await photo.getAttribute('src'))).toBe('/website-services/sports-massage.png');
+      await expect.poll(async () => optimizedServicePhotoName(await photo.getAttribute('src'))).toBe('sports-massage');
       await expect(photo).toHaveCSS('object-fit', 'contain');
       await expect.poll(() => photo.evaluate((image) => image.naturalWidth)).toBeGreaterThan(0);
       await checkSectionVisibility(locale);
@@ -180,7 +180,7 @@ async function browserChecks(origin) {
     await demoCta.click();
     await expect(page).toHaveURL(`${origin}/en/booking/`);
     await expect(page.locator('.booking[data-ready="true"] #st1')).toBeVisible();
-    await page.route((url) => optimizerSource(url) === '/website-services/sports-massage.png',
+    await page.route((url) => optimizedServicePhotoName(url) === 'sports-massage',
       (route) => route.fulfill({ status: 404 }));
     await page.goto(origin + paths.page('en', 'sports'));
     await expect(hero.locator('.svc-hero__photo .ph')).toBeVisible();
