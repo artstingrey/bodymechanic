@@ -102,7 +102,6 @@ export default async function StaffPage({ params }: PageProps<'/[locale]/team/[s
             <h2 className="h3">{t('team.profile.nearestSlots')}</h2>
             {real ? <StaffTodaySlots key={`${locale}:${s.id}`} staffId={s.id} /> : <NearestSlots staffId={s.id} />}
           </section>
-          <Link href="/team" className="btn btn--text">{t('team.profile.back')}</Link>
         </div>
       </div>
       <div className="doc-sections" hidden>
