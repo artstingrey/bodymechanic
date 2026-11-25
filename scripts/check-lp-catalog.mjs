@@ -144,6 +144,7 @@ async function checkCatalog(browser, variant, isChrome) {
       for (const [index, name] of photoNames.entries()) {
         const cardPhoto = cards.nth(index).locator('img');
         await expect.poll(async () => optimizedServicePhotoName(await cardPhoto.getAttribute('src'))).toBe(name);
+        await expect.poll(async () => optimizerSource(await cardPhoto.getAttribute('src'))).not.toMatch(/[+&]/);
       }
 
       for (const width of [320, 390, 768, 1280]) {

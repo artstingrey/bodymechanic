@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
     deviceSizes: [430, 576, 640, 750, 828, 860, 1080, 1152, 1200, 1600, 1920, 2048, 3840],
     localPatterns: [
       { pathname: '/_next/static/media/**', search: '' },
+      { pathname: '/_next/static/immutable/media/**', search: '' },
       { pathname: '/website-services/**', search: '' },
       { pathname: '/interier/**', search: '' },
       { pathname: '/photos/**', search: '' },

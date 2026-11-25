@@ -37,5 +37,7 @@ const servicePhotos = new Map([
 ]);
 
 export function catalogServicePhoto(serviceId: number) {
-  return servicePhotos.get(serviceId);
+  const photo = servicePhotos.get(serviceId);
+  // Vercel resolves the static asset URL after decoding the optimizer's url parameter.
+  return photo && { ...photo, src: photo.src.replace(/[+&]/g, (character) => encodeURIComponent(character)) };
 }

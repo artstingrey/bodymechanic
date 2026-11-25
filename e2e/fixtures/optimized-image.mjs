@@ -4,6 +4,6 @@ export function optimizerSource(src) {
 }
 
 export function optimizedServicePhotoName(src) {
-  const match = optimizerSource(src)?.match(/^\/_next\/static\/media\/([^/]+)\.[a-z\d_-]+\.png$/i);
+  const match = optimizerSource(src)?.match(/^\/_next\/static\/(?:immutable\/)?media\/([^/]+)\.[a-z\d_-]+\.png$/i);
   return match ? decodeURIComponent(match[1]) : null;
 }
