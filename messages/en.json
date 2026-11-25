@@ -637,7 +637,6 @@
       "lowFps": "3D is running slowly",
       "text": "We’re showing a simplified body diagram. The areas and booking work just as they do in 3D.",
       "badge": "2D mode",
-      "tryAgain": "Try 3D again",
       "diagramLabel": "Body diagram: {side}"
     },
     "list": {

@@ -280,7 +280,7 @@ test.describe('2D mode — body2d-callouts (ТЗ 6.10/6.11)', () => {
     const g = guard(page, baseURL!);
     await to2d(page);
     for (const model of ['male', 'female'] as const) {
-      if (model === 'female') { await page.getByRole('button', { name: en.body3d.mode2d.tryAgain }).click(); await page.getByRole('button', { name: en.body3d.model.female, exact: true }).first().click(); await page.getByTestId('switch-2d').click(); await page.locator('.b2d-stage svg[data-model="female"]').first().waitFor(); }
+      if (model === 'female') { await page.getByTestId('switch-3d').click(); await page.getByRole('button', { name: en.body3d.model.female, exact: true }).first().click(); await page.getByTestId('switch-2d').click(); await page.locator('.b2d-stage svg[data-model="female"]').first().waitFor(); }
       await zone(page, 0, 'chest').dispatchEvent('click');
       await zone(page, 1, 'lumbar').dispatchEvent('click');
     }
@@ -335,7 +335,7 @@ test.describe('2D mode — body2d-callouts (ТЗ 6.10/6.11)', () => {
     await page.locator('.b2d-stage svg .b2d-zone').first().waitFor();
     await expect(page.locator('.b2d-stage svg').first().locator('.b2d-badge')).toContainText(['1', '2']);
     await zone(page, 1, 'lumbar').dispatchEvent('click'); // marker 3 in 2D
-    await page.getByRole('button', { name: en.body3d.mode2d.tryAgain }).click();
+    await page.getByTestId('switch-3d').click();
     await settle3D(page);
     await expect(page.getByTestId('b3d-marker')).toHaveCount(3);
     await expect(page.getByTestId('b3d-marker').nth(2)).toContainText(en.body3d.zones.lumbar);

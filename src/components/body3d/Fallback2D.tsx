@@ -10,7 +10,7 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { useBody, useBodyStore, type Marker } from '@/lib/body3d/store';
+import { useBody, type Marker } from '@/lib/body3d/store';
 import { zoneLabel } from '@/lib/body3d/zones';
 import { ALL_KEYS, toggleZone } from './ZoneChecklist';
 import { Segmented } from '@/components/ui/Choice';
@@ -153,7 +153,6 @@ function Silhouette({ src, label, selected, names, fontsEpoch }: {
 
 export function Fallback2D() {
   const t = useTranslations();
-  const store = useBodyStore();
   const model = useBody((s) => s.model);
   const reason = useBody((s) => s.mode2d);
   const markers = useBody((s) => s.markers);
@@ -178,7 +177,6 @@ export function Fallback2D() {
       <div className="b2d-views" data-side={side}>
         {(['front', 'back'] as const).map(silhouette)}
       </div>
-      {reason !== 'noWebgl' ? <button type="button" onClick={() => store.setMode2d(false)}>{t('body3d.mode2d.tryAgain')}</button> : null}
     </section>
   );
 }

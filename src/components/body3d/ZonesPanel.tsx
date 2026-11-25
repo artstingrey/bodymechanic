@@ -19,7 +19,7 @@ export function Toolbar() {
     <div className="b3d-toolbar" role="toolbar" aria-label={t('body3d.toolbar.label')}>
       <ModelSwitch />
       {!mode2d && <button type="button" className="b3d-reset" title={t('body3d.toolbar.resetHint')} onClick={() => body.resetView()}><Icon name="undo" /><span className="b3d-reset__t">{t('body3d.toolbar.reset')}</span></button>}
-      {/* ТЗ 6.10: the 2D diagram on demand (keyboard / screen reader / preference); «Try 3D again» brings the model back */}
+      {/* ТЗ 6.10: switch between the 2D diagram and the 3D model when WebGL is available. */}
       {mode2d ? (
         mode2d !== 'noWebgl' ? <button type="button" data-testid="switch-3d" aria-label={`${t('body3d.toolbar.switch3d')}. ${t('body3d.toolbar.switch3dAria')}`} onClick={() => body.setMode2d(false)}><span className="b3d-sw__full">{t('body3d.toolbar.switch3d')}</span><span className="b3d-sw__short" aria-hidden="true">{t('body3d.toolbar.switch3dShort')}</span></button> : null
       ) : (

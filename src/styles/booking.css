@@ -235,7 +235,7 @@ dialog.sheet-dialog[open] { animation: bk-sheet-in var(--d-2, 400ms) var(--e-out
   .booking-3d .b3d-toolbar > [data-testid="switch-2d"] { position: static; }
   .b3d-help-btn { top: 6px; right: 8px; }
   .b3d-list-link { position: absolute; z-index: 3; left: 8px; bottom: 8px; padding: 0 12px; border-radius: var(--r-pill); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text); }
-  .booking-3d__model .b2d-mode { padding-bottom: calc(8px + 44px + 12px); } /* 2D: «Попробовать 3D ещё раз» ends above the floating zone-list link (it covered the button in EN) */
+  .booking-3d__model .b2d-mode { padding-bottom: calc(8px + 44px + 12px); } /* Leave room for the floating zone-list link. */
   .booking-3d__right { display: contents; }
   /* «Запись»: non-modal sheet above the CTA bar; snaps by transform (BottomSheet) */
   .bsheet { --peek: var(--bk-peek); --half: 45svh; /* «половина» ≤ 45 % (F2-01): the marker and the model stay in view */ position: fixed; z-index: 30; left: 0; right: 0; bottom: calc(var(--bk-cta-h) + env(safe-area-inset-bottom) + var(--kb, 0px));
@@ -378,8 +378,6 @@ dialog.b3d-confirm button + button { background: transparent; color: var(--text)
 .b2d-mode > p:first-child { color: var(--text); font-weight: 600; }
 .b2d-mode .b2d-views { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .b2d-mode .b2d-figure { margin: 0; min-width: 0; }
-.b2d-mode > button { justify-self: start; min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--text); color: var(--text); font: 700 14px/1 var(--font-sans); cursor: pointer; }
-@media (hover: hover) { .b2d-mode > button:hover { background: var(--text); color: var(--bg); } }
 
 /* intensity 1–10: one row only when the card is wide enough for 44 px targets, otherwise 5 × 2 (44 px wins) */
 .b3d-markers > li { container-type: inline-size; }
