@@ -21,7 +21,7 @@ import { ServiceStaff } from '@/components/services/ServiceStaff';
 import { isTodo } from '@/components/ui/Todo';
 
 const demoSlugs = new Set(serviceSlugs());
-const PHOTO_SIZES = '(min-width: 1024px) 40vw, (min-width: 600px) 92vw, 360px';
+const PHOTO_SIZES = '(min-width: 1200px) 400px, (min-width: 1024px) 40vw, (min-width: 600px) 92vw, 360px';
 
 const resolveService = cache(async (locale: CatalogLocale, slug: string) => {
   if (catalogServiceId(slug) === undefined) {

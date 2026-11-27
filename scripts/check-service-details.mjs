@@ -134,7 +134,7 @@ async function browserChecks(origin) {
       }
     }
 
-    for (const [locale, width] of [['en', 1280], ['ru', 320], ['en', 320]]) {
+    for (const [locale, width] of [['en', 1199], ['en', 1200], ['ru', 320], ['en', 320]]) {
       await page.setViewportSize({ width, height: 820 });
       await page.goto(origin + paths.page(locale, 'service-91201'));
       await expect(heading).toHaveText(/длинным названием|very long service title/);
@@ -152,7 +152,13 @@ async function browserChecks(origin) {
       assert.ok(await heading.evaluate((element) => element.scrollWidth <= element.clientWidth));
       const [photoBox, textBox] = await Promise.all([hero.locator('.svc-hero__photo').boundingBox(), hero.locator('.svc-hero__text').boundingBox()]);
       assert.ok(width === 320 ? textBox.y < photoBox.y : photoBox.x < textBox.x, 'hero order');
-      if (width >= 1024) assert.ok(Math.abs(photoBox.width - (photoBox.width + textBox.width) * 3 / 8) < 1, 'desktop photo column width');
+      if (width >= 1200) {
+        assert.equal(photoBox.width, 400);
+        await hero.locator('.svc-hero__text').evaluate((element) => { element.style.minHeight = '750px'; });
+        assert.equal((await hero.locator('.svc-hero__photo').boundingBox()).height, photoBox.height);
+      } else if (width >= 1024) {
+        assert.ok(Math.abs(photoBox.width - (photoBox.width + textBox.width) * 3 / 8) < 1, 'desktop photo column width');
+      }
     }
     for (const [slug, price] of [['service-91202', /From\s+AED\s+55\.5/], ['service-91203', /AED\s+125/], ['service-91204', 'Price to be confirmed']]) {
       await page.goto(origin + paths.page('en', slug));

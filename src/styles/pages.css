@@ -58,24 +58,16 @@
 .facts dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
 @media (min-width: 1024px) {
   .svc-hero { grid-template-columns: minmax(0, 3fr) minmax(0, 5fr); gap: 48px; align-items: start; }
-  /* Let the text set the row height independently of the image's intrinsic size. */
-  .svc-hero__photo:not(:empty) {
-    position: relative;
-    align-self: stretch;
-    min-height: 260px;
-    max-height: min(520px, 72svh);
-    overflow: hidden;
-    border-radius: var(--r-card);
-  }
-  .svc-hero__photo > * { position: absolute; inset: 0; }
-  .svc-hero__photo picture, .svc-hero__photo img, .svc-hero__photo .ph {
-    height: 100%;
-    aspect-ratio: auto;
-  }
-  .svc-hero__text { display: flex; flex-direction: column; align-self: stretch; }
-  .svc-hero__text > .facts { margin-top: auto; }
+  .svc-hero__photo img { height: auto; }
+  .svc-hero__text { display: flex; flex-direction: column; padding-top: 16px; }
+  .svc-hero__text > .facts { margin-top: 24px; }
   .svc-hero__text > .btn-book { align-self: start; }
   .svc-hero + .doc-sections { margin-top: 32px; }
+}
+@media (min-width: 1200px) {
+  .svc-hero { grid-template-columns: 400px minmax(0, 1fr); }
+  .svc-hero__text { padding-top: 20px; }
+  .svc-hero__text > .facts { margin-top: 30px; }
 }
 /* On phones and tablets, price and booking come before the description and photo.
    On desktop, the description sits directly under the title. */
