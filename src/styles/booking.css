@@ -160,6 +160,7 @@
 
 /* loader / timeout dialog / hint inside the slot */
 .booking-3d .b3d-loader { inset: auto 50% 50% auto; transform: translate(50%, 50%); width: max-content; padding: 10px 16px; border-radius: var(--r-card-sm); background: color-mix(in srgb, var(--surface) 92%, transparent); box-shadow: var(--sh-2); font-weight: 600; }
+.booking-3d .b3d-slot[data-status="unavailable"] .b3d-loader { max-width: calc(100% - 24px); }
 .b3d-dialog { display: grid; gap: 10px; box-shadow: var(--sh-3); border-radius: var(--r-card); padding: 20px; }
 .b3d-dialog p { margin: 0; }
 .b3d-dialog button { min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); border: 0; font: 700 14px/1 var(--font-sans); cursor: pointer; }

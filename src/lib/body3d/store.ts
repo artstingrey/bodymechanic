@@ -29,7 +29,8 @@ export interface BodyState {
   autorotate: boolean;
   status: Status;
   progress: number; // 0..1
-  mode2d: false | 'noWebgl' | 'lowFps' | 'user' | 'timeout';
+  mode2d: false | 'user' | 'timeout';
+  heroLowFps: boolean;
   markers: Marker[];
   selectedZones: string[];
   generalNote: string;
@@ -40,12 +41,16 @@ export interface BodyState {
   resetSeq: number; // bumps → runtime resets the view
   /** Visible hint next to the canvas (body3d.hint.*), e.g. a tap on the head or the front of the shin (outside the zone list). */
   hint: { seq: number; key: 'outOfZones' } | null;
-  /** 'reduced' = DPR ≤ 1.5 + MeshStandard instead of MeshPhysical (FPS < 30 in the first 3 s; < 20 → 2D, ТЗ 6.11). */
+  /** 'reduced' = DPR ≤ 1.5 + MeshStandard instead of MeshPhysical (FPS < 30 in the first 3 s). */
   quality: 'high' | 'reduced';
   /** the draft came back from sessionStorage (ТЗ 6.8) → booking step 1 offers «Продолжить / Начать заново» (N-04) */
   restored: boolean;
   /** bumps → the runtime retries a failed model load (R-APP-01 F-07) */
   loadSeq: number;
+}
+
+export function heroFallback({ mode2d, heroLowFps, status }: Pick<BodyState, 'mode2d' | 'heroLowFps' | 'status'>) {
+  return !!mode2d || heroLowFps || status === 'timeout' || status === 'error' || status === 'unavailable';
 }
 
 const KEY = 'bm.bookingDraft';
@@ -55,7 +60,7 @@ const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('
 /** Each standalone viewer gets a fresh store for its document lifetime. */
 export function createBodyStore(viewer = false) {
   let state: BodyState = {
-    model: 'male', autorotate: true, status: 'idle', progress: 0, mode2d: false,
+    model: 'male', autorotate: true, status: 'idle', progress: 0, mode2d: false, heroLowFps: false,
     markers: [], selectedZones: [], generalNote: '', live: { seq: 0, event: null }, liveLog: [], resetSeq: 0, hint: null, quality: 'high', restored: false, loadSeq: 0,
   };
   const listeners = new Set<() => void>();
@@ -128,6 +133,7 @@ export function createBodyStore(viewer = false) {
     setStatus(status: Status, progress?: number) { set(progress === undefined ? { status } : { status, progress }); },
     setProgress(progress: number) { set({ progress }); },
     setMode2d(reason: BodyState['mode2d']) { set({ mode2d: reason }); if (reason) announce({ type: 'mode2d' }); },
+    setHeroLowFps() { if (!state.heroLowFps) set({ heroLowFps: true }); },
     resetView() { set({ resetSeq: state.resetSeq + 1 }); announce({ type: 'viewReset' }); },
     toggleZone(zoneId: string) {
       const selected = state.selectedZones;

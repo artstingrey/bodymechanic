@@ -193,7 +193,7 @@ export function computeZoneColours(entry: ModelEntry): number[] {
 /**
  * Performance fallback (lead, R-3D-01): KHR_materials_ior/specular make GLTFLoader create MeshPhysicalMaterial; on weak GPUs
  * (FPS < 30 in the first 3 s) every loaded and future model switches to MeshStandardMaterial (same maps and factors).
- * Together with DPR ≤ 1.5 (set by the Scene). FPS < 20 still means 2D (ТЗ 6.11).
+ * Together with DPR ≤ 1.5 (set by the runtime).
  */
 let reducedQuality = false;
 export function setReducedQuality() {

@@ -162,7 +162,7 @@ export async function settle3D(page: Page) {
   if (!(await page.locator('.b3d-slot').count())) return;
   await page.waitForFunction(() => {
     const s = document.querySelector<HTMLElement>('.b3d-slot');
-    return !s || s.dataset.status === 'ready' || !!s.dataset.mode2d;
+    return !s || s.dataset.status === 'ready' || s.dataset.status === 'unavailable' || !!s.dataset.mode2d || !!s.dataset.fallback;
   }, null, { timeout: 30_000 });
 }
 
@@ -171,7 +171,7 @@ export async function settle3D(page: Page) {
  * the first screen would be captured blank. Scroll it into view, let it draw, come back to the top.
  */
 export async function drawOffscreen3D(page: Page) {
-  const slot = page.locator('.b3d-slot:not([data-mode2d])');
+  const slot = page.locator('.b3d-slot:not([data-mode2d], [data-fallback], [data-status="unavailable"])');
   if (!(await slot.count())) return;
   const f0 = await page.evaluate(() => window.__bm3d?.frames ?? 0);
   await slot.first().scrollIntoViewIfNeeded();

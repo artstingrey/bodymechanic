@@ -1,7 +1,7 @@
 'use client';
 /** Hero: model switch (ТЗ §05.1) and the visible pause/play of the auto-rotation (WCAG 2.2.2, A11Y-15). */
 import { useTranslations } from 'next-intl';
-import { body, useBody, useBodyStore } from '@/lib/body3d/store';
+import { body, heroFallback, useBody, useBodyStore } from '@/lib/body3d/store';
 import { Icon } from '@/components/ui/Icon';
 
 export function ModelSwitch() {
@@ -24,7 +24,7 @@ export function ModelSwitch() {
 export function RotationToggle() {
   const t = useTranslations();
   const on = useBody((s) => s.autorotate);
-  const fallback = useBody((s) => !!s.mode2d || s.status === 'timeout' || s.status === 'error'); // static poster: nothing moves
+  const fallback = useBody(heroFallback);
   const label = t('home.hero.pauseRotation');
   if (fallback) return null;
   return (

@@ -200,7 +200,10 @@ test('booking step 1 on short landscape phones (640×300, 667×325): the figure 
     await page.setViewportSize(s);
     await page.goto('/ru/booking/', { waitUntil: 'networkidle' });
     await settle3D(page);
-    if (await page.locator('.b3d-slot[data-mode2d]').count()) { test.info().annotations.push({ type: 'skipped size', description: `${s.width}×${s.height}: 2D fallback (load)` }); continue; }
+    if (await page.locator('.b3d-slot:is([data-mode2d], [data-status="unavailable"])').count()) {
+      test.info().annotations.push({ type: 'skipped size', description: `${s.width}×${s.height}: 3D model unavailable` });
+      continue;
+    }
     const f0 = await page.evaluate(() => window.__bm3d?.frames ?? 0);
     await page.waitForFunction((f) => (window.__bm3d?.frames ?? 0) > f + 10, f0, { timeout: 15_000 }).catch(() => {});
     const slot = page.locator('.booking-3d__model .b3d-slot');

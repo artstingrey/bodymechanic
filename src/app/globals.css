@@ -126,8 +126,8 @@ main .chips > a[aria-current] { background: var(--text); color: var(--bg); box-s
 .b3d-slot[data-fallback] .b3d-poster { opacity: 1; }
 .b3d-poster, .b3d-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .b3d-poster { z-index: 0; transition: opacity var(--d-2) ease; }
-.b3d-slot[data-status="ready"]:not([data-mode2d]) .b3d-poster { opacity: 0; pointer-events: none; }
-.b3d-slot[data-mode="booking"][data-mode2d] .b3d-poster, .b3d-slot[data-mode2d] .b3d-host { display: none; }
+.b3d-slot[data-status="ready"]:not([data-mode2d], [data-fallback]) .b3d-poster { opacity: 0; pointer-events: none; }
+.b3d-slot[data-mode="booking"][data-mode2d] .b3d-poster, .b3d-slot:is([data-mode2d], [data-fallback]) .b3d-host { display: none; }
 .b3d-host { position: absolute; inset: 0; z-index: 1; }
 .b3d-canvas { width: 100%; height: 100%; }
 /* OrbitControls sets touch-action on its event target in booking only.

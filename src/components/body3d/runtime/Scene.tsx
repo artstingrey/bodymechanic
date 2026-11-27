@@ -59,10 +59,12 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
   const selectedZones = useBody((s) => s.selectedZones);
   const resetSeq = useBody((s) => s.resetSeq);
   const mode2d = useBody((s) => s.mode2d);
+  const heroLowFps = useBody((s) => s.heroLowFps);
   const loadSeq = useBody((s) => s.loadSeq); // «Повторить» after a load error (F-07)
   const quality = useBody((s) => s.quality);
   const dpr = useThree((s) => s.viewport.dpr); // follows setDpr (quality fallback) → outline stays 1.5 CSS px
   const mode = slot?.mode ?? null;
+  const heroUsesPoster = mode === 'hero' && heroLowFps;
   const booking = mode === 'booking';
   const viewer = mode === 'viewer';
   const interactive = booking || viewer;
@@ -206,13 +208,13 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
   // ---- pause rendering when the slot is off-screen, the tab is hidden, the host is parked or 2D mode is on (ТЗ §06)
   useEffect(() => {
     let onScreen = true;
-    const apply = () => setFrameloop(slot && onScreen && !document.hidden && !mode2d ? 'always' : 'never');
+    const apply = () => setFrameloop(slot && onScreen && !document.hidden && !mode2d && !heroUsesPoster ? 'always' : 'never');
     const io = slot ? new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; apply(); }) : null;
     if (slot && io) io.observe(slot.el);
     document.addEventListener('visibilitychange', apply);
     apply();
     return () => { io?.disconnect(); document.removeEventListener('visibilitychange', apply); };
-  }, [slot, mode2d, setFrameloop]);
+  }, [slot, mode2d, heroUsesPoster, setFrameloop]);
 
   // ---- booking reset (double tap / button / entry from the hero)
   type Anim = { t0: number; from: THREE.Vector3; fromT: THREE.Vector3; rotFrom: number };
@@ -236,7 +238,7 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
   }, [booking, startAnim]);
 
   // ---- hero: the camera stays at the front; drag and sway share the model's vertical pivot.
-  const hero = mode === 'hero' && !mode2d;
+  const hero = mode === 'hero' && !mode2d && !heroUsesPoster;
   const swayT = useRef(0);
   const dragYaw = useRef(0);
   useLayoutEffect(() => {
@@ -320,7 +322,7 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
   // ---- quality fallback (lead, R-3D-01): MeshStandard here; DPR ≤ 1.5 via the Canvas dpr prop (Body3DRuntime).
   useEffect(() => { if (quality === 'reduced') setReducedQuality(); }, [quality]);
 
-  // ---- FPS check during the first 3 s after the model is shown: < 20 → 2D (ТЗ 6.11), < 30 → reduced quality
+  // ---- FPS check during the first 3 s: < 30 reduces quality, < 20 keeps the static poster on the homepage.
   const fpsProbe = useRef<{ t0: number; frames: number } | null>(null);
   useEffect(() => { if (entry && !fpsProbe.current) fpsProbe.current = { t0: performance.now(), frames: 0 }; }, [entry]);
 
@@ -354,7 +356,8 @@ export function Scene({ slot }: { slot: Body3DActiveSlot | null }) {
       const el = performance.now() - probe.t0;
       if (el > 3000) {
         const fps = (probe.frames * 1000) / el;
-        if (fps < 20 && !viewer) store.setMode2d('lowFps'); else if (fps < 30) store.setQuality('reduced');
+        if (fps < 30) store.setQuality('reduced');
+        if (fps < 20 && mode === 'hero') store.setHeroLowFps();
         probe.frames = -1;
       }
     }

@@ -154,7 +154,6 @@ function Silhouette({ src, label, selected, names, fontsEpoch }: {
 export function Fallback2D() {
   const t = useTranslations();
   const model = useBody((s) => s.model);
-  const reason = useBody((s) => s.mode2d);
   const markers = useBody((s) => s.markers);
   const selected = useMemo(() => selectionOf(markers), [markers]);
   const names = useMemo(() => Object.fromEntries(ALL_KEYS.map((k) => [k, zoneLabel(t, k)])), [t]);
@@ -170,7 +169,7 @@ export function Fallback2D() {
   );
   return (
     <section className="b2d-mode" aria-label={t('body3d.mode2d.badge')} data-testid="b2d">
-      <p><span className="badge badge--dark">{t('body3d.mode2d.badge')}</span> {reason === 'noWebgl' ? t('body3d.mode2d.noWebgl') : reason === 'lowFps' ? t('body3d.mode2d.lowFps') : null}</p>
+      <p><span className="badge badge--dark">{t('body3d.mode2d.badge')}</span></p>
       <p>{t('body3d.mode2d.text')}</p>
       <Segmented className="b2d-side" label={t('body3d.mode2d.badge')} value={side} onChange={setSide}
         options={[{ value: 'front', label: t('body3d.list.groupFront') }, { value: 'back', label: t('body3d.list.groupBack') }]} />

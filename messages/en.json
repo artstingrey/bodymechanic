@@ -634,7 +634,6 @@
     },
     "mode2d": {
       "noWebgl": "3D isn’t available on this device",
-      "lowFps": "3D is running slowly",
       "text": "We’re showing a simplified body diagram. The areas and booking work just as they do in 3D.",
       "badge": "2D mode",
       "diagramLabel": "Body diagram: {side}"

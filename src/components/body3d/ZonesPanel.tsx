@@ -15,13 +15,14 @@ import { useDialogBackCloses } from '@/lib/ui/useBackCloses';
 export function Toolbar() {
   const t = useTranslations();
   const mode2d = useBody((s) => s.mode2d);
+  const unavailable = useBody((s) => s.status === 'unavailable');
   return (
     <div className="b3d-toolbar" role="toolbar" aria-label={t('body3d.toolbar.label')}>
       <ModelSwitch />
-      {!mode2d && <button type="button" className="b3d-reset" title={t('body3d.toolbar.resetHint')} onClick={() => body.resetView()}><Icon name="undo" /><span className="b3d-reset__t">{t('body3d.toolbar.reset')}</span></button>}
+      {!mode2d && !unavailable && <button type="button" className="b3d-reset" title={t('body3d.toolbar.resetHint')} onClick={() => body.resetView()}><Icon name="undo" /><span className="b3d-reset__t">{t('body3d.toolbar.reset')}</span></button>}
       {/* ТЗ 6.10: switch between the 2D diagram and the 3D model when WebGL is available. */}
       {mode2d ? (
-        mode2d !== 'noWebgl' ? <button type="button" data-testid="switch-3d" aria-label={`${t('body3d.toolbar.switch3d')}. ${t('body3d.toolbar.switch3dAria')}`} onClick={() => body.setMode2d(false)}><span className="b3d-sw__full">{t('body3d.toolbar.switch3d')}</span><span className="b3d-sw__short" aria-hidden="true">{t('body3d.toolbar.switch3dShort')}</span></button> : null
+        !unavailable ? <button type="button" data-testid="switch-3d" aria-label={`${t('body3d.toolbar.switch3d')}. ${t('body3d.toolbar.switch3dAria')}`} onClick={() => body.setMode2d(false)}><span className="b3d-sw__full">{t('body3d.toolbar.switch3d')}</span><span className="b3d-sw__short" aria-hidden="true">{t('body3d.toolbar.switch3dShort')}</span></button> : null
       ) : (
         <button type="button" data-testid="switch-2d" aria-label={`${t('body3d.toolbar.switch2d')}. ${t('body3d.toolbar.switch2dAria')}`} onClick={() => body.setMode2d('user')}><span className="b3d-sw__full">{t('body3d.toolbar.switch2d')}</span><span className="b3d-sw__short" aria-hidden="true">{t.has('body3d.toolbar.switch2dShort') ? t('body3d.toolbar.switch2dShort') : t('body3d.toolbar.switch2d')}</span></button>
       )}

@@ -325,7 +325,7 @@ test('3D: an embedded texture whose first decode fails is retried — the model 
   const g = guard(page, baseURL!);
   await page.goto('/en/', { waitUntil: 'networkidle' });
   await settle3D(page);
-  test.skip((await page.locator('.b3d-slot[data-mode2d]').count()) > 0, 'this device shows the 2D poster, no model');
+  test.skip((await page.locator('.b3d-slot:is([data-mode2d], [data-fallback])').count()) > 0, 'this device shows the poster');
   const s = await page.evaluate(() => (window as unknown as { __bmTextures?: Record<string, number> }).__bmTextures);
   expect(s, 'texture counters').toMatchObject({ retried: 1, fellBack: 0, failed: 0 });
   expect(s!.decoded, 'the palette texture delivered').toBeGreaterThanOrEqual(1);

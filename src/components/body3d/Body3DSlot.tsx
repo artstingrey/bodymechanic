@@ -4,7 +4,7 @@
  * the canvas is moved in after the first paint and cross-fades over the poster when the model is ready.
  *
  * Fallbacks (ТЗ 6.10/6.11 + lead's decision for the hero):
- *  - booking: no WebGL / FPS < 20 / 15 s timeout / «Перейти в 2D» → the 2D silhouette (Fallback2D);
+ *  - booking: the 2D silhouette appears when the visitor chooses it;
  *  - hero: NO 2D silhouette — the front-view poster stays (data-fallback), the anchors for the hero index are published from
  *    the poster (usePosterAnchors); no sway, no pause button, no loading / timeout UI over the hero.
  *  - standalone viewer: use the selected model's poster when WebGL is unavailable or loading fails.
@@ -13,7 +13,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import assets from '@/lib/body3d/assets.json';
-import { useBody, useBodyStore } from '@/lib/body3d/store';
+import { heroFallback, useBody, useBodyStore } from '@/lib/body3d/store';
 import { useBody3DHost, type SlotMode } from './Body3DProvider';
 import { LiveRegion } from './LiveRegion';
 import { usePosterAnchors } from './usePosterAnchors';
@@ -21,9 +21,6 @@ import { heroIntro, heroReveal, REVEAL_FAILSAFE_MS } from '@/lib/body3d/heroIntr
 
 // the 2D module (silhouettes + body2d-callouts) is needed only in 2D mode on /booking → its own chunk, not on the first screen
 const Fallback2D = dynamic(() => import('./Fallback2D').then((m) => m.Fallback2D), { ssr: false });
-
-/** hero shows the static poster instead of the 3D model */
-export const heroFallback = (s: { mode2d: unknown; status: string }) => !!s.mode2d || s.status === 'timeout' || s.status === 'error';
 
 export function Body3DSlot({ mode, className = '', autoRotate = false }: { mode: SlotMode; className?: string; autoRotate?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -35,7 +32,8 @@ export function Body3DSlot({ mode, className = '', autoRotate = false }: { mode:
   const progress = useBody((s) => s.progress);
   const mode2d = useBody((s) => s.mode2d);
   const hint = useBody((s) => s.hint);
-  const posterMode = mode === 'hero' && heroFallback({ mode2d, status });
+  const fallback = useBody(heroFallback);
+  const posterMode = mode === 'hero' && fallback;
   // the visible hint (e.g. tap on the head / front of the shin) fades after 5 s; aria-live announces it separately
   useEffect(() => { if (!hint) return; const id = window.setTimeout(() => store.clearHint(), 5000); return () => window.clearTimeout(id); }, [hint, store]);
 
@@ -52,20 +50,20 @@ export function Body3DSlot({ mode, className = '', autoRotate = false }: { mode:
   const hero = mode === 'hero';
   const introDone = useSyncExternalStore(heroIntro.subscribe, heroIntro.canReveal, () => false);
   const [late, setLate] = useState(false);
-  const held = hero && status === 'ready' && !mode2d && !introDone && !late;
+  const held = hero && status === 'ready' && !posterMode && !introDone && !late;
   // the hero mounts with the model already live (a client navigation from /booking): no intro to wait for — the signal at
   // once (before HeroAtlas's first draw: child layout effects run first), so neither the poster covers the live model nor
   // the lines draw over it
   useLayoutEffect(() => { if (hero && store.get().status === 'ready') heroIntro.done(true); }, [hero, store]);
   useEffect(() => {
-    if (!hero || status !== 'ready' || mode2d) return;
+    if (!hero || status !== 'ready' || posterMode) return;
     heroReveal.ready();
     if (introDone || late) return;
     const id = window.setTimeout(() => setLate(true), REVEAL_FAILSAFE_MS);
     return () => window.clearTimeout(id);
-  }, [hero, status, mode2d, introDone, late]);
+  }, [hero, status, posterMode, introDone, late]);
   // the runtime starts the sway clock from here (Scene): the model waited in the front pose under the poster
-  useLayoutEffect(() => { if (hero && status === 'ready' && !mode2d && !held) heroReveal.show(!introDone); }, [hero, status, mode2d, held, introDone]);
+  useLayoutEffect(() => { if (hero && status === 'ready' && !posterMode && !held) heroReveal.show(!introDone); }, [hero, status, posterMode, held, introDone]);
 
   const p = assets.posters[model];
   const booking = mode === 'booking';
@@ -89,6 +87,7 @@ export function Body3DSlot({ mode, className = '', autoRotate = false }: { mode:
       {status === 'loading' && !mode2d && !hero ? <div className={viewer ? 'sr-only' : 'b3d-loader'} role="status">{t('body3d.load.progress', { percent: Math.round(progress * 100) })}</div> : null}
       {viewer && viewerAlert ? <p className="sr-only" role="alert">{t(viewerAlert)}</p> : null}
       {autoRotate && status === 'ready' ? <p id="body-viewer-pause-hint" className="sr-only">{t('body3d.viewer.pauseHint')}</p> : null}
+      {booking && status === 'unavailable' && !mode2d ? <div className="b3d-loader" role="status">{t('body3d.mode2d.noWebgl')}</div> : null}
       {booking && status === 'error' && !mode2d ? (
         <div className="b3d-loader" role="alert">
           {t('body3d.load.error')}{' '}

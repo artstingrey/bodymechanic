@@ -460,7 +460,7 @@ for (const scale of [1.3, 2]) {
   });
 }
 
-test('weak GPU (forced): hero keeps the poster, booking switches to 2D and still works', async ({ page, baseURL }, info) => {
+test('weak GPU (forced): hero keeps the poster, booking keeps 3D until the visitor selects 2D', async ({ page, baseURL }, info) => {
   test.skip(!/moto-g4|iphone-se/.test(info.project.name), 'Moto G4 and iPhone SE');
   await seedConsent(page);
   const g = guard(page, baseURL!);
@@ -469,7 +469,12 @@ test('weak GPU (forced): hero keeps the poster, booking switches to 2D and still
   await expect(hero).toHaveAttribute('data-fallback', 'true');
   await expect(hero.locator('.b3d-poster img')).toBeVisible();
   await page.goto('/en/booking/?debug=lowfps', { waitUntil: 'networkidle' });
-  await expect(page.locator('.b3d-slot[data-mode="booking"]')).toHaveAttribute('data-mode2d', 'lowFps');
+  const booking = page.locator('.b3d-slot[data-mode="booking"]');
+  await expect.poll(() => page.evaluate(() => window.__bm3d?.quality())).toBe('reduced');
+  await expect(booking).not.toHaveAttribute('data-mode2d');
+  await page.getByTestId('switch-2d').tap();
+  await expect(booking).toHaveAttribute('data-mode2d', 'user');
+  await expect(booking.getByText('3D is running slowly', { exact: true })).toHaveCount(0);
   await page.locator('#zone-list input[type="checkbox"]').first().check();
   await expect(page.getByTestId('b3d-marker')).toHaveCount(1);
   await page.getByRole('button', { name: en.body3d.panel.cta }).first().tap();
@@ -647,8 +652,9 @@ test('DEV-16 reduced motion: a 3D marker pin appears without the pop-in and the 
   }, draft);
   const page = await ctx.newPage();
   await page.goto('/ru/booking/', { waitUntil: 'load' });
-  const mode2d = await page.locator('.b3d-slot[data-mode2d]').count();
-  test.skip(mode2d > 0, 'the 2D fallback: no 3D pins on this run');
+  await settle3D(page);
+  const no3d = await page.locator('.b3d-slot:is([data-mode2d], [data-status="unavailable"])').count();
+  test.skip(no3d > 0, '3D pins are unavailable');
   await expect.poll(() => page.evaluate(() => (window as unknown as { __pins: unknown[] }).__pins.length), { timeout: 60_000 }).toBeGreaterThanOrEqual(3);
   const pins = await page.evaluate(() => (window as unknown as { __pins: { anims: string[]; transform: string; opacity: string; ring: string; back: boolean }[] }).__pins);
   await ctx.close();

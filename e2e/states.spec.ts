@@ -346,7 +346,11 @@ test.describe('2D mode — body2d-callouts (ТЗ 6.10/6.11)', () => {
 test.describe('2D without WebGL on /booking (R-APP-02 F-01)', () => {
   const checks = async (page: Page, msgs: typeof en) => {
     const slot = page.locator('.b3d-slot[data-mode="booking"]');
-    await expect(slot).toHaveAttribute('data-mode2d', 'noWebgl');
+    await expect(slot).toHaveAttribute('data-status', 'unavailable');
+    await expect(slot).not.toHaveAttribute('data-mode2d');
+    await expect(slot.getByText(msgs.body3d.mode2d.noWebgl)).toBeVisible();
+    await page.getByTestId('switch-2d').click();
+    await expect(slot).toHaveAttribute('data-mode2d', 'user');
     const front = page.locator('.b2d-stage svg').first();
     await front.locator('.b2d-zone').first().waitFor();
     // labels in the page language; no 3D tools in 2D; no way back to 3D without WebGL
@@ -367,7 +371,7 @@ test.describe('2D without WebGL on /booking (R-APP-02 F-01)', () => {
     expect(box.height, 'figure height ≤ viewport').toBeLessThanOrEqual(vh);
   };
 
-  test('real browser without WebGL (--disable-3d-apis), RU, 1280: 2D on its own, click and list in sync, size', async ({ baseURL }) => {
+  test('real browser without WebGL (--disable-3d-apis), RU, 1280: manual switch to 2D, diagram and list in sync', async ({ baseURL }) => {
     const browser = await chromium.launch({ channel: 'chrome', args: ['--disable-3d-apis'] });
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, baseURL });
     await seedConsent(page);

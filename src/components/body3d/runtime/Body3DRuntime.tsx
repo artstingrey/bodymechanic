@@ -13,17 +13,21 @@ function hasWebGL2() {
 
 export default function Body3DRuntime({ host, slot }: { host: HTMLDivElement; slot: Body3DActiveSlot | null }) {
   const store = useBodyStore();
-  const viewer = slot?.mode === 'viewer';
-  const hasSlot = !!slot;
+  const mode = slot?.mode;
   // debug only: ?debug=nowebgl behaves like a device without WebGL 2 (checks of the hero / booking fallbacks)
   const [webgl] = useState(() => hasWebGL2() && new URLSearchParams(window.location.search).get('debug') !== 'nowebgl');
   // declarative DPR: the Canvas re-applies its dpr prop on re-render, so the quality fallback lives here, not in setDpr()
   const reduced = useBody((s) => s.quality === 'reduced');
   useEffect(() => {
-    if (webgl || !hasSlot) return;
-    if (viewer) store.setStatus('unavailable');
-    else if (store.get().mode2d !== 'noWebgl') store.setMode2d('noWebgl');
-  }, [webgl, hasSlot, viewer, store]);
+    if (!mode) return;
+    if (!webgl) {
+      store.setStatus('unavailable');
+      return;
+    }
+    const debug = new URLSearchParams(window.location.search).get('debug');
+    if (debug === 'reduced' || debug === 'lowfps') store.setQuality('reduced');
+    if (debug === 'lowfps' && mode === 'hero') store.setHeroLowFps();
+  }, [webgl, mode, store]);
   if (!webgl) return null;
   return createPortal(
     <Canvas
@@ -35,10 +39,6 @@ export default function Body3DRuntime({ host, slot }: { host: HTMLDivElement; sl
         gl.toneMappingExposure = 1.5; // prototype: ACES Filmic (R3F default) + exposure 1.5
         camera.lookAt(0, 0.5, 0);
         window.__bm3d = { contextId: Math.random().toString(36).slice(2), frames: 0, model: () => store.get().model, url: modelUrl, quality: () => store.get().quality, dpr: () => gl.getPixelRatio() };
-        // debug only (lead: no debug UI in the product): ?debug=reduced forces the low-quality path for checks
-        const debug = new URLSearchParams(window.location.search).get('debug');
-        if (debug === 'reduced' || (debug === 'lowfps' && viewer)) store.setQuality('reduced');
-        else if (debug === 'lowfps') store.setMode2d('lowFps'); // hero poster / booking 2D
       }}
     >
       <Scene slot={slot} />
